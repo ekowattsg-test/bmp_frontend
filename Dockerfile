@@ -1,0 +1,29 @@
+# Dockerfile for jwt_frontend (Vite + React)
+# Use official Node.js image for build
+FROM node:20-alpine AS build
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --legacy-peer-deps
+
+COPY . .
+
+# Build the production files with limited memory
+RUN NODE_OPTIONS="--max-old-space-size=2048" npm run build
+
+# Use official Nginx image for serving static files
+FROM nginx:alpine
+
+# Remove default nginx static assets
+RUN rm -rf /usr/share/nginx/html/*
+
+# Copy built files from previous stage
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Copy custom nginx config to handle SPA routing
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
