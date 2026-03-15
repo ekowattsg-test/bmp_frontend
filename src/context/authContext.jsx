@@ -28,7 +28,14 @@
  */
 import { request, getAuthToken, setAuthHeader } from "../helpers/axios_helper";
 import React, { createContext, useEffect, useState } from "react";
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from "@mui/material";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Typography,
+} from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
 const AuthContext = createContext();
@@ -259,7 +266,10 @@ const AuthProvider = ({ children }) => {
         children
       )}
 
-      <Dialog open={expiredDialogOpen} onClose={() => setExpiredDialogOpen(false)}>
+      <Dialog
+        open={expiredDialogOpen}
+        onClose={() => setExpiredDialogOpen(false)}
+      >
         <DialogTitle>{"Session Expired"}</DialogTitle>
         <DialogContent>
           <Typography>

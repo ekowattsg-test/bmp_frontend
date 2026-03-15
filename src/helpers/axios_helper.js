@@ -35,7 +35,8 @@ export const isTokenExpired = (token) => {
   }
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 // Create an axios instance we control
 export const api = axios.create({
@@ -76,7 +77,11 @@ api.interceptors.response.use(
     if (!originalRequest) return Promise.reject(error);
 
     // If we already tried a retry, avoid infinite loops
-    if (error.response && error.response.status === 401 && !originalRequest._retry) {
+    if (
+      error.response &&
+      error.response.status === 401 &&
+      !originalRequest._retry
+    ) {
       originalRequest._retry = true;
 
       // If a refresh is already running, queue this request
