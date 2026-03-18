@@ -3,12 +3,18 @@ import { useTranslation } from "react-i18next";
 import { AuthContext } from "../../context/authContext";
 import { request } from "../../helpers/axios_helper";
 import {
+  buildDriveDirectViewLink,
+  buildDriveViewLink,
+  getActiveStorageProviderConfig,
+  getStorageConfig,
+  initStorageTokenClient,
   uploadFileToDrive,
   getFileIcon,
   showDocument,
   downloadDocument,
   getFileIdFromLink,
   getPreviewLink,
+  requestGoogleAccessTokenWithState,
   getDisplayImageInfo,
   FileChip,
   ImageCarousel,
@@ -67,19 +73,18 @@ const StaffSkillProfile = ({ onBack }) => {
     console.log("openCarouselAt called", index, links);
     const images = (links || []).map((cert) => {
       const displayUrl =
-        cert.url || (cert.id ? `https://drive.google.com/file/d/${cert.id}/view` : "");
+        cert.url || (cert.id ? buildDriveViewLink(cert.id, cert.provider) : "");
       const fileId = cert.id || getFileIdFromLink(displayUrl);
       const thumbnailUrl = fileId
-        ? getPreviewLink(
-            `https://drive.google.com/file/d/${fileId}/view`,
-            120,
-            120,
-          )
+        ? getPreviewLink(buildDriveViewLink(fileId, cert.provider), 120, 120)
         : null;
       const isImage =
         (cert.mimeType && cert.mimeType.startsWith("image/")) ||
         (cert.name && /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(cert.name));
-      const fullImageUrl = isImage && fileId ? `https://drive.google.com/uc?export=view&id=${fileId}` : null;
+      const fullImageUrl =
+        isImage && fileId
+          ? buildDriveDirectViewLink(fileId, cert.provider)
+          : null;
       return {
         displayUrl,
         viewUrl: fullImageUrl || displayUrl,
@@ -95,7 +100,11 @@ const StaffSkillProfile = ({ onBack }) => {
   };
 
   useEffect(() => {
-    console.log("carousel state changed", { carouselOpen, carouselStartIndex, len: carouselImages?.length });
+    console.log("carousel state changed", {
+      carouselOpen,
+      carouselStartIndex,
+      len: carouselImages?.length,
+    });
   }, [carouselOpen, carouselStartIndex, carouselImages]);
 
   // Get user level and company info
@@ -103,49 +112,25 @@ const StaffSkillProfile = ({ onBack }) => {
   const isUserLevelNine = userLevel === 9 || userLevel === "9";
   const userCompanyId = userInfo?.companyId;
 
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  const googleApiKey = import.meta.env.VITE_GOOGLE_API_KEY;
-  const googleDriveFolderId = import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID;
+  const googleDriveFolderId = getActiveStorageProviderConfig().folderId;
 
   useEffect(() => {
-    const loadScript = (src) =>
-      new Promise((resolve, reject) => {
-        if (document.querySelector(`script[src="${src}"]`)) {
-          resolve();
+    const initGoogleDrive = async () => {
+      try {
+        const storageConfig = getStorageConfig();
+        const activeCfg = getActiveStorageProviderConfig();
+        const missingProviderConfig =
+          storageConfig.provider === "google"
+            ? !activeCfg.clientId || !activeCfg.apiKey
+            : !activeCfg.clientId;
+        if (missingProviderConfig) {
+          console.error("Missing Google Drive credentials");
           return;
         }
-        const script = document.createElement("script");
-        script.src = src;
-        script.async = true;
-        script.defer = true;
-        script.onload = resolve;
-        script.onerror = reject;
-        document.body.appendChild(script);
-      });
-
-    const initGoogleDrive = async () => {
-      if (!googleClientId || !googleApiKey) {
-        console.error("Missing Google Drive credentials");
-        return;
-      }
-
-      try {
-        await loadScript("https://apis.google.com/js/api.js");
-        await loadScript("https://accounts.google.com/gsi/client");
-
-        await new Promise((resolve) => window.gapi.load("client", resolve));
-        await window.gapi.client.init({
-          apiKey: googleApiKey,
-          discoveryDocs: [
-            "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
-          ],
+        const { tokenClient } = await initStorageTokenClient({
+          provider: storageConfig.provider,
         });
-
-        tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
-          client_id: googleClientId,
-          scope: "https://www.googleapis.com/auth/drive.file",
-          callback: () => {},
-        });
+        tokenClientRef.current = tokenClient;
         setDriveReady(true);
       } catch (error) {
         console.error("Error initializing Google Drive:", error);
@@ -153,12 +138,12 @@ const StaffSkillProfile = ({ onBack }) => {
     };
 
     initGoogleDrive();
-  }, [googleClientId, googleApiKey]);
+  }, []);
 
   useEffect(() => {
     loadStaffList();
   }, [userCompanyId, isUserLevelNine]);
-  
+
   const loadStaffList = async () => {
     try {
       setLoading(true);
@@ -329,30 +314,25 @@ const StaffSkillProfile = ({ onBack }) => {
 
   const requestDriveToken = (autoOpenPicker = false) =>
     new Promise((resolve, reject) => {
-      if (!tokenClientRef.current) {
-        reject(new Error("Token client not ready"));
-        return;
-      }
-      tokenClientRef.current.callback = (tokenResponse) => {
-        authorizingRef.current = false;
-        if (tokenResponse.error) {
-          reject(tokenResponse);
-          return;
-        }
-        const accessToken = tokenResponse.access_token;
-
-        if (autoOpenPicker && fileInputRef.current) {
-          fileInputRef.current.value = "";
-          fileInputRef.current.click();
-        }
-
-        setDriveToken(accessToken);
-        resolve(accessToken);
-      };
-      authorizingRef.current = true; // Mark authorization started
-      tokenClientRef.current.requestAccessToken({
-        prompt: driveToken ? "" : "consent",
-      });
+      authorizingRef.current = true;
+      requestGoogleAccessTokenWithState({
+        tokenClient: tokenClientRef.current,
+        currentToken: driveToken,
+        flowKey: "staff-skill-profile-drive-upload",
+      })
+        .then((accessToken) => {
+          authorizingRef.current = false;
+          if (autoOpenPicker && fileInputRef.current) {
+            fileInputRef.current.value = "";
+            fileInputRef.current.click();
+          }
+          setDriveToken(accessToken);
+          resolve(accessToken);
+        })
+        .catch((error) => {
+          authorizingRef.current = false;
+          reject(error);
+        });
     });
   const handleUploadButtonClick = async () => {
     try {
@@ -382,6 +362,7 @@ const StaffSkillProfile = ({ onBack }) => {
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const storageProvider = getStorageConfig().provider;
 
     try {
       setIsUploading(true);
@@ -401,6 +382,7 @@ const StaffSkillProfile = ({ onBack }) => {
         id: fileId || null,
         name: file.name,
         mimeType: file.type || "",
+        provider: storageProvider,
         url: fileLink,
         uploadedAt: new Date().toISOString(),
       };
@@ -462,6 +444,7 @@ const StaffSkillProfile = ({ onBack }) => {
             id: id,
             name: cert.name || "",
             mimeType: cert.mimeType || "",
+            provider: cert.provider || getStorageConfig().provider,
             uploadedAt: cert.uploadedAt || new Date().toISOString(),
           };
         })
@@ -589,9 +572,7 @@ const StaffSkillProfile = ({ onBack }) => {
               name: cert.name || "",
               url:
                 cert.url ||
-                (cert.id
-                  ? `https://drive.google.com/file/d/${cert.id}/view`
-                  : ""),
+                (cert.id ? buildDriveViewLink(cert.id, cert.provider) : ""),
               uploadedAt: cert.uploadedAt || new Date().toISOString(),
             };
           });
@@ -642,6 +623,7 @@ const StaffSkillProfile = ({ onBack }) => {
             id: id,
             name: cert.name || "",
             mimeType: cert.mimeType || "",
+            provider: cert.provider || getStorageConfig().provider,
             uploadedAt: cert.uploadedAt || new Date().toISOString(),
           };
         })
@@ -975,12 +957,12 @@ const StaffSkillProfile = ({ onBack }) => {
                         </span>
                       </div>
                     ))}
-                    <ImageCarousel
-                      images={carouselImages}
-                      open={carouselOpen}
-                      onClose={() => setCarouselOpen(false)}
-                      startIndex={carouselStartIndex}
-                    />
+                  <ImageCarousel
+                    images={carouselImages}
+                    open={carouselOpen}
+                    onClose={() => setCarouselOpen(false)}
+                    startIndex={carouselStartIndex}
+                  />
                 </div>
 
                 <button className="new-skill-btn" onClick={handleNewSkillClick}>
@@ -1067,7 +1049,12 @@ const StaffSkillProfile = ({ onBack }) => {
                             key={index}
                             file={cert}
                             size={56}
-                            onClick={() => openCarouselAt(index, skillFormData.certificationLinks)}
+                            onClick={() =>
+                              openCarouselAt(
+                                index,
+                                skillFormData.certificationLinks,
+                              )
+                            }
                             onRemove={() => handleRemoveCertification(index)}
                           />
                         ))}
@@ -1224,7 +1211,12 @@ const StaffSkillProfile = ({ onBack }) => {
                             key={index}
                             file={cert}
                             size={56}
-                            onClick={() => openCarouselAt(index, skillFormData.certificationLinks)}
+                            onClick={() =>
+                              openCarouselAt(
+                                index,
+                                skillFormData.certificationLinks,
+                              )
+                            }
                             onRemove={() => handleRemoveCertification(index)}
                           />
                         ))}
@@ -1427,12 +1419,12 @@ const StaffSkillProfile = ({ onBack }) => {
             </div>
           </div>
         )}
-      <ImageCarousel
-        images={carouselImages}
-        open={carouselOpen}
-        onClose={() => setCarouselOpen(false)}
-        startIndex={carouselStartIndex}
-      />
+        <ImageCarousel
+          images={carouselImages}
+          open={carouselOpen}
+          onClose={() => setCarouselOpen(false)}
+          startIndex={carouselStartIndex}
+        />
       </div>
     );
   }

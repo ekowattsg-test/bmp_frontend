@@ -3,6 +3,386 @@
  * Handles file uploads, viewing, downloading, and icon display
  */
 
+const OAUTH_STATE_STORAGE_PREFIX = "__gdrive:oauth:state:";
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+const ONEDRIVE_SCOPE = "Files.ReadWrite User.Read openid profile";
+const STORAGE_PROVIDER_GOOGLE = "google";
+const STORAGE_PROVIDER_ONEDRIVE = "onedrive";
+const SUPPORTED_STORAGE_PROVIDERS = [
+  STORAGE_PROVIDER_GOOGLE,
+  STORAGE_PROVIDER_ONEDRIVE,
+];
+
+let googleDriveInitPromise = null;
+let oneDriveInitPromise = null;
+let oneDriveClientApp = null;
+
+const toBase64Url = (bytes) => {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 1) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+};
+
+const createRandomStatePart = () => {
+  const randomBytes = new Uint8Array(24);
+  window.crypto.getRandomValues(randomBytes);
+  return toBase64Url(randomBytes);
+};
+
+/**
+ * Build and persist a one-time OAuth state token.
+ * @param {string} flowKey - Storage key for the auth flow.
+ * @returns {string} - Generated state value.
+ */
+export const createGoogleOAuthState = (flowKey = "default") => {
+  const state = `${Date.now().toString(36)}.${createRandomStatePart()}`;
+  const payload = {
+    state,
+    createdAt: Date.now(),
+  };
+  sessionStorage.setItem(
+    `${OAUTH_STATE_STORAGE_PREFIX}${flowKey}`,
+    JSON.stringify(payload),
+  );
+  return state;
+};
+
+/**
+ * Clear previously stored OAuth state for a flow.
+ * @param {string} flowKey - Storage key for the auth flow.
+ */
+export const clearGoogleOAuthState = (flowKey = "default") => {
+  sessionStorage.removeItem(`${OAUTH_STATE_STORAGE_PREFIX}${flowKey}`);
+};
+
+/**
+ * Verify a returned OAuth state and clear it after checking.
+ * @param {string} receivedState - State returned by OAuth callback.
+ * @param {string} flowKey - Storage key for the auth flow.
+ * @returns {boolean} - True when state is valid and not expired.
+ */
+export const verifyGoogleOAuthState = (receivedState, flowKey = "default") => {
+  const storageKey = `${OAUTH_STATE_STORAGE_PREFIX}${flowKey}`;
+  const storedRaw = sessionStorage.getItem(storageKey);
+  clearGoogleOAuthState(flowKey);
+
+  if (!storedRaw || !receivedState) return false;
+
+  try {
+    const stored = JSON.parse(storedRaw);
+    const createdAt = Number(stored?.createdAt || 0);
+    const isExpired = Date.now() - createdAt > OAUTH_STATE_TTL_MS;
+    if (isExpired) return false;
+    return stored?.state === receivedState;
+  } catch (error) {
+    return false;
+  }
+};
+
+/**
+ * Request a Google access token with CSRF-safe OAuth state handling.
+ * @param {object} params - Request parameters.
+ * @param {object} params.tokenClient - Google OAuth token client.
+ * @param {string|null} params.currentToken - Existing token, if any.
+ * @param {string} params.flowKey - Storage key for auth flow state.
+ * @returns {Promise<string>} - Access token.
+ */
+export const requestGoogleAccessTokenWithState = ({
+  tokenClient,
+  currentToken = null,
+  flowKey = "default",
+}) =>
+  new Promise((resolve, reject) => {
+    if (!tokenClient) {
+      reject(new Error("Token client not ready"));
+      return;
+    }
+
+    const state = createGoogleOAuthState(flowKey);
+
+    tokenClient.callback = (tokenResponse) => {
+      if (tokenResponse?.error) {
+        clearGoogleOAuthState(flowKey);
+        reject(tokenResponse);
+        return;
+      }
+
+      const returnedState = tokenResponse?.state;
+      const isValidState = verifyGoogleOAuthState(returnedState, flowKey);
+
+      if (!isValidState) {
+        reject(new Error("OAuth state validation failed"));
+        return;
+      }
+
+      resolve(tokenResponse.access_token);
+    };
+
+    tokenClient.requestAccessToken({
+      prompt: currentToken ? "" : "consent",
+      state,
+    });
+  });
+
+/**
+ * Read Google Drive related runtime configuration from Vite env.
+ * @returns {{clientId: string|undefined, apiKey: string|undefined, folderId: string|undefined, scope: string}}
+ */
+export const getGoogleDriveConfig = () => ({
+  clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+  apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
+  folderId: import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID,
+  scope: DRIVE_SCOPE,
+});
+
+export const getOneDriveConfig = () => ({
+  clientId: import.meta.env.VITE_ONEDRIVE_CLIENT_ID,
+  tenantId: import.meta.env.VITE_ONEDRIVE_TENANT_ID || "common",
+  folderId: import.meta.env.VITE_ONEDRIVE_FOLDER_ID,
+  scope: import.meta.env.VITE_ONEDRIVE_SCOPE || ONEDRIVE_SCOPE,
+});
+
+const normalizeProvider = (value) => {
+  const provider = String(value || "")
+    .trim()
+    .toLowerCase();
+  if (SUPPORTED_STORAGE_PROVIDERS.includes(provider)) return provider;
+  return STORAGE_PROVIDER_GOOGLE;
+};
+
+export const getStorageProvider = () =>
+  normalizeProvider(import.meta.env.VITE_STORAGE_PROVIDER || "google");
+
+export const getStorageConfig = () => {
+  const enabledRaw =
+    import.meta.env.VITE_STORAGE_ENABLED || STORAGE_PROVIDER_GOOGLE;
+  const enabledProviders = enabledRaw
+    .split(",")
+    .map((p) => normalizeProvider(p))
+    .filter((p, idx, arr) => arr.indexOf(p) === idx);
+
+  return {
+    provider: getStorageProvider(),
+    enabledProviders,
+    google: getGoogleDriveConfig(),
+    onedrive: getOneDriveConfig(),
+  };
+};
+
+export const getActiveStorageProviderConfig = () => {
+  const storageConfig = getStorageConfig();
+  if (storageConfig.provider === STORAGE_PROVIDER_ONEDRIVE) {
+    return storageConfig.onedrive;
+  }
+  return storageConfig.google;
+};
+
+const loadScriptOnce = (src) =>
+  new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve();
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.defer = true;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.body.appendChild(script);
+  });
+
+/**
+ * Initialize Google APIs and create a Drive token client.
+ * @param {{clientId?: string, apiKey?: string, scope?: string}} params
+ * @returns {Promise<{tokenClient: object, gapi: object}>}
+ */
+export const initGoogleDriveTokenClient = async ({
+  clientId,
+  apiKey,
+  scope = DRIVE_SCOPE,
+} = {}) => {
+  const resolvedClientId = clientId || getGoogleDriveConfig().clientId;
+  const resolvedApiKey = apiKey || getGoogleDriveConfig().apiKey;
+
+  if (!resolvedClientId || !resolvedApiKey) {
+    throw new Error("Missing Google Drive credentials");
+  }
+
+  if (!googleDriveInitPromise) {
+    googleDriveInitPromise = (async () => {
+      await loadScriptOnce("https://apis.google.com/js/api.js");
+      await loadScriptOnce("https://accounts.google.com/gsi/client");
+      await new Promise((resolve) => window.gapi.load("client", resolve));
+      await window.gapi.client.init({
+        apiKey: resolvedApiKey,
+        discoveryDocs: [
+          "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
+        ],
+      });
+      return window.gapi;
+    })();
+  }
+
+  const gapi = await googleDriveInitPromise;
+  const tokenClient = window.google.accounts.oauth2.initTokenClient({
+    client_id: resolvedClientId,
+    scope,
+    callback: () => {},
+  });
+
+  window.__GDriveAuth = window.__GDriveAuth || {};
+  window.__GDriveAuth.gapi = gapi;
+  window.__GDriveAuth.tokenClient = tokenClient;
+
+  return { tokenClient, gapi };
+};
+
+/**
+ * Initialize OneDrive auth and return token client with Google-compatible method shape.
+ * @param {{clientId?: string, tenantId?: string, scope?: string}} params
+ * @returns {Promise<{tokenClient: object}>}
+ */
+export const initOneDriveTokenClient = async ({
+  clientId,
+  tenantId,
+  scope,
+} = {}) => {
+  const cfg = getOneDriveConfig();
+  const resolvedClientId = clientId || cfg.clientId;
+  const resolvedTenantId = tenantId || cfg.tenantId;
+  const resolvedScope = scope || cfg.scope;
+
+  if (!resolvedClientId) {
+    throw new Error("Missing OneDrive client id");
+  }
+
+  if (!oneDriveInitPromise) {
+    oneDriveInitPromise = (async () => {
+      await loadScriptOnce(
+        "https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js",
+      );
+      if (!window.msal?.PublicClientApplication) {
+        throw new Error("MSAL not available after script load");
+      }
+
+      oneDriveClientApp = new window.msal.PublicClientApplication({
+        auth: {
+          clientId: resolvedClientId,
+          authority: `https://login.microsoftonline.com/${resolvedTenantId}`,
+          redirectUri: window.location.origin,
+        },
+        cache: {
+          cacheLocation: "sessionStorage",
+          storeAuthStateInCookie: false,
+        },
+      });
+
+      await oneDriveClientApp.initialize();
+    })();
+  }
+
+  await oneDriveInitPromise;
+
+  const scopes = String(resolvedScope)
+    .split(/[\s,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const tokenClient = {
+    callback: () => {},
+    requestAccessToken: async ({ prompt = "", state = "" } = {}) => {
+      try {
+        const request = {
+          scopes,
+          prompt: prompt || undefined,
+        };
+        const response = await oneDriveClientApp.acquireTokenPopup(request);
+        tokenClient.callback({
+          access_token: response.accessToken,
+          state,
+        });
+      } catch (error) {
+        tokenClient.callback({
+          error: error?.message || "OneDrive authorization failed",
+          state,
+        });
+      }
+    },
+  };
+
+  window.__OneDriveAuth = window.__OneDriveAuth || {};
+  window.__OneDriveAuth.clientApp = oneDriveClientApp;
+  window.__OneDriveAuth.tokenClient = tokenClient;
+
+  return { tokenClient };
+};
+
+export const initStorageTokenClient = async ({
+  provider = getStorageProvider(),
+} = {}) => {
+  const resolvedProvider = normalizeProvider(provider);
+  if (resolvedProvider === STORAGE_PROVIDER_ONEDRIVE) {
+    return initOneDriveTokenClient();
+  }
+  return initGoogleDriveTokenClient();
+};
+
+/**
+ * Build a Google Drive file view URL.
+ * @param {string} fileId - Google Drive file ID.
+ * @returns {string}
+ */
+export const buildDriveViewLink = (fileId, provider = null) =>
+  normalizeProvider(provider || getStorageProvider()) ===
+  STORAGE_PROVIDER_ONEDRIVE
+    ? `https://onedrive.live.com/?id=${fileId}`
+    : `https://drive.google.com/file/d/${fileId}/view`;
+
+/**
+ * Build a direct Google Drive image/file view URL.
+ * @param {string} fileId - Google Drive file ID.
+ * @returns {string}
+ */
+export const buildDriveDirectViewLink = (fileId, provider = null) =>
+  normalizeProvider(provider || getStorageProvider()) ===
+  STORAGE_PROVIDER_ONEDRIVE
+    ? buildDriveViewLink(fileId, provider)
+    : `https://drive.google.com/uc?export=view&id=${fileId}`;
+
+/**
+ * Delete a file from Google Drive.
+ * @param {string} fileId - Google Drive file ID.
+ * @param {string} accessToken - Google OAuth access token.
+ * @returns {Promise<Response|null>}
+ */
+export const deleteFileFromDrive = async (
+  fileId,
+  accessToken,
+  provider = null,
+) => {
+  if (!fileId || !accessToken) return null;
+  if (
+    normalizeProvider(provider || getStorageProvider()) ===
+    STORAGE_PROVIDER_ONEDRIVE
+  ) {
+    return fetch(`https://graph.microsoft.com/v1.0/me/drive/items/${fileId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+  }
+  return fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+};
+
 /**
  * Upload a file to Google Drive
  * @param {File} file - The file to upload
@@ -11,6 +391,32 @@
  * @returns {Promise<string>} - URL to the uploaded file on Google Drive
  */
 export const uploadFileToDrive = async (file, accessToken, folderId = null) => {
+  if (getStorageProvider() === STORAGE_PROVIDER_ONEDRIVE) {
+    const cfg = getOneDriveConfig();
+    const parentId = folderId || cfg.folderId;
+    const encodedName = encodeURIComponent(file.name);
+    const uploadUrl = parentId
+      ? `https://graph.microsoft.com/v1.0/me/drive/items/${parentId}:/${encodedName}:/content`
+      : `https://graph.microsoft.com/v1.0/me/drive/root:/${encodedName}:/content`;
+
+    const uploadResponse = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": file.type || "application/octet-stream",
+      },
+      body: file,
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      throw new Error(errorText || "Upload failed");
+    }
+
+    const result = await uploadResponse.json();
+    return result.webUrl || `https://onedrive.live.com/?id=${result.id}`;
+  }
+
   const metadata = {
     name: file.name,
     mimeType: file.type || "application/octet-stream",
@@ -213,8 +619,14 @@ export const getFileIdFromLink = (driveLink) => {
   const match = driveLink.match(/\/d\/([a-zA-Z0-9-_]+)/);
   if (match) return match[1];
 
+  const oneDriveItemMatch = driveLink.match(/\/items\/([a-zA-Z0-9!._-]+)/);
+  if (oneDriveItemMatch) return oneDriveItemMatch[1];
+
   const queryMatch = driveLink.match(/[?&]id=([a-zA-Z0-9-_]+)/);
   if (queryMatch) return queryMatch[1];
+
+  const oneDriveResidMatch = driveLink.match(/[?&]resid=([a-zA-Z0-9!._-]+)/);
+  if (oneDriveResidMatch) return oneDriveResidMatch[1];
 
   return null;
 };
@@ -266,9 +678,13 @@ export const getDisplayImageInfo = (pic) => {
     ];
     for (const c of urlCandidates) {
       if (c && typeof c === "string") {
+        const isOneDriveUrl =
+          c.includes("onedrive.live.com") ||
+          c.includes("1drv.ms") ||
+          c.includes("sharepoint.com");
         // prefer returning an embedable thumbnail link when we can extract an ID
         const id = getFileIdFromLink(c);
-        if (id) {
+        if (id && !isOneDriveUrl) {
           const thumb = `https://drive.google.com/thumbnail?id=${id}&sz=w120-h120`;
           const view =
             parsed.webViewLink ||
@@ -281,6 +697,7 @@ export const getDisplayImageInfo = (pic) => {
               id: parsed.id || id,
               name: parsed.name || parsed.title || "",
               mimeType: parsed.mimeType || parsed.type || "",
+              provider: parsed.provider || STORAGE_PROVIDER_GOOGLE,
               viewUrl: view,
             },
           };
@@ -292,12 +709,27 @@ export const getDisplayImageInfo = (pic) => {
             id: parsed.id || null,
             name: parsed.name || parsed.title || "",
             mimeType: parsed.mimeType || parsed.type || "",
+            provider: parsed.provider || null,
           },
         };
       }
     }
     // if contains id only, return embedable thumbnail and include a view URL
     if (parsed.id) {
+      if (parsed.provider === STORAGE_PROVIDER_ONEDRIVE) {
+        return {
+          imageUrl:
+            parsed.webUrl || parsed.url || buildDriveViewLink(parsed.id),
+          meta: {
+            id: parsed.id,
+            name: parsed.name || "",
+            mimeType: parsed.mimeType || parsed.type || "",
+            provider: STORAGE_PROVIDER_ONEDRIVE,
+            viewUrl:
+              parsed.webUrl || parsed.url || buildDriveViewLink(parsed.id),
+          },
+        };
+      }
       const thumb = `https://drive.google.com/thumbnail?id=${parsed.id}&sz=w120-h120`;
       const view =
         parsed.webViewLink ||
@@ -309,6 +741,7 @@ export const getDisplayImageInfo = (pic) => {
           id: parsed.id,
           name: parsed.name || "",
           mimeType: parsed.mimeType || parsed.type || "",
+          provider: parsed.provider || STORAGE_PROVIDER_GOOGLE,
           viewUrl: view,
         },
       };

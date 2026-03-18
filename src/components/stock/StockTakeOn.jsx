@@ -12,6 +12,8 @@ import QrCodeScannerIcon from "@mui/icons-material/QrCodeScanner";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import {
+  buildDriveDirectViewLink,
+  buildDriveViewLink,
   getFileIcon,
   getFileIdFromLink,
   getDisplayImageInfo,
@@ -243,9 +245,7 @@ const StockTakeOn = () => {
           (info && info.meta && info.meta.id);
         const displayUrl =
           (info && info.meta && info.meta.viewUrl) ||
-          (fileId
-            ? `https://drive.google.com/file/d/${fileId}/view`
-            : candidate);
+          (fileId ? buildDriveViewLink(fileId) : candidate);
         const isImage =
           (info &&
             info.meta &&
@@ -256,9 +256,7 @@ const StockTakeOn = () => {
           ? getPreviewLink(displayUrl, 120, 120)
           : null;
         const fullImageUrl =
-          isImage && fileId
-            ? `https://drive.google.com/uc?export=view&id=${fileId}`
-            : null;
+          isImage && fileId ? buildDriveDirectViewLink(fileId) : null;
         const title =
           (info && info.meta && info.meta.name) || (p && p.name) || "";
         return { displayUrl, fileId, thumbnailUrl, fullImageUrl, title };
