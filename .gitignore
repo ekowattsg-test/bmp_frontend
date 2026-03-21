@@ -40,4 +40,5 @@ coverage/
 # OS generated files
 Thumbs.db
 
+# Google OAuth credentials - never commit
 ekowatt_drive.json

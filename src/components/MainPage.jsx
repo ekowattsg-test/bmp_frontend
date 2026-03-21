@@ -20,6 +20,8 @@ import Settings from "./baseInformation/Settings";
 import EulaPage from "./information/EulaPage";
 import PrivacyPage from "./information/PrivacyPage";
 import Product from "./baseInformation/Product";
+import StaffExcelUpload from "./baseInformation/StaffExcelUpload";
+import UserLoginList from "./baseInformation/UserLoginList";
 
 function MainPage() {
   return (
@@ -32,10 +34,12 @@ function MainPage() {
         <Route path="/staff" element={<StaffModern />} />
         <Route path="/user" element={<UserModern />} />
         <Route path="/userRole" element={<UserRoleModern />} />
+        <Route path="/userlogin" element={<UserLoginList />} />
         <Route path="/customer" element={<CustomerModern />} />
         <Route path="/vendor" element={<VendorModern />} />
         <Route path="/purchaseorder" element={<PurchaseOrderModern />} />
         <Route path="/staffskill" element={<StaffSkillModern />} />
+        <Route path="/staff-excel-upload" element={<StaffExcelUpload />} />
         <Route path="/stockmovementcode" element={<StockMovementCode />} />
         <Route path="/stocktakeon" element={<StockTakeOn />} />
         <Route path="/product" element={<Product />} />

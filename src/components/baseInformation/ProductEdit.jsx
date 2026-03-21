@@ -6,6 +6,8 @@ import {
   getDisplayImageInfo,
   ImageCarousel,
   getFileIdFromLink,
+  commit,
+  abort,
 } from "../../helpers/file_helper";
 import FileGallery from "../common/FileGallery";
 import { useTranslation } from "react-i18next";
@@ -143,6 +145,7 @@ const ProductEdit = ({ product, onCancel }) => {
       };
       const id = product?.id || product?.productId || product?.product_id;
       await request("PUT", `/api/products/${id}`, payload);
+      await commit();
       setSuccess(true);
       if (onCancel) onCancel(true);
     } catch (err) {
@@ -269,7 +272,10 @@ const ProductEdit = ({ product, onCancel }) => {
         </Button>
         <Button
           variant="outlined"
-          onClick={() => onCancel(false)}
+          onClick={() => {
+            abort();
+            onCancel(false);
+          }}
           disabled={loading}
         >
           {t("basic.cancel")}

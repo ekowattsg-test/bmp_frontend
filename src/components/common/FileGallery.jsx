@@ -11,8 +11,6 @@ import {
   getDisplayImageInfo,
   getFileIdFromLink,
   getFileIcon,
-  initStorageTokenClient,
-  requestGoogleAccessTokenWithState,
   uploadFileToDrive,
 } from "../../helpers/file_helper";
 
@@ -32,12 +30,9 @@ const FileGallery = ({
   onChange = () => {},
 }) => {
   const [files, setFiles] = useState([]);
-  const [driveReady, setDriveReady] = useState(false);
-  const [driveToken, setDriveToken] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const { t } = useTranslation();
-  const tokenClientRef = useRef(null);
   const [carouselOpen, setCarouselOpen] = useState(false);
   const [carouselImages, setCarouselImages] = useState([]);
   const [carouselStart, setCarouselStart] = useState(0);
@@ -64,121 +59,9 @@ const FileGallery = ({
     }
   }, [productPicture]);
 
-  // Google Drive init + auth
-  useEffect(() => {
-    const initGoogleDrive = async () => {
-      try {
-        const storageConfig = getStorageConfig();
-        const activeCfg = getActiveStorageProviderConfig();
-        const missingProviderConfig =
-          storageConfig.provider === "google"
-            ? !activeCfg.clientId || !activeCfg.apiKey
-            : !activeCfg.clientId;
-        if (missingProviderConfig) return;
-        const { tokenClient } = await initStorageTokenClient({
-          provider: storageConfig.provider,
-        });
-        tokenClientRef.current = tokenClient;
-        setDriveReady(true);
-      } catch (err) {
-        console.error("Error initializing Google Drive in FileGallery", err);
-      }
-    };
-
-    initGoogleDrive();
-  }, []);
-
-  // Cross-tab/session token sharing: listen for tokens published via BroadcastChannel or localStorage
-  useEffect(() => {
-    // read any already published global token
-    try {
-      if (window.__GDriveAuth?.accessToken) {
-        setDriveToken(window.__GDriveAuth.accessToken);
-      } else {
-        // localStorage fallback (other tabs may write a key to notify)
-        const saved = localStorage.getItem("__GDriveAuth:accessToken");
-        if (saved) setDriveToken(saved);
-      }
-    } catch (e) {
-      // ignore
-    }
-
-    let bc;
-    try {
-      bc = new BroadcastChannel("gdrive-auth");
-      bc.onmessage = (ev) => {
-        const data = ev.data || {};
-        if (data?.accessToken) {
-          window.__GDriveAuth = window.__GDriveAuth || {};
-          window.__GDriveAuth.accessToken = data.accessToken;
-          setDriveToken(data.accessToken);
-        }
-      };
-    } catch (e) {
-      // BroadcastChannel may not be available; listen to localStorage events instead
-      const onStorage = (ev) => {
-        if (ev.key === "__GDriveAuth:accessToken" && ev.newValue) {
-          window.__GDriveAuth = window.__GDriveAuth || {};
-          window.__GDriveAuth.accessToken = ev.newValue;
-          setDriveToken(ev.newValue);
-        }
-      };
-      window.addEventListener("storage", onStorage);
-      return () => window.removeEventListener("storage", onStorage);
-    }
-
-    return () => {
-      try {
-        bc?.close();
-      } catch (e) {}
-    };
-  }, []);
-
-  const publishDriveToken = (accessToken) => {
-    setDriveToken(accessToken);
-    window.__GDriveAuth = window.__GDriveAuth || {};
-    window.__GDriveAuth.accessToken = accessToken;
-    try {
-      const bc = new BroadcastChannel("gdrive-auth");
-      bc.postMessage({ accessToken });
-      bc.close();
-    } catch (e) {
-      try {
-        localStorage.setItem("__GDriveAuth:accessToken", accessToken);
-        // write+remove to trigger storage event in some browsers
-        localStorage.setItem("__GDriveAuth:accessToken:ts", String(Date.now()));
-      } catch (e) {}
-    }
-  };
-
-  const requestDriveToken = () =>
-    new Promise((resolve, reject) => {
-      requestGoogleAccessTokenWithState({
-        tokenClient: tokenClientRef.current,
-        currentToken: driveToken,
-        flowKey: "file-gallery-drive-upload",
-      })
-        .then((accessToken) => {
-          publishDriveToken(accessToken);
-          resolve(accessToken);
-        })
-        .catch((error) => reject(error));
-    });
-
   // file input for add action
   const fileInputRef = useRef(null);
 
-  // Explicit authorize button handler: this must be called from a user gesture.
-  const handleAuthorize = async () => {
-    try {
-      await requestDriveToken();
-      setUploadError("");
-    } catch (error) {
-      setUploadError(error?.message || "Authorization failed");
-    }
-  };
-
-  // Open file chooser synchronously from user click when token already present
   const handleOpenFileChooser = () => {
     if (!fileInputRef.current) return;
     fileInputRef.current.value = "";
@@ -193,12 +76,8 @@ const FileGallery = ({
     setUploadError("");
     try {
       const activeCfg = getActiveStorageProviderConfig();
-      const googleDriveFolderId = activeCfg.folderId;
-      const fileLink = await uploadFileToDrive(
-        file,
-        driveToken,
-        googleDriveFolderId,
-      );
+      const folderId = activeCfg.folderId;
+      const fileLink = await uploadFileToDrive(file, null, folderId);
       const fileId = getFileIdFromLink(fileLink);
       const newFile = {
         id: fileId || null,
@@ -301,24 +180,19 @@ const FileGallery = ({
       return next;
     });
 
-    // attempt background deletion from Google Drive if we have an id
+    // attempt background deletion via n8n
     (async () => {
       try {
         const fileId = removed?.id || getFileIdFromLink(removed?.url);
-        const token = window.__GDriveAuth?.accessToken || driveToken;
-        if (!fileId || !token) return;
-        const resp = await deleteFileFromDrive(
-          fileId,
-          token,
-          removed?.provider,
-        );
-        if (!resp.ok) {
+        if (!fileId) return;
+        const resp = await deleteFileFromDrive(fileId, null, removed?.provider);
+        if (resp && !resp.ok) {
           const text = await resp.text();
-          console.warn("Drive delete failed:", resp.status, text);
+          console.warn("Delete failed:", resp.status, text);
           setUploadError(t("basic.failed") + ": " + (text || resp.statusText));
         }
       } catch (err) {
-        console.error("Error deleting file from Drive", err);
+        console.error("Error deleting file", err);
         setUploadError(err?.message || "Delete failed");
       }
     })();
@@ -371,29 +245,17 @@ const FileGallery = ({
               style={{ display: "none" }}
               onChange={handleFileSelected}
             />
-            {!driveToken ? (
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={handleAuthorize}
-                startIcon={<span>🔐</span>}
-                disabled={!driveReady || isUploading}
-              >
-                {t("staffManagement.authorizeAndUpload")}
-              </Button>
-            ) : (
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={handleOpenFileChooser}
-                startIcon={<span>＋</span>}
-                disabled={isUploading}
-              >
-                {isUploading
-                  ? t("staffManagement.uploading")
-                  : t("staffManagement.addFile")}
-              </Button>
-            )}
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleOpenFileChooser}
+              startIcon={<span>＋</span>}
+              disabled={isUploading}
+            >
+              {isUploading
+                ? t("staffManagement.uploading")
+                : t("staffManagement.addFile")}
+            </Button>
           </>
         )}
       </Box>

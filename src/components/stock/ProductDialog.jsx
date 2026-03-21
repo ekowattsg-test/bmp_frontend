@@ -15,6 +15,8 @@ import {
   getFileIdFromLink,
   getFileIcon,
   getDisplayImageInfo,
+  commit,
+  abort,
 } from "../../helpers/file_helper";
 import FileGallery from "../common/FileGallery";
 import { useTranslation } from "react-i18next";
@@ -60,7 +62,7 @@ const ProductDialog = ({
     fetchProducts("");
   }, [open, stockCode]);
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     setCreating(true);
     try {
@@ -87,6 +89,7 @@ const ProductDialog = ({
         ...newProduct,
         productPicture: JSON.stringify(normalized),
       };
+      await commit();
       onSelected({
         product: payload,
         productFound: false,
@@ -113,6 +116,7 @@ const ProductDialog = ({
 
   const handleCreateToggle = () => {
     setCreateError("");
+    if (creating) abort();
     setCreating((c) => {
       const next = !c;
       if (!next) {

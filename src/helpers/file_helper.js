@@ -1,12 +1,20 @@
 /**
- * File Helper - Google Drive file operations
- * Handles file uploads, viewing, downloading, and icon display
+ * File Helper - n8n-mediated file storage operations
+ * All uploads/deletes/lists/downloads are routed through n8n webhooks.
+ * The browser never directly touches Google Drive or OneDrive APIs.
+ *
+ * Webhook convention (configured via VITE_N8N_BASE_URL + VITE_STORAGE_PROVIDER):
+ *   Base URL is called directly (no extra path segments appended by frontend).
+ *   Action/provider are sent in request payload for API operations.
+ *   sessionNumber is managed internally by this helper and sent on every
+ *   n8n action request.
+ *
+ * FileMetadata shape:
+ *   { id, name, mimeType, uploadedAt, url, viewUrl, provider }
+ *
+ * Auth: token is sent via X-N8N-Token header.
  */
 
-const OAUTH_STATE_STORAGE_PREFIX = "__gdrive:oauth:state:";
-const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
-const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
-const ONEDRIVE_SCOPE = "Files.ReadWrite User.Read openid profile";
 const STORAGE_PROVIDER_GOOGLE = "google";
 const STORAGE_PROVIDER_ONEDRIVE = "onedrive";
 const SUPPORTED_STORAGE_PROVIDERS = [
@@ -14,139 +22,64 @@ const SUPPORTED_STORAGE_PROVIDERS = [
   STORAGE_PROVIDER_ONEDRIVE,
 ];
 
-let googleDriveInitPromise = null;
-let oneDriveInitPromise = null;
-let oneDriveClientApp = null;
+// ─── n8n config ────────────────────────────────────────────────────────────
 
-const toBase64Url = (bytes) => {
-  let binary = "";
-  for (let i = 0; i < bytes.length; i += 1) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary)
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/g, "");
-};
+const getN8nBaseUrl = () =>
+  (import.meta.env.VITE_N8N_BASE_URL || "").replace(/\/$/, "");
 
-const createRandomStatePart = () => {
-  const randomBytes = new Uint8Array(24);
-  window.crypto.getRandomValues(randomBytes);
-  return toBase64Url(randomBytes);
-};
+const getN8nSecret = () => import.meta.env.VITE_N8N_SECRET || "";
 
-/**
- * Build and persist a one-time OAuth state token.
- * @param {string} flowKey - Storage key for the auth flow.
- * @returns {string} - Generated state value.
- */
-export const createGoogleOAuthState = (flowKey = "default") => {
-  const state = `${Date.now().toString(36)}.${createRandomStatePart()}`;
-  const payload = {
-    state,
-    createdAt: Date.now(),
-  };
-  sessionStorage.setItem(
-    `${OAUTH_STATE_STORAGE_PREFIX}${flowKey}`,
-    JSON.stringify(payload),
-  );
-  return state;
-};
+const n8nActionUrl = () => getN8nBaseUrl();
 
-/**
- * Clear previously stored OAuth state for a flow.
- * @param {string} flowKey - Storage key for the auth flow.
- */
-export const clearGoogleOAuthState = (flowKey = "default") => {
-  sessionStorage.removeItem(`${OAUTH_STATE_STORAGE_PREFIX}${flowKey}`);
-};
-
-/**
- * Verify a returned OAuth state and clear it after checking.
- * @param {string} receivedState - State returned by OAuth callback.
- * @param {string} flowKey - Storage key for the auth flow.
- * @returns {boolean} - True when state is valid and not expired.
- */
-export const verifyGoogleOAuthState = (receivedState, flowKey = "default") => {
-  const storageKey = `${OAUTH_STATE_STORAGE_PREFIX}${flowKey}`;
-  const storedRaw = sessionStorage.getItem(storageKey);
-  clearGoogleOAuthState(flowKey);
-
-  if (!storedRaw || !receivedState) return false;
-
-  try {
-    const stored = JSON.parse(storedRaw);
-    const createdAt = Number(stored?.createdAt || 0);
-    const isExpired = Date.now() - createdAt > OAUTH_STATE_TTL_MS;
-    if (isExpired) return false;
-    return stored?.state === receivedState;
-  } catch (error) {
-    return false;
-  }
-};
-
-/**
- * Request a Google access token with CSRF-safe OAuth state handling.
- * @param {object} params - Request parameters.
- * @param {object} params.tokenClient - Google OAuth token client.
- * @param {string|null} params.currentToken - Existing token, if any.
- * @param {string} params.flowKey - Storage key for auth flow state.
- * @returns {Promise<string>} - Access token.
- */
-export const requestGoogleAccessTokenWithState = ({
-  tokenClient,
-  currentToken = null,
-  flowKey = "default",
-}) =>
-  new Promise((resolve, reject) => {
-    if (!tokenClient) {
-      reject(new Error("Token client not ready"));
-      return;
-    }
-
-    const state = createGoogleOAuthState(flowKey);
-
-    tokenClient.callback = (tokenResponse) => {
-      if (tokenResponse?.error) {
-        clearGoogleOAuthState(flowKey);
-        reject(tokenResponse);
-        return;
-      }
-
-      const returnedState = tokenResponse?.state;
-      const isValidState = verifyGoogleOAuthState(returnedState, flowKey);
-
-      if (!isValidState) {
-        reject(new Error("OAuth state validation failed"));
-        return;
-      }
-
-      resolve(tokenResponse.access_token);
-    };
-
-    tokenClient.requestAccessToken({
-      prompt: currentToken ? "" : "consent",
-      state,
-    });
-  });
-
-/**
- * Read Google Drive related runtime configuration from Vite env.
- * @returns {{clientId: string|undefined, apiKey: string|undefined, folderId: string|undefined, scope: string}}
- */
-export const getGoogleDriveConfig = () => ({
-  clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-  apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
-  folderId: import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID,
-  scope: DRIVE_SCOPE,
+const getN8nHeaders = () => ({
+  "X-N8N-Token": getN8nSecret(),
 });
 
-export const getOneDriveConfig = () => ({
-  clientId: import.meta.env.VITE_ONEDRIVE_CLIENT_ID,
-  tenantId: import.meta.env.VITE_ONEDRIVE_TENANT_ID || "common",
-  folderId: import.meta.env.VITE_ONEDRIVE_FOLDER_ID,
-  scope: import.meta.env.VITE_ONEDRIVE_SCOPE || ONEDRIVE_SCOPE,
-});
+let activeFileSessionNumber = null;
+
+const hasSessionNumber = (sessionNumber) =>
+  sessionNumber !== null &&
+  sessionNumber !== undefined &&
+  String(sessionNumber).trim() !== "";
+
+const createSessionNumber = () =>
+  `${Date.now()}${Math.floor(Math.random() * 1000000)
+    .toString()
+    .padStart(6, "0")}`;
+
+const resolveSessionNumber = (createIfMissing = false) => {
+  if (hasSessionNumber(activeFileSessionNumber)) {
+    return String(activeFileSessionNumber).trim();
+  }
+  if (!createIfMissing) return null;
+  activeFileSessionNumber = createSessionNumber();
+  return activeFileSessionNumber;
+};
+
+const clearCurrentFileSessionNumber = () => {
+  activeFileSessionNumber = null;
+};
+
+const appendSessionNumber = (form, sessionNumber) => {
+  if (!hasSessionNumber(sessionNumber)) {
+    throw new Error("sessionNumber is required");
+  }
+  form.append("sessionNumber", String(sessionNumber).trim());
+};
+
+const n8nThumbnailUrl = (provider, fileId, w, h) => {
+  const url = new URL(getN8nBaseUrl());
+  url.searchParams.set("action", "thumbnail");
+  url.searchParams.set("provider", provider);
+  url.searchParams.set("fileId", String(fileId || ""));
+  url.searchParams.set("w", String(w));
+  url.searchParams.set("h", String(h));
+  // Add token to query params for image URL (can't use headers in img/src)
+  url.searchParams.set("token", getN8nSecret());
+  return url.toString();
+};
+
+// ─── Storage provider helpers (unchanged public API) ───────────────────────
 
 const normalizeProvider = (value) => {
   const provider = String(value || "")
@@ -158,6 +91,22 @@ const normalizeProvider = (value) => {
 
 export const getStorageProvider = () =>
   normalizeProvider(import.meta.env.VITE_STORAGE_PROVIDER || "google");
+
+export const getGoogleDriveConfig = () => ({
+  clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+  apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
+  folderId: import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID,
+  scope: "https://www.googleapis.com/auth/drive.file",
+});
+
+export const getOneDriveConfig = () => ({
+  clientId: import.meta.env.VITE_ONEDRIVE_CLIENT_ID,
+  tenantId: import.meta.env.VITE_ONEDRIVE_TENANT_ID || "common",
+  folderId: import.meta.env.VITE_ONEDRIVE_FOLDER_ID,
+  scope:
+    import.meta.env.VITE_ONEDRIVE_SCOPE ||
+    "Files.ReadWrite User.Read openid profile",
+});
 
 export const getStorageConfig = () => {
   const enabledRaw =
@@ -183,161 +132,58 @@ export const getActiveStorageProviderConfig = () => {
   return storageConfig.google;
 };
 
-const loadScriptOnce = (src) =>
-  new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) {
-      resolve();
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = src;
-    script.async = true;
-    script.defer = true;
-    script.onload = resolve;
-    script.onerror = reject;
-    document.body.appendChild(script);
-  });
+// ─── OAuth stubs (kept for API compatibility – callers need not change) ─────
 
 /**
- * Initialize Google APIs and create a Drive token client.
- * @param {{clientId?: string, apiKey?: string, scope?: string}} params
- * @returns {Promise<{tokenClient: object, gapi: object}>}
+ * @deprecated No-op stub. Auth is now handled server-side by n8n.
  */
-export const initGoogleDriveTokenClient = async ({
-  clientId,
-  apiKey,
-  scope = DRIVE_SCOPE,
-} = {}) => {
-  const resolvedClientId = clientId || getGoogleDriveConfig().clientId;
-  const resolvedApiKey = apiKey || getGoogleDriveConfig().apiKey;
-
-  if (!resolvedClientId || !resolvedApiKey) {
-    throw new Error("Missing Google Drive credentials");
-  }
-
-  if (!googleDriveInitPromise) {
-    googleDriveInitPromise = (async () => {
-      await loadScriptOnce("https://apis.google.com/js/api.js");
-      await loadScriptOnce("https://accounts.google.com/gsi/client");
-      await new Promise((resolve) => window.gapi.load("client", resolve));
-      await window.gapi.client.init({
-        apiKey: resolvedApiKey,
-        discoveryDocs: [
-          "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
-        ],
-      });
-      return window.gapi;
-    })();
-  }
-
-  const gapi = await googleDriveInitPromise;
-  const tokenClient = window.google.accounts.oauth2.initTokenClient({
-    client_id: resolvedClientId,
-    scope,
-    callback: () => {},
-  });
-
-  window.__GDriveAuth = window.__GDriveAuth || {};
-  window.__GDriveAuth.gapi = gapi;
-  window.__GDriveAuth.tokenClient = tokenClient;
-
-  return { tokenClient, gapi };
-};
+export const createGoogleOAuthState = (_flowKey = "default") => "";
 
 /**
- * Initialize OneDrive auth and return token client with Google-compatible method shape.
- * @param {{clientId?: string, tenantId?: string, scope?: string}} params
- * @returns {Promise<{tokenClient: object}>}
+ * @deprecated No-op stub.
  */
-export const initOneDriveTokenClient = async ({
-  clientId,
-  tenantId,
-  scope,
-} = {}) => {
-  const cfg = getOneDriveConfig();
-  const resolvedClientId = clientId || cfg.clientId;
-  const resolvedTenantId = tenantId || cfg.tenantId;
-  const resolvedScope = scope || cfg.scope;
-
-  if (!resolvedClientId) {
-    throw new Error("Missing OneDrive client id");
-  }
-
-  if (!oneDriveInitPromise) {
-    oneDriveInitPromise = (async () => {
-      await loadScriptOnce(
-        "https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js",
-      );
-      if (!window.msal?.PublicClientApplication) {
-        throw new Error("MSAL not available after script load");
-      }
-
-      oneDriveClientApp = new window.msal.PublicClientApplication({
-        auth: {
-          clientId: resolvedClientId,
-          authority: `https://login.microsoftonline.com/${resolvedTenantId}`,
-          redirectUri: window.location.origin,
-        },
-        cache: {
-          cacheLocation: "sessionStorage",
-          storeAuthStateInCookie: false,
-        },
-      });
-
-      await oneDriveClientApp.initialize();
-    })();
-  }
-
-  await oneDriveInitPromise;
-
-  const scopes = String(resolvedScope)
-    .split(/[\s,]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const tokenClient = {
-    callback: () => {},
-    requestAccessToken: async ({ prompt = "", state = "" } = {}) => {
-      try {
-        const request = {
-          scopes,
-          prompt: prompt || undefined,
-        };
-        const response = await oneDriveClientApp.acquireTokenPopup(request);
-        tokenClient.callback({
-          access_token: response.accessToken,
-          state,
-        });
-      } catch (error) {
-        tokenClient.callback({
-          error: error?.message || "OneDrive authorization failed",
-          state,
-        });
-      }
-    },
-  };
-
-  window.__OneDriveAuth = window.__OneDriveAuth || {};
-  window.__OneDriveAuth.clientApp = oneDriveClientApp;
-  window.__OneDriveAuth.tokenClient = tokenClient;
-
-  return { tokenClient };
-};
-
-export const initStorageTokenClient = async ({
-  provider = getStorageProvider(),
-} = {}) => {
-  const resolvedProvider = normalizeProvider(provider);
-  if (resolvedProvider === STORAGE_PROVIDER_ONEDRIVE) {
-    return initOneDriveTokenClient();
-  }
-  return initGoogleDriveTokenClient();
-};
+export const clearGoogleOAuthState = (_flowKey = "default") => {};
 
 /**
- * Build a Google Drive file view URL.
- * @param {string} fileId - Google Drive file ID.
- * @returns {string}
+ * @deprecated No-op stub – always returns false.
+ */
+export const verifyGoogleOAuthState = (_receivedState, _flowKey = "default") =>
+  false;
+
+/**
+ * @deprecated No-op stub. Resolves immediately with null.
+ * Token is no longer needed; n8n handles auth server-side.
+ */
+export const requestGoogleAccessTokenWithState = (_params) =>
+  Promise.resolve(null);
+
+/**
+ * @deprecated No-op stub. Resolves with a dummy no-op token client.
+ */
+export const initGoogleDriveTokenClient = async (_params = {}) => ({
+  tokenClient: { callback: () => {}, requestAccessToken: () => {} },
+  gapi: null,
+});
+
+/**
+ * @deprecated No-op stub. Resolves with a dummy no-op token client.
+ */
+export const initOneDriveTokenClient = async (_params = {}) => ({
+  tokenClient: { callback: () => {}, requestAccessToken: () => {} },
+});
+
+/**
+ * @deprecated No-op stub. Resolves with a dummy no-op token client.
+ */
+export const initStorageTokenClient = async (_params = {}) => ({
+  tokenClient: { callback: () => {}, requestAccessToken: () => {} },
+});
+
+// ─── URL helpers ────────────────────────────────────────────────────────────
+
+/**
+ * Build a file view URL. For n8n-stored files the url/viewUrl from metadata
+ * is canonical; this helper is kept for backward compatibility.
  */
 export const buildDriveViewLink = (fileId, provider = null) =>
   normalizeProvider(provider || getStorageProvider()) ===
@@ -345,142 +191,203 @@ export const buildDriveViewLink = (fileId, provider = null) =>
     ? `https://onedrive.live.com/?id=${fileId}`
     : `https://drive.google.com/file/d/${fileId}/view`;
 
-/**
- * Build a direct Google Drive image/file view URL.
- * @param {string} fileId - Google Drive file ID.
- * @returns {string}
- */
 export const buildDriveDirectViewLink = (fileId, provider = null) =>
   normalizeProvider(provider || getStorageProvider()) ===
   STORAGE_PROVIDER_ONEDRIVE
     ? buildDriveViewLink(fileId, provider)
     : `https://drive.google.com/uc?export=view&id=${fileId}`;
 
+// ─── Core n8n file operations ───────────────────────────────────────────────
+
 /**
- * Delete a file from Google Drive.
- * @param {string} fileId - Google Drive file ID.
- * @param {string} accessToken - Google OAuth access token.
+ * Upload a file via n8n webhook.
+ * Signature intentionally keeps (file, accessToken, folderId) so existing
+ * callers need no changes – accessToken is ignored (auth is in the header).
+ * @param {File} file
+ * @param {string|null} _accessToken - ignored
+ * @param {string|null} folderId - forwarded to n8n as a form field
+ * @returns {Promise<string>} canonical file URL returned by n8n
+ */
+export const uploadFileToDrive = async (
+  file,
+  _accessToken,
+  folderId = null,
+) => {
+  const provider = getStorageProvider();
+  const resolvedSession = resolveSessionNumber(true);
+  const form = new FormData();
+  form.append("file", file);
+  form.append("action", "upload");
+  form.append("provider", provider);
+  appendSessionNumber(form, resolvedSession);
+  if (folderId) form.append("folderId", folderId);
+
+  const resp = await fetch(n8nActionUrl(), {
+    method: "POST",
+    headers: getN8nHeaders(),
+    body: form,
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(text || "Upload failed");
+  }
+
+  const result = await resp.json();
+  // Prefer viewUrl, then url, then construct from id
+  return (
+    result.viewUrl ||
+    result.url ||
+    (result.id
+      ? buildDriveViewLink(result.id, result.provider || provider)
+      : "")
+  );
+};
+
+/**
+ * Delete a file via n8n webhook.
+ * Signature keeps (fileId, accessToken, provider) – accessToken is ignored.
+ * @param {string} fileId
+ * @param {string|null} _accessToken - ignored
+ * @param {string|null} provider
  * @returns {Promise<Response|null>}
  */
 export const deleteFileFromDrive = async (
   fileId,
-  accessToken,
+  _accessToken,
   provider = null,
 ) => {
-  if (!fileId || !accessToken) return null;
-  if (
-    normalizeProvider(provider || getStorageProvider()) ===
-    STORAGE_PROVIDER_ONEDRIVE
-  ) {
-    return fetch(`https://graph.microsoft.com/v1.0/me/drive/items/${fileId}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-  }
-  return fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${accessToken}` },
+  if (!fileId) return null;
+  const resolvedProvider = normalizeProvider(provider || getStorageProvider());
+  const resolvedSession = resolveSessionNumber(true);
+  const form = new FormData();
+  form.append("action", "delete");
+  form.append("provider", resolvedProvider);
+  appendSessionNumber(form, resolvedSession);
+  form.append("fileId", fileId);
+
+  return fetch(n8nActionUrl(), {
+    method: "POST",
+    headers: getN8nHeaders(),
+    body: form,
   });
 };
 
 /**
- * Upload a file to Google Drive
- * @param {File} file - The file to upload
- * @param {string} accessToken - Google Drive API access token
- * @param {string} folderId - Optional Google Drive folder ID for parent folder
- * @returns {Promise<string>} - URL to the uploaded file on Google Drive
+ * List files in a folder via n8n webhook.
+ * @param {string|null} folderId
+ * @returns {Promise<Array>} array of FileMetadata objects
  */
-export const uploadFileToDrive = async (file, accessToken, folderId = null) => {
-  if (getStorageProvider() === STORAGE_PROVIDER_ONEDRIVE) {
-    const cfg = getOneDriveConfig();
-    const parentId = folderId || cfg.folderId;
-    const encodedName = encodeURIComponent(file.name);
-    const uploadUrl = parentId
-      ? `https://graph.microsoft.com/v1.0/me/drive/items/${parentId}:/${encodedName}:/content`
-      : `https://graph.microsoft.com/v1.0/me/drive/root:/${encodedName}:/content`;
+export const listFilesFromStorage = async (folderId = null) => {
+  const provider = getStorageProvider();
+  const resolvedSession = resolveSessionNumber(true);
+  const form = new FormData();
+  form.append("action", "list");
+  form.append("provider", provider);
+  appendSessionNumber(form, resolvedSession);
+  if (folderId) form.append("folderId", folderId);
 
-    const uploadResponse = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": file.type || "application/octet-stream",
-      },
-      body: file,
-    });
+  const resp = await fetch(n8nActionUrl(), {
+    method: "POST",
+    headers: getN8nHeaders(),
+    body: form,
+  });
 
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      throw new Error(errorText || "Upload failed");
-    }
-
-    const result = await uploadResponse.json();
-    return result.webUrl || `https://onedrive.live.com/?id=${result.id}`;
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(text || "List failed");
   }
-
-  const metadata = {
-    name: file.name,
-    mimeType: file.type || "application/octet-stream",
-  };
-  if (folderId) {
-    metadata.parents = [folderId];
-  }
-
-  const boundary = "-------314159265358979323846";
-  const delimiter = `\r\n--${boundary}\r\n`;
-  const closeDelimiter = `\r\n--${boundary}--`;
-
-  const multipartRequestBody = new Blob([
-    delimiter,
-    "Content-Type: application/json; charset=UTF-8\r\n\r\n",
-    JSON.stringify(metadata),
-    delimiter,
-    `Content-Type: ${file.type || "application/octet-stream"}\r\n\r\n`,
-    file,
-    closeDelimiter,
-  ]);
-
-  const uploadResponse = await fetch(
-    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,webViewLink,webContentLink",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": `multipart/related; boundary=${boundary}`,
-      },
-      body: multipartRequestBody,
-    },
-  );
-
-  if (!uploadResponse.ok) {
-    const errorText = await uploadResponse.text();
-    throw new Error(errorText || "Upload failed");
-  }
-
-  const result = await uploadResponse.json();
-
-  // Set file permissions to public (anyone with link)
-  try {
-    await fetch(
-      `https://www.googleapis.com/drive/v3/files/${result.id}/permissions`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ role: "reader", type: "anyone" }),
-      },
-    );
-  } catch (error) {
-    console.warn("Unable to set file permission:", error);
-  }
-
-  return (
-    result.webViewLink ||
-    result.webContentLink ||
-    `https://drive.google.com/file/d/${result.id}/view`
-  );
+  return resp.json();
 };
+
+/**
+ * Download a file via n8n webhook; returns the Response so callers can
+ * stream or blob() as needed.
+ * @param {string} fileId
+ * @returns {Promise<Response>}
+ */
+export const downloadFileFromStorage = async (fileId) => {
+  const provider = getStorageProvider();
+  const resolvedSession = resolveSessionNumber(true);
+  const form = new FormData();
+  form.append("action", "download");
+  form.append("provider", provider);
+  appendSessionNumber(form, resolvedSession);
+  form.append("fileId", fileId);
+
+  const resp = await fetch(n8nActionUrl(), {
+    method: "POST",
+    headers: getN8nHeaders(),
+    body: form,
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(text || "Download failed");
+  }
+  return resp;
+};
+
+/**
+ * Get a thumbnail URL via n8n webhook (returns a direct URL string).
+ * Falls back to Google Drive thumbnail API for google provider when no
+ * n8n base URL is configured yet.
+ * @param {string} fileId
+ * @param {number} w
+ * @param {number} h
+ * @returns {string}
+ */
+export const getThumbnailUrl = (fileId, w = 120, h = 120) => {
+  const base = getN8nBaseUrl();
+  const provider = getStorageProvider();
+  if (base) {
+    return n8nThumbnailUrl(provider, fileId, w, h);
+  }
+  // fallback (offline/dev without n8n)
+  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w${w}-h${h}`;
+};
+
+const parseResponsePayload = async (resp) => {
+  const text = await resp.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    return text;
+  }
+};
+
+const runSessionAction = async (action, provider = null) => {
+  const resolvedSession = resolveSessionNumber(true);
+
+  const resolvedProvider = normalizeProvider(provider || getStorageProvider());
+  const form = new FormData();
+  form.append("action", action);
+  form.append("provider", resolvedProvider);
+  appendSessionNumber(form, resolvedSession);
+
+  const resp = await fetch(n8nActionUrl(), {
+    method: "POST",
+    headers: getN8nHeaders(),
+    body: form,
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(text || `${action} failed`);
+  }
+
+  const payload = await parseResponsePayload(resp);
+  if (action === "commit" || action === "abort") {
+    clearCurrentFileSessionNumber();
+  }
+  return payload;
+};
+
+export const commit = async (provider = null) =>
+  runSessionAction("commit", provider);
+
+export const abort = async (provider = null) =>
+  runSessionAction("abort", provider);
 
 /**
  * Get file type icon based on MIME type or file extension
@@ -669,6 +576,7 @@ export const getDisplayImageInfo = (pic) => {
   if (typeof parsed === "object" && parsed !== null) {
     const urlCandidates = [
       parsed.url,
+      parsed.viewUrl,
       parsed.webContentLink,
       parsed.webViewLink,
       parsed.link,

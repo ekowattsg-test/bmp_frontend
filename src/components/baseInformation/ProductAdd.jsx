@@ -3,7 +3,7 @@ import { TextField, Button, Box, MenuItem } from "@mui/material";
 import { request } from "../../helpers/axios_helper";
 import { useTranslation } from "react-i18next";
 import FileGallery from "../common/FileGallery";
-import { getFileIdFromLink } from "../../helpers/file_helper";
+import { getFileIdFromLink, commit, abort } from "../../helpers/file_helper";
 
 const ProductAdd = ({ onCancel }) => {
   const { t } = useTranslation();
@@ -59,6 +59,7 @@ const ProductAdd = ({ onCancel }) => {
       };
 
       await request("POST", "/api/products", payload);
+      await commit();
       setSuccess(true);
       if (onCancel) onCancel(true);
     } catch (err) {
@@ -177,7 +178,10 @@ const ProductAdd = ({ onCancel }) => {
         </Button>
         <Button
           variant="outlined"
-          onClick={() => onCancel(false)}
+          onClick={() => {
+            abort();
+            onCancel(false);
+          }}
           disabled={loading}
         >
           {t("basic.cancel")}

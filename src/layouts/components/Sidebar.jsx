@@ -24,8 +24,10 @@ import {
   Group as GroupIcon,
   AdminPanelSettings as AdminPanelSettingsIcon,
   Dashboard as DashboardIcon,
+  History as HistoryIcon,
   PersonAdd as PersonAddIcon,
   AutoStories as AutoStoriesIcon,
+  UploadFile as UploadFileIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -99,6 +101,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               icon: <GroupIcon fontSize="small" />,
               path: "/userRole",
             },
+            {
+              key: "userLogins",
+              label: t("menu.userLoginList", "User Login Records"),
+              icon: <HistoryIcon fontSize="small" />,
+              path: "/userlogin",
+            },
           ],
         },
         {
@@ -112,6 +120,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               label: t("menu.staffSkillList", "Staff Skill List"),
               icon: <AutoStoriesIcon fontSize="small" />,
               path: "/staffskill",
+            },
+            {
+              key: "staffExcelUpload",
+              label: t("menu.staffExcelUpload", "Staff Excel Upload"),
+              icon: <UploadFileIcon fontSize="small" />,
+              path: "/staff-excel-upload",
             },
           ],
         },

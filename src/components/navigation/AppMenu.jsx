@@ -18,6 +18,8 @@ import {
   Dashboard,
   People,
   AutoStories,
+  UploadFile,
+  History,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 
@@ -74,6 +76,11 @@ const AppMenu = () => {
             label: t("menu.userRoleList", "UserRole List"),
             icon: <Business />,
           },
+          {
+            to: "/userlogin",
+            label: t("menu.userLoginList", "User Login Records"),
+            icon: <History />,
+          },
         ],
       },
       {
@@ -86,6 +93,11 @@ const AppMenu = () => {
             to: "/staffskill",
             label: t("menu.staffSkillList", "Staff Skill List"),
             icon: <AutoStories />,
+          },
+          {
+            to: "/staff-excel-upload",
+            label: t("menu.staffExcelUpload", "Staff Excel Upload"),
+            icon: <UploadFile />,
           },
         ],
       },

@@ -18,6 +18,8 @@ import {
   getDisplayImageInfo,
   FileChip,
   ImageCarousel,
+  commit,
+  abort,
 } from "../../helpers/file_helper";
 
 const StaffSkillProfile = ({ onBack }) => {
@@ -470,6 +472,7 @@ const StaffSkillProfile = ({ onBack }) => {
       };
 
       await request("POST", "/api/staffskillprofiles", payload);
+      await commit();
 
       // Reload both staff skills and staff list to update badges
       await Promise.all([
@@ -654,6 +657,7 @@ const StaffSkillProfile = ({ onBack }) => {
         `/api/staffskillprofiles/${editingSkill.staffSkillProfileId}`,
         payload,
       );
+      await commit();
 
       // Reload both staff skills and staff list to update badges
       await Promise.all([
@@ -721,6 +725,7 @@ const StaffSkillProfile = ({ onBack }) => {
   };
 
   const closeAllModals = () => {
+    abort();
     setShowSkillModal(false);
     setShowSkillForm(false);
     setShowNewSkillForm(false);
