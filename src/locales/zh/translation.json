@@ -265,6 +265,7 @@
     "password": "密码",
     "active": "激活",
     "level": "级别",
+    "mobileNumber": "手机号码",
     "lastPasswordChanged": "密码最后更改",
     "companyId": "公司ID",
     "searchPlaceholder": "搜索...",

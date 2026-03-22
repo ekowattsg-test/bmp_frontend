@@ -181,6 +181,7 @@ const UserModern = () => {
       user.firstName?.toLowerCase().includes(searchLower) ||
       user.lastName?.toLowerCase().includes(searchLower) ||
       user.login?.toLowerCase().includes(searchLower) ||
+      user.mobileNumber?.toLowerCase().includes(searchLower) ||
       getCompanyName(user.companyId).toLowerCase().includes(searchLower)
     );
   });
@@ -211,6 +212,12 @@ const UserModern = () => {
       headerName: t("userList.login", "Login"),
       flex: 1,
       minWidth: 150,
+    },
+    {
+      field: "mobileNumber",
+      headerName: t("userList.mobileNumber", "Mobile Number"),
+      flex: 1,
+      minWidth: 140,
     },
     {
       field: "companyId",

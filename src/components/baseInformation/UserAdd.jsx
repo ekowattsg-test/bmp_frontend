@@ -19,6 +19,7 @@ const UserAdd = ({ onCancel }) => {
     lastName: "",
     login: "",
     password: "",
+    mobileNumber: "",
     level: 0,
     companyId: userInfo.companyId || "",
     active: true,
@@ -114,6 +115,7 @@ const UserAdd = ({ onCancel }) => {
         lastName: form.lastName,
         login: form.login,
         password: form.password,
+        mobileNumber: form.mobileNumber || null,
         companyId: form.companyId,
         level: form.level,
         active: isActiveValue(form.active) ? 1 : 0,
@@ -197,6 +199,14 @@ const UserAdd = ({ onCancel }) => {
         type="password"
         error={!!errors.password}
         helperText={errors.password}
+      />
+      <TextField
+        label={t("userList.mobileNumber", "Mobile Number")}
+        name="mobileNumber"
+        value={form.mobileNumber}
+        onChange={handleChange}
+        fullWidth
+        margin="normal"
       />
       <TextField
         select

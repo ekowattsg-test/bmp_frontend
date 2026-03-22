@@ -218,6 +218,14 @@ const UserEdit = ({ user, onCancel }) => {
       />
       {/* Password field removed for edit, not changeable here */}
       <TextField
+        label={t("userList.mobileNumber", "Mobile Number")}
+        name="mobileNumber"
+        value={form.mobileNumber || ""}
+        onChange={handleChange}
+        fullWidth
+        margin="normal"
+      />
+      <TextField
         select
         label={t("userList.level")}
         name="level"

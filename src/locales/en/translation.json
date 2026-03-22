@@ -264,6 +264,7 @@
     "password": "Password",
     "active": "Active",
     "level": "Level",
+    "mobileNumber": "Mobile Number",
     "lastPasswordChanged": "PW Last Changed",
     "companyId": "Company ID",
     "searchPlaceholder": "Search...",
