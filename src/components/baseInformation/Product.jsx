@@ -3,7 +3,11 @@ import { Box } from "@mui/material";
 import { Inventory2 as InventoryIcon } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
-import { getDisplayImageInfo, ImageCarousel } from "../../helpers/file_helper";
+import {
+  getDisplayImageInfo,
+  ImageCarousel,
+  ThumbnailImg,
+} from "../../helpers/file_helper";
 import { ListContainer, PageHeader } from "../common";
 import HelpDialog from "../common/HelpDialog";
 import ProductAdd from "./ProductAdd";
@@ -87,11 +91,13 @@ const Product = () => {
     const arr = Array.isArray(parsed) ? parsed : [parsed];
     const imgs = arr
       .map((p) => getDisplayImageInfo(p))
-      .filter((info) => info && info.imageUrl)
+      .filter((info) => info && (info.imageUrl || info.meta?.id))
       .map((info) => ({
-        displayUrl: info.imageUrl,
+        displayUrl: info.imageUrl || null,
         viewUrl: info.meta?.viewUrl || null,
         title: info.meta?.name || "",
+        provider: info.meta?.provider || null,
+        meta: info.meta || null,
       }));
     return imgs;
   };
@@ -140,14 +146,31 @@ const Product = () => {
           let thumb = null;
           if (p.productPicture) {
             const imgs = buildImages(p.productPicture);
-            let src = imgs[0]?.displayUrl || null;
+            const firstImage = imgs[0] || null;
+            let src = firstImage?.displayUrl || null;
             if (!src && typeof p.productPicture === "string") {
               const str = p.productPicture.trim();
               if (str.startsWith("data:")) src = str;
               else if (/^[A-Za-z0-9+\/=\r\n]+$/.test(str) && str.length > 100)
                 src = `data:image/png;base64,${str}`;
             }
-            if (src) {
+            if (firstImage?.meta?.id) {
+              thumb = (
+                <ThumbnailImg
+                  fileId={firstImage.meta.id}
+                  viewUrl={firstImage.meta.viewUrl || ""}
+                  provider={firstImage.meta.provider || null}
+                  width={40}
+                  height={40}
+                  alt={p.productDescription || p.productCode}
+                  style={{ borderRadius: 4, cursor: "pointer" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleImageClick(p.productPicture, 0);
+                  }}
+                />
+              );
+            } else if (src) {
               thumb = (
                 <img
                   src={src}

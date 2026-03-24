@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Box, Button, Typography, Paper } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
-import { getDisplayImageInfo } from "../../helpers/file_helper";
+import { getDisplayImageInfo, ThumbnailImg } from "../../helpers/file_helper";
 
 const ProductDelete = ({ product, onCancel, onDeleted }) => {
   const { t } = useTranslation();
@@ -52,6 +52,7 @@ const ProductDelete = ({ product, onCancel, onDeleted }) => {
             {product.productPicture &&
               (() => {
                 const info = getDisplayImageInfo(product.productPicture);
+                const meta = info?.meta || null;
                 let src = info.imageUrl || null;
                 if (!src && typeof product.productPicture === "string") {
                   const str = product.productPicture.trim();
@@ -62,20 +63,32 @@ const ProductDelete = ({ product, onCancel, onDeleted }) => {
                   )
                     src = `data:image/png;base64,${str}`;
                 }
-                if (!src) return null;
+                if (!src && !meta?.id) return null;
                 return (
                   <Box sx={{ mb: 1 }}>
-                    <img
-                      src={src}
-                      alt={product.productDescription || product.productCode}
-                      style={{
-                        width: 80,
-                        height: 80,
-                        objectFit: "cover",
-                        borderRadius: 6,
-                      }}
-                      referrerPolicy="no-referrer"
-                    />
+                    {meta?.id ? (
+                      <ThumbnailImg
+                        fileId={meta.id}
+                        viewUrl={meta.viewUrl || ""}
+                        provider={meta.provider || null}
+                        width={80}
+                        height={80}
+                        alt={product.productDescription || product.productCode}
+                        style={{ borderRadius: 6 }}
+                      />
+                    ) : (
+                      <img
+                        src={src}
+                        alt={product.productDescription || product.productCode}
+                        style={{
+                          width: 80,
+                          height: 80,
+                          objectFit: "cover",
+                          borderRadius: 6,
+                        }}
+                        referrerPolicy="no-referrer"
+                      />
+                    )}
                   </Box>
                 );
               })()}

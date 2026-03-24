@@ -5,12 +5,14 @@ import CloseIcon from "@mui/icons-material/Close";
 import {
   deleteFileFromDrive,
   FileChip,
+  ThumbnailImg,
   getActiveStorageProviderConfig,
   getStorageConfig,
   ImageCarousel,
   getDisplayImageInfo,
   getFileIdFromLink,
   getFileIcon,
+  normalizeFileMetadata,
   uploadFileToDrive,
 } from "../../helpers/file_helper";
 
@@ -36,6 +38,25 @@ const FileGallery = ({
   const [carouselOpen, setCarouselOpen] = useState(false);
   const [carouselImages, setCarouselImages] = useState([]);
   const [carouselStart, setCarouselStart] = useState(0);
+  const storageProvider = getStorageConfig().provider;
+
+  const normalizeForStorage = (fileLike, fallback = {}) =>
+    normalizeFileMetadata(fileLike, {
+      provider: storageProvider,
+      uploadedAt: new Date().toISOString(),
+      ...fallback,
+    });
+
+  const emitChange = (nextFiles) => {
+    const normalized = (nextFiles || []).map((f) => normalizeForStorage(f));
+    try {
+      setTimeout(() => {
+        try {
+          onChange(normalized.length > 0 ? JSON.stringify(normalized) : null);
+        } catch (e) {}
+      }, 0);
+    } catch (e) {}
+  };
 
   useEffect(() => {
     try {
@@ -51,7 +72,7 @@ const FileGallery = ({
       const arr = Array.isArray(parsed) ? parsed : parsed ? [parsed] : [];
       const norm = arr
         .filter(Boolean)
-        .map((p) => (typeof p === "string" ? { url: p } : p));
+        .map((p) => normalizeForStorage(p));
       setFiles(norm);
       // parsed incoming prop -> normalized files
     } catch (err) {
@@ -71,41 +92,19 @@ const FileGallery = ({
   const handleFileSelected = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const storageProvider = getStorageConfig().provider;
     setIsUploading(true);
     setUploadError("");
     try {
       const activeCfg = getActiveStorageProviderConfig();
       const folderId = activeCfg.folderId;
-      const fileLink = await uploadFileToDrive(file, null, folderId);
-      const fileId = getFileIdFromLink(fileLink);
-      const newFile = {
-        id: fileId || null,
-        url: fileLink,
+      const uploaded = await uploadFileToDrive(file, null, folderId);
+      const newFile = normalizeForStorage(uploaded, {
         name: file.name,
         mimeType: file.type || "",
-        provider: storageProvider,
-        uploadedAt: new Date().toISOString(),
-      };
+      });
       setFiles((prev) => {
         const next = [...(prev || []), newFile];
-        // emit normalized metadata (no URLs) after render to avoid setState-in-render
-        const normalized = next.map((f) => ({
-          id: f.id || getFileIdFromLink(f.url) || null,
-          name: f.name || "",
-          mimeType: f.mimeType || f.type || "",
-          provider: f.provider || storageProvider,
-          uploadedAt: f.uploadedAt || new Date().toISOString(),
-        }));
-        try {
-          setTimeout(() => {
-            try {
-              onChange(
-                normalized.length > 0 ? JSON.stringify(normalized) : null,
-              );
-            } catch (e) {}
-          }, 0);
-        } catch (e) {}
+        emitChange(next);
         return next;
       });
     } catch (err) {
@@ -115,31 +114,22 @@ const FileGallery = ({
         const reader = new FileReader();
         reader.onload = () => {
           const dataUrl = reader.result;
-          const newFile = {
-            id: null,
-            url: dataUrl,
-            name: file.name,
-            mimeType: file.type || "",
-            uploadedAt: new Date().toISOString(),
-          };
+          const newFile = normalizeForStorage(
+            {
+              id: null,
+              url: dataUrl,
+              viewUrl: dataUrl,
+              name: file.name,
+              mimeType: file.type || "",
+            },
+            {
+              name: file.name,
+              mimeType: file.type || "",
+            },
+          );
           setFiles((prev) => {
             const next = [...(prev || []), newFile];
-            const normalized = next.map((f) => ({
-              id: f.id || null,
-              name: f.name || "",
-              mimeType: f.mimeType || f.type || "",
-              provider: f.provider || storageProvider,
-              uploadedAt: f.uploadedAt || new Date().toISOString(),
-            }));
-            try {
-              setTimeout(() => {
-                try {
-                  onChange(
-                    normalized.length > 0 ? JSON.stringify(normalized) : null,
-                  );
-                } catch (e) {}
-              }, 0);
-            } catch (e) {}
+            emitChange(next);
             return next;
           });
         };
@@ -164,19 +154,7 @@ const FileGallery = ({
         return true;
       });
       removed = prev[idx];
-      const normalized = (next || []).map((f) => ({
-        id: f.id || getFileIdFromLink(f.url) || null,
-        name: f.name || "",
-        mimeType: f.mimeType || f.type || "",
-        uploadedAt: f.uploadedAt || new Date().toISOString(),
-      }));
-      try {
-        setTimeout(() => {
-          try {
-            onChange(normalized.length > 0 ? JSON.stringify(normalized) : null);
-          } catch (e) {}
-        }, 0);
-      } catch (e) {}
+      emitChange(next);
       return next;
     });
 
@@ -202,11 +180,13 @@ const FileGallery = ({
     if (!filesArr || filesArr.length === 0) return [];
     return filesArr
       .map((f) => getDisplayImageInfo(f.url || f))
-      .filter((info) => info && info.imageUrl)
+      .filter((info) => info && (info.imageUrl || info.meta?.id))
       .map((info) => ({
-        displayUrl: info.imageUrl,
+        displayUrl: info.imageUrl || null,
         viewUrl: info.meta?.viewUrl || null,
         title: info.meta?.name || "",
+        provider: info.meta?.provider || null,
+        meta: info.meta || null,
       }));
   };
 
@@ -246,7 +226,8 @@ const FileGallery = ({
               onChange={handleFileSelected}
             />
             <Button
-              variant="outlined"
+              variant="contained"
+              color="primary"
               size="small"
               onClick={handleOpenFileChooser}
               startIcon={<span>＋</span>}
@@ -280,11 +261,22 @@ const FileGallery = ({
               );
             } catch (e) {
               const info = getDisplayImageInfo(f.url || f);
-              const imageUrl = info?.imageUrl || f.url || null;
+              const imageUrl = info?.imageUrl || null;
               const meta = info?.meta || {};
               return (
                 <Box key={f.id || f.url || idx} sx={{ position: "relative" }}>
-                  {imageUrl ? (
+                  {meta?.id ? (
+                    <ThumbnailImg
+                      fileId={meta.id}
+                      viewUrl={meta.viewUrl || ""}
+                      provider={meta.provider || null}
+                      width={56}
+                      height={56}
+                      alt={meta.name || f.name || `img-${idx}`}
+                      style={{ borderRadius: 6, cursor: "pointer" }}
+                      onClick={() => openCarousel(idx)}
+                    />
+                  ) : imageUrl ? (
                     <img
                       src={imageUrl}
                       alt={meta.name || f.name || `img-${idx}`}

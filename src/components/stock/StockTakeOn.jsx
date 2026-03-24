@@ -12,13 +12,11 @@ import QrCodeScannerIcon from "@mui/icons-material/QrCodeScanner";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import {
-  buildDriveDirectViewLink,
-  buildDriveViewLink,
   getFileIcon,
   getFileIdFromLink,
   getDisplayImageInfo,
   ImageCarousel,
-  getPreviewLink,
+  ThumbnailImg,
 } from "../../helpers/file_helper";
 import ProductDialog from "./ProductDialog";
 import { PageHeader } from "../common";
@@ -53,6 +51,21 @@ const StockTakeOn = () => {
       stock.productNameEn ||
       stock.productCode ||
       ""
+    );
+  };
+
+  const hasProductPictureData = (item) => {
+    if (!item) return false;
+    return Boolean(
+      item.productPicture ||
+      item.imageUrl ||
+      item.productImage ||
+      item.productPictureUrl ||
+      (item.product &&
+        (item.product.productPicture ||
+          item.product.imageUrl ||
+          item.product.productImage ||
+          item.product.productPictureUrl)),
     );
   };
 
@@ -244,24 +257,18 @@ const StockTakeOn = () => {
           getFileIdFromLink(candidate || "") ||
           (info && info.meta && info.meta.id);
         const displayUrl =
-          (info && info.meta && info.meta.viewUrl) ||
-          (fileId ? buildDriveViewLink(fileId) : candidate);
-        const isImage =
-          (info &&
-            info.meta &&
-            info.meta.mimeType &&
-            info.meta.mimeType.startsWith("image/")) ||
-          (p && p.name && /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(p.name || ""));
-        const thumbnailUrl = fileId
-          ? getPreviewLink(displayUrl, 120, 120)
-          : null;
-        const fullImageUrl =
-          isImage && fileId ? buildDriveDirectViewLink(fileId) : null;
+          (info && info.meta && info.meta.viewUrl) || candidate || "";
         const title =
           (info && info.meta && info.meta.name) || (p && p.name) || "";
-        return { displayUrl, fileId, thumbnailUrl, fullImageUrl, title };
+        return {
+          displayUrl,
+          fileId,
+          title,
+          provider: info?.meta?.provider || null,
+          meta: info?.meta || null,
+        };
       })
-      .filter((x) => x && (x.fullImageUrl || x.thumbnailUrl || x.displayUrl));
+      .filter((x) => x && (x.meta?.id || x.displayUrl));
     return imgs;
   };
 
@@ -417,9 +424,40 @@ const StockTakeOn = () => {
   const handleCreateStockAndMove = async (selected) => {
     // Dialog now only returns a product object; store it and let parent handle stock/movement on Record
     if (selected && selected.product) {
-      setSelectedProduct(selected.product);
+      const product = selected.product;
+      setSelectedProduct(product);
       // ProductDialog now returns Drive-based productPicture (JSON string or url). We don't have File objects here.
       setSelectedProductImage(null);
+
+      // Selection dialogs may return summary records without productPicture.
+      // Fetch full product details to ensure thumbnail metadata is available.
+      if (!hasProductPictureData(product) && product.productId) {
+        try {
+          const productRes = await request(
+            "GET",
+            `/api/products/${product.productId}`,
+          );
+          const fullProduct = productRes?.data;
+          if (fullProduct) {
+            setSelectedProduct((prev) => ({
+              ...prev,
+              ...fullProduct,
+              productPicture:
+                fullProduct.productPicture ||
+                fullProduct.productPictureUrl ||
+                fullProduct.imageUrl ||
+                fullProduct.productImage ||
+                prev?.productPicture ||
+                null,
+            }));
+          }
+        } catch (err) {
+          console.debug(
+            "StockTakeOn: failed to load full product details",
+            err,
+          );
+        }
+      }
     } else if (
       selected &&
       selected.product === undefined &&
@@ -663,6 +701,48 @@ const StockTakeOn = () => {
               {(() => {
                 const img = extractFirstImageUrl(foundStock);
                 const meta = extractFirstFileMeta(foundStock);
+                if (meta?.id) {
+                  const imgs = buildImagesFromItem(foundStock);
+                  return (
+                    <ButtonBase
+                      onClick={() => {
+                        console.log("StockTakeOn: thumbnail clicked", imgs);
+                        if (imgs.length === 0) return;
+                        setCarouselImages(imgs);
+                        setCarouselStartIndex(0);
+                        setCarouselOpen(true);
+                      }}
+                      sx={{ display: "inline-block", borderRadius: 1 }}
+                    >
+                      <Box sx={{ width: 64, height: 64, position: "relative" }}>
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            inset: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: 1,
+                            bgcolor: "background.paper",
+                          }}
+                        >
+                          {getFileIcon(meta.mimeType, meta.name)}
+                        </Box>
+                        <Box sx={{ position: "absolute", inset: 0 }}>
+                          <ThumbnailImg
+                            fileId={meta.id}
+                            viewUrl={meta.viewUrl || ""}
+                            provider={meta.provider || null}
+                            width={64}
+                            height={64}
+                            alt={meta.name || "product image"}
+                            style={{ borderRadius: 4 }}
+                          />
+                        </Box>
+                      </Box>
+                    </ButtonBase>
+                  );
+                }
                 if (img) {
                   const imgs = buildImagesFromItem(foundStock);
                   return (
@@ -776,12 +856,7 @@ const StockTakeOn = () => {
             <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
               {(() => {
                 const img = extractFirstImageUrl(selectedProduct);
-                console.log(
-                  "StockTakeOn DEBUG selectedProduct img:",
-                  img,
-                  "selectedProduct:",
-                  selectedProduct,
-                );
+                const meta = extractFirstFileMeta(selectedProduct);
                 if (!img && selectedProductImage) {
                   const url = URL.createObjectURL(selectedProductImage);
                   return (
@@ -807,6 +882,51 @@ const StockTakeOn = () => {
                           borderRadius: 1,
                         }}
                       />
+                    </ButtonBase>
+                  );
+                }
+                if (meta?.id) {
+                  const imgs = buildImagesFromItem(selectedProduct);
+                  return (
+                    <ButtonBase
+                      onClick={() => {
+                        console.log(
+                          "StockTakeOn: selectedProduct thumbnail clicked",
+                          imgs,
+                        );
+                        if (imgs.length === 0) return;
+                        setCarouselImages(imgs);
+                        setCarouselStartIndex(0);
+                        setCarouselOpen(true);
+                      }}
+                      sx={{ display: "inline-block", borderRadius: 1 }}
+                    >
+                      <Box sx={{ width: 64, height: 64, position: "relative" }}>
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            inset: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: 1,
+                            bgcolor: "background.paper",
+                          }}
+                        >
+                          {getFileIcon(meta.mimeType, meta.name)}
+                        </Box>
+                        <Box sx={{ position: "absolute", inset: 0 }}>
+                          <ThumbnailImg
+                            fileId={meta.id}
+                            viewUrl={meta.viewUrl || ""}
+                            provider={meta.provider || null}
+                            width={64}
+                            height={64}
+                            alt={meta.name || "product image"}
+                            style={{ borderRadius: 4 }}
+                          />
+                        </Box>
+                      </Box>
                     </ButtonBase>
                   );
                 }
@@ -839,7 +959,6 @@ const StockTakeOn = () => {
                     </ButtonBase>
                   );
                 }
-                const meta = extractFirstFileMeta(selectedProduct);
                 if (meta) {
                   const imgs = buildImagesFromItem(selectedProduct);
                   return (

@@ -9,7 +9,7 @@ import {
   ListItemText,
   Chip,
 } from "@mui/material";
-import { getDisplayImageInfo } from "../../helpers/file_helper";
+import { getDisplayImageInfo, ThumbnailImg } from "../../helpers/file_helper";
 import Modal from "./Modal";
 
 /**
@@ -218,8 +218,10 @@ const SelectionDialog = ({
               it.picture ||
               null;
             let imgUrl = null;
+            let imgMeta = null;
             try {
               const info = getDisplayImageInfo(rawPic);
+              if (info?.meta?.id) imgMeta = info.meta;
               if (info && info.imageUrl) imgUrl = info.imageUrl;
               else if (typeof rawPic === "string" && rawPic.startsWith("http")) imgUrl = rawPic;
             } catch (err) {
@@ -240,7 +242,17 @@ const SelectionDialog = ({
                 onClick={() => onSelect(it)}
                 sx={{ alignItems: "flex-start" }}
               >
-                {imgUrl ? (
+                {imgMeta?.id ? (
+                  <ThumbnailImg
+                    fileId={imgMeta.id}
+                    viewUrl={imgMeta.viewUrl || ""}
+                    provider={imgMeta.provider || null}
+                    width={48}
+                    height={48}
+                    alt={r.primary}
+                    style={{ borderRadius: 4, marginRight: 8 }}
+                  />
+                ) : imgUrl ? (
                   <Box
                     component="img"
                     src={imgUrl}

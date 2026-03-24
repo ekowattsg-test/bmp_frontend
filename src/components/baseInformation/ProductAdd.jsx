@@ -3,7 +3,7 @@ import { TextField, Button, Box, MenuItem } from "@mui/material";
 import { request } from "../../helpers/axios_helper";
 import { useTranslation } from "react-i18next";
 import FileGallery from "../common/FileGallery";
-import { getFileIdFromLink, commit, abort } from "../../helpers/file_helper";
+import { normalizeFileMetadata, commit, abort } from "../../helpers/file_helper";
 
 const ProductAdd = ({ onCancel }) => {
   const { t } = useTranslation();
@@ -41,12 +41,9 @@ const ProductAdd = ({ onCancel }) => {
     setErrorMsg("");
     setSuccess(false);
     try {
-      const normalized = (productFiles || []).map((f) => ({
-        id: f.id || getFileIdFromLink(f.url) || null,
-        name: f.name || "",
-        mimeType: f.mimeType || f.type || "",
-        uploadedAt: f.uploadedAt || new Date().toISOString(),
-      }));
+      const normalized = (productFiles || []).map((f) =>
+        normalizeFileMetadata(f),
+      );
 
       const payload = {
         productName: form.productName,
@@ -143,9 +140,7 @@ const ProductAdd = ({ onCancel }) => {
               try {
                 const parsed = json ? JSON.parse(json) : [];
                 const arr = Array.isArray(parsed) ? parsed : [parsed];
-                const norm = arr.map((p) =>
-                  typeof p === "string" ? { url: p } : p,
-                );
+                const norm = arr.map((p) => normalizeFileMetadata(p));
                 if (JSON.stringify(norm) !== JSON.stringify(productFiles)) {
                   setProductFiles(norm);
                 }

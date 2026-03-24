@@ -1,26 +1,15 @@
-import React, { useState, useEffect, useContext, useRef } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { AuthContext } from "../../context/authContext";
 import { request } from "../../helpers/axios_helper";
 import {
-  buildDriveDirectViewLink,
-  buildDriveViewLink,
-  getActiveStorageProviderConfig,
   getStorageConfig,
-  initStorageTokenClient,
-  uploadFileToDrive,
-  getFileIcon,
-  showDocument,
-  downloadDocument,
   getFileIdFromLink,
-  getPreviewLink,
-  requestGoogleAccessTokenWithState,
-  getDisplayImageInfo,
-  FileChip,
-  ImageCarousel,
+  normalizeFileMetadata,
   commit,
   abort,
 } from "../../helpers/file_helper";
+import FileGallery from "../common/FileGallery";
 
 const StaffSkillProfile = ({ onBack }) => {
   const { t } = useTranslation();
@@ -40,15 +29,6 @@ const StaffSkillProfile = ({ onBack }) => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [skillSearchTerm, setSkillSearchTerm] = useState("");
   const [skillCategoryFilter, setSkillCategoryFilter] = useState(null);
-  const [driveReady, setDriveReady] = useState(false);
-  const [driveToken, setDriveToken] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState("");
-  const fileInputRef = useRef(null);
-  const certificationInputRef = useRef(null);
-  const tokenClientRef = useRef(null);
-  const openFilePicker = useRef(false);
-  const authorizingRef = useRef(false);
   const [skillFormData, setSkillFormData] = useState({
     issuedBy: "",
     acquiredDate: "",
@@ -66,81 +46,10 @@ const StaffSkillProfile = ({ onBack }) => {
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [skillToDelete, setSkillToDelete] = useState(null);
 
-  // Image carousel state (for previewing certification images)
-  const [carouselOpen, setCarouselOpen] = useState(false);
-  const [carouselImages, setCarouselImages] = useState([]);
-  const [carouselStartIndex, setCarouselStartIndex] = useState(0);
-
-  const openCarouselAt = (index, links = skillFormData.certificationLinks) => {
-    console.log("openCarouselAt called", index, links);
-    const images = (links || []).map((cert) => {
-      const displayUrl =
-        cert.url || (cert.id ? buildDriveViewLink(cert.id, cert.provider) : "");
-      const fileId = cert.id || getFileIdFromLink(displayUrl);
-      const thumbnailUrl = fileId
-        ? getPreviewLink(buildDriveViewLink(fileId, cert.provider), 120, 120)
-        : null;
-      const isImage =
-        (cert.mimeType && cert.mimeType.startsWith("image/")) ||
-        (cert.name && /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(cert.name));
-      const fullImageUrl =
-        isImage && fileId
-          ? buildDriveDirectViewLink(fileId, cert.provider)
-          : null;
-      return {
-        displayUrl,
-        viewUrl: fullImageUrl || displayUrl,
-        title: cert.name,
-        fullImageUrl,
-        thumbnailUrl,
-        url: displayUrl,
-      };
-    });
-    setCarouselImages(images);
-    setCarouselStartIndex(index || 0);
-    setCarouselOpen(true);
-  };
-
-  useEffect(() => {
-    console.log("carousel state changed", {
-      carouselOpen,
-      carouselStartIndex,
-      len: carouselImages?.length,
-    });
-  }, [carouselOpen, carouselStartIndex, carouselImages]);
-
   // Get user level and company info
   const userLevel = userInfo?.userLevel || userInfo?.level || 0;
   const isUserLevelNine = userLevel === 9 || userLevel === "9";
   const userCompanyId = userInfo?.companyId;
-
-  const googleDriveFolderId = getActiveStorageProviderConfig().folderId;
-
-  useEffect(() => {
-    const initGoogleDrive = async () => {
-      try {
-        const storageConfig = getStorageConfig();
-        const activeCfg = getActiveStorageProviderConfig();
-        const missingProviderConfig =
-          storageConfig.provider === "google"
-            ? !activeCfg.clientId || !activeCfg.apiKey
-            : !activeCfg.clientId;
-        if (missingProviderConfig) {
-          console.error("Missing Google Drive credentials");
-          return;
-        }
-        const { tokenClient } = await initStorageTokenClient({
-          provider: storageConfig.provider,
-        });
-        tokenClientRef.current = tokenClient;
-        setDriveReady(true);
-      } catch (error) {
-        console.error("Error initializing Google Drive:", error);
-      }
-    };
-
-    initGoogleDrive();
-  }, []);
 
   useEffect(() => {
     loadStaffList();
@@ -314,92 +223,21 @@ const StaffSkillProfile = ({ onBack }) => {
     }
   };
 
-  const requestDriveToken = (autoOpenPicker = false) =>
-    new Promise((resolve, reject) => {
-      authorizingRef.current = true;
-      requestGoogleAccessTokenWithState({
-        tokenClient: tokenClientRef.current,
-        currentToken: driveToken,
-        flowKey: "staff-skill-profile-drive-upload",
-      })
-        .then((accessToken) => {
-          authorizingRef.current = false;
-          if (autoOpenPicker && fileInputRef.current) {
-            fileInputRef.current.value = "";
-            fileInputRef.current.click();
-          }
-          setDriveToken(accessToken);
-          resolve(accessToken);
-        })
-        .catch((error) => {
-          authorizingRef.current = false;
-          reject(error);
-        });
-    });
-  const handleUploadButtonClick = async () => {
+  const handleCertificationLinksChange = (json) => {
     try {
-      if (!driveToken) {
-        console.log("Requesting Drive authorization...");
-        // Pass false - we'll open file picker on second click after auth
-        await requestDriveToken(false);
-        console.log(
-          "Authorization successful, user should click Upload File again",
-        );
-        return;
-      }
-
-      // Token exists, open file picker with user activation from button click
-      console.log("Token exists, opening file picker...");
-      setUploadError("");
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-        fileInputRef.current.click();
-      }
-    } catch (error) {
-      console.error("Authorization error:", error);
-      setUploadError(error.message || t("staffManagement.uploadFailed"));
-    }
-  };
-
-  const handleFileSelect = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const storageProvider = getStorageConfig().provider;
-
-    try {
-      setIsUploading(true);
-
-      // Token should already exist from handleUploadButtonClick
-      if (!driveToken) {
-        throw new Error("No authorization token available");
-      }
-
-      const fileLink = await uploadFileToDrive(
-        file,
-        driveToken,
-        googleDriveFolderId,
+      const parsed = json ? JSON.parse(json) : [];
+      const arr = Array.isArray(parsed) ? parsed : [parsed];
+      const certificationLinks = arr.filter(Boolean).map((item) =>
+        normalizeFileMetadata(item, {
+          provider: getStorageConfig().provider,
+        }),
       );
-      const fileId = getFileIdFromLink(fileLink);
-      const newCertification = {
-        id: fileId || null,
-        name: file.name,
-        mimeType: file.type || "",
-        provider: storageProvider,
-        url: fileLink,
-        uploadedAt: new Date().toISOString(),
-      };
       setSkillFormData((prev) => ({
         ...prev,
-        certificationLinks: [...prev.certificationLinks, newCertification],
+        certificationLinks,
       }));
-      // Clear file input for next upload
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
     } catch (error) {
-      setUploadError(error.message || t("staffManagement.uploadFailed"));
-    } finally {
-      setIsUploading(false);
+      console.error("Error parsing certification links:", error);
     }
   };
 
@@ -412,8 +250,6 @@ const StaffSkillProfile = ({ onBack }) => {
     setSelectedSkill(skill);
     setShowSkillModal(false);
     setShowSkillForm(true);
-    setUploadError("");
-    setIsUploading(false);
     setSkillFormData({
       issuedBy: "",
       acquiredDate: "",
@@ -436,19 +272,16 @@ const StaffSkillProfile = ({ onBack }) => {
     try {
       const normalizedCertLinks = skillFormData.certificationLinks
         .map((cert) => {
-          const id = cert.id || getFileIdFromLink(cert.url);
+          const normalizedCert = normalizeFileMetadata(cert, {
+            provider: getStorageConfig().provider,
+          });
+          const id = normalizedCert.id;
           // Only include documents with valid IDs
           if (!id) {
             console.warn("Skipping document without valid ID:", cert);
             return null;
           }
-          return {
-            id: id,
-            name: cert.name || "",
-            mimeType: cert.mimeType || "",
-            provider: cert.provider || getStorageConfig().provider,
-            uploadedAt: cert.uploadedAt || new Date().toISOString(),
-          };
+          return normalizedCert;
         })
         .filter((cert) => cert !== null); // Remove null entries
 
@@ -562,22 +395,12 @@ const StaffSkillProfile = ({ onBack }) => {
         }
         if (Array.isArray(certificationLinks)) {
           certificationLinks = certificationLinks.map((cert) => {
-            if (typeof cert === "string") {
-              return {
-                id: getFileIdFromLink(cert),
-                name: "Legacy Certificate",
-                url: cert,
-                uploadedAt: new Date().toISOString(),
-              };
-            }
-            return {
-              id: cert.id || getFileIdFromLink(cert.url),
-              name: cert.name || "",
-              url:
-                cert.url ||
-                (cert.id ? buildDriveViewLink(cert.id, cert.provider) : ""),
-              uploadedAt: cert.uploadedAt || new Date().toISOString(),
-            };
+            const normalizedCert = normalizeFileMetadata(cert, {
+              name: typeof cert === "string" ? "Legacy Certificate" : "",
+              provider: getStorageConfig().provider,
+              uploadedAt: new Date().toISOString(),
+            });
+            return normalizedCert;
           });
         }
       }
@@ -601,8 +424,6 @@ const StaffSkillProfile = ({ onBack }) => {
       noExpiry: skill.noExpiry === 1 || skill.noExpiry === true,
       certificationLinks: certificationLinks,
     });
-    setUploadError("");
-    setIsUploading(false);
     setShowEditSkillForm(true);
   };
 
@@ -616,19 +437,16 @@ const StaffSkillProfile = ({ onBack }) => {
 
       const normalizedCertLinks = skillFormData.certificationLinks
         .map((cert) => {
-          const id = cert.id || getFileIdFromLink(cert.url);
+          const normalizedCert = normalizeFileMetadata(cert, {
+            provider: getStorageConfig().provider,
+          });
+          const id = normalizedCert.id;
           // Only include documents with valid IDs
           if (!id) {
             console.warn("Skipping document without valid ID:", cert);
             return null;
           }
-          return {
-            id: id,
-            name: cert.name || "",
-            mimeType: cert.mimeType || "",
-            provider: cert.provider || getStorageConfig().provider,
-            uploadedAt: cert.uploadedAt || new Date().toISOString(),
-          };
+          return normalizedCert;
         })
         .filter((cert) => cert !== null); // Remove null entries
 
@@ -678,13 +496,6 @@ const StaffSkillProfile = ({ onBack }) => {
             t("staffManagement.errorUpdatingSkill");
       setError(errorMsg);
     }
-  };
-
-  const handleRemoveCertification = (index) => {
-    setSkillFormData((prev) => ({
-      ...prev,
-      certificationLinks: prev.certificationLinks.filter((_, i) => i !== index),
-    }));
   };
 
   const handleDeleteSkillClick = (skill) => {
@@ -962,12 +773,6 @@ const StaffSkillProfile = ({ onBack }) => {
                         </span>
                       </div>
                     ))}
-                  <ImageCarousel
-                    images={carouselImages}
-                    open={carouselOpen}
-                    onClose={() => setCarouselOpen(false)}
-                    startIndex={carouselStartIndex}
-                  />
                 </div>
 
                 <button className="new-skill-btn" onClick={handleNewSkillClick}>
@@ -1045,82 +850,13 @@ const StaffSkillProfile = ({ onBack }) => {
                   )}
                   <div className="form-group">
                     <label>{t("staffManagement.certificationLinks")}</label>
-
-                    {/* Display uploaded certification files as chips */}
-                    {skillFormData.certificationLinks.length > 0 && (
-                      <div className="certification-icons-display">
-                        {skillFormData.certificationLinks.map((cert, index) => (
-                          <FileChip
-                            key={index}
-                            file={cert}
-                            size={56}
-                            onClick={() =>
-                              openCarouselAt(
-                                index,
-                                skillFormData.certificationLinks,
-                              )
-                            }
-                            onRemove={() => handleRemoveCertification(index)}
-                          />
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Upload button */}
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "8px",
-                        alignItems: "center",
-                        marginTop:
-                          skillFormData.certificationLinks.length > 0
-                            ? "12px"
-                            : "0",
-                      }}
-                    >
-                      {driveReady && (
-                        <button
-                          type="button"
-                          onClick={handleUploadButtonClick}
-                          className="upload-button"
-                          disabled={isUploading}
-                          title={t("staffManagement.uploadFileToGoogleDrive")}
-                        >
-                          📤{" "}
-                          {isUploading
-                            ? t("staffManagement.uploading")
-                            : driveToken
-                              ? t("staffManagement.addFile")
-                              : t("staffManagement.authorizeAndUpload")}
-                        </button>
-                      )}
-                    </div>
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      className="file-input-hidden"
-                      onChange={handleFileSelect}
-                      accept="application/pdf,image/*"
+                    <FileGallery
+                      productPicture={skillFormData.certificationLinks}
+                      allowRemove={true}
+                      allowAdd={true}
+                      repoConfig={null}
+                      onChange={handleCertificationLinksChange}
                     />
-                    {/* ImageCarousel intentionally rendered at top-level of each return branch */}
-                    {isUploading && (
-                      <div className="upload-status">
-                        {t("staffManagement.uploadingFile")}
-                      </div>
-                    )}
-                    {uploadError && (
-                      <div className="upload-error">{uploadError}</div>
-                    )}
-                    {!isUploading &&
-                      !uploadError &&
-                      driveReady &&
-                      skillFormData.certificationLinks.length === 0 && (
-                        <div className="upload-hint">
-                          {driveToken
-                            ? t("staffManagement.clickAddFileHint")
-                            : t("staffManagement.clickAuthorizeHint")}
-                        </div>
-                      )}
                   </div>
                   <div className="form-actions">
                     <button
@@ -1207,81 +943,13 @@ const StaffSkillProfile = ({ onBack }) => {
                   )}
                   <div className="form-group">
                     <label>{t("staffManagement.certificationLinks")}</label>
-
-                    {/* Display uploaded certification files as chips */}
-                    {skillFormData.certificationLinks.length > 0 && (
-                      <div className="certification-icons-display">
-                        {skillFormData.certificationLinks.map((cert, index) => (
-                          <FileChip
-                            key={index}
-                            file={cert}
-                            size={56}
-                            onClick={() =>
-                              openCarouselAt(
-                                index,
-                                skillFormData.certificationLinks,
-                              )
-                            }
-                            onRemove={() => handleRemoveCertification(index)}
-                          />
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Upload button */}
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "8px",
-                        alignItems: "center",
-                        marginTop:
-                          skillFormData.certificationLinks.length > 0
-                            ? "12px"
-                            : "0",
-                      }}
-                    >
-                      {driveReady && (
-                        <button
-                          type="button"
-                          onClick={handleUploadButtonClick}
-                          className="upload-button"
-                          disabled={isUploading}
-                          title={t("staffManagement.uploadFileToGoogleDrive")}
-                        >
-                          📤{" "}
-                          {isUploading
-                            ? t("staffManagement.uploading")
-                            : driveToken
-                              ? t("staffManagement.addFile")
-                              : t("staffManagement.authorizeAndUpload")}
-                        </button>
-                      )}
-                    </div>
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      className="file-input-hidden"
-                      onChange={handleFileSelect}
-                      accept="application/pdf,image/*"
+                    <FileGallery
+                      productPicture={skillFormData.certificationLinks}
+                      allowRemove={true}
+                      allowAdd={true}
+                      repoConfig={null}
+                      onChange={handleCertificationLinksChange}
                     />
-                    {isUploading && (
-                      <div className="upload-status">
-                        {t("staffManagement.uploadingFile")}
-                      </div>
-                    )}
-                    {uploadError && (
-                      <div className="upload-error">{uploadError}</div>
-                    )}
-                    {!isUploading &&
-                      !uploadError &&
-                      driveReady &&
-                      skillFormData.certificationLinks.length === 0 && (
-                        <div className="upload-hint">
-                          {driveToken
-                            ? t("staffManagement.clickAddFileHint")
-                            : t("staffManagement.clickAuthorizeHint")}
-                        </div>
-                      )}
                   </div>
                   <div className="form-actions">
                     <button
@@ -1424,12 +1092,6 @@ const StaffSkillProfile = ({ onBack }) => {
             </div>
           </div>
         )}
-        <ImageCarousel
-          images={carouselImages}
-          open={carouselOpen}
-          onClose={() => setCarouselOpen(false)}
-          startIndex={carouselStartIndex}
-        />
       </div>
     );
   }

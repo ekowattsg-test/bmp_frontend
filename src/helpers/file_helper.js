@@ -21,6 +21,20 @@ const SUPPORTED_STORAGE_PROVIDERS = [
   STORAGE_PROVIDER_GOOGLE,
   STORAGE_PROVIDER_ONEDRIVE,
 ];
+const SUPPORTED_IMAGE_EXTENSIONS = [
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+  ".webp",
+  ".bmp",
+  ".svg",
+  ".tif",
+  ".tiff",
+  ".avif",
+  ".heic",
+  ".heif",
+];
 
 // ─── n8n config ────────────────────────────────────────────────────────────
 
@@ -67,16 +81,160 @@ const appendSessionNumber = (form, sessionNumber) => {
   form.append("sessionNumber", String(sessionNumber).trim());
 };
 
-const n8nThumbnailUrl = (provider, fileId, w, h) => {
-  const url = new URL(getN8nBaseUrl());
-  url.searchParams.set("action", "thumbnail");
-  url.searchParams.set("provider", provider);
-  url.searchParams.set("fileId", String(fileId || ""));
-  url.searchParams.set("w", String(w));
-  url.searchParams.set("h", String(h));
-  // Add token to query params for image URL (can't use headers in img/src)
-  url.searchParams.set("token", getN8nSecret());
-  return url.toString();
+const isImageFile = (file) => {
+  if (!file) return false;
+
+  const mimeType = String(file.type || "").toLowerCase();
+  if (mimeType.startsWith("image/")) {
+    return true;
+  }
+
+  const fileName = String(file.name || "").toLowerCase();
+  return SUPPORTED_IMAGE_EXTENSIONS.some((ext) => fileName.endsWith(ext));
+};
+
+const resolveThumbnailContext = (value, provider = null) => {
+  const inferredProvider = normalizeProvider(provider || getStorageProvider());
+  const parsed =
+    typeof value === "object" && value !== null
+      ? value
+      : { viewUrl: typeof value === "string" ? value : "" };
+
+  const rawViewUrl =
+    parsed.viewUrl ||
+    parsed.url ||
+    parsed.webViewLink ||
+    parsed.webContentLink ||
+    "";
+  const fileId =
+    parsed.id ||
+    getFileIdFromLink(rawViewUrl) ||
+    getFileIdFromLink(parsed.link);
+  const resolvedProvider = normalizeProvider(
+    parsed.provider || inferredProvider,
+  );
+  const viewUrl = rawViewUrl;
+
+  return { fileId, provider: resolvedProvider, viewUrl };
+};
+
+export const normalizeFileMetadata = (value, defaults = {}) => {
+  const source =
+    typeof value === "object" && value !== null
+      ? value
+      : { url: typeof value === "string" ? value : "" };
+
+  const viewUrl =
+    source.viewUrl ||
+    source.url ||
+    source.webViewLink ||
+    source.webContentLink ||
+    source.link ||
+    source.fileUrl ||
+    defaults.viewUrl ||
+    defaults.url ||
+    "";
+  const url =
+    source.url ||
+    source.viewUrl ||
+    source.webContentLink ||
+    source.webViewLink ||
+    source.link ||
+    source.fileUrl ||
+    defaults.url ||
+    defaults.viewUrl ||
+    "";
+
+  const fileId =
+    source.id ||
+    getFileIdFromLink(viewUrl) ||
+    getFileIdFromLink(url) ||
+    defaults.id ||
+    null;
+
+  return {
+    id: fileId,
+    name: source.name || source.title || defaults.name || "",
+    mimeType: source.mimeType || source.type || defaults.mimeType || "",
+    provider: normalizeProvider(
+      source.provider || defaults.provider || getStorageProvider(),
+    ),
+    uploadedAt:
+      source.uploadedAt || defaults.uploadedAt || new Date().toISOString(),
+    url,
+    viewUrl,
+  };
+};
+
+export const fetchThumbnailBlobUrl = async (
+  fileId,
+  viewUrl,
+  provider = null,
+  w = 120,
+  h = 120,
+) => {
+  const base = getN8nBaseUrl();
+  if (!base || !fileId) return null;
+
+  const resolvedProvider = normalizeProvider(provider || getStorageProvider());
+  const resolvedSession = resolveSessionNumber(true);
+  const form = new FormData();
+  form.append("action", "thumbnail");
+  form.append("provider", resolvedProvider);
+  appendSessionNumber(form, resolvedSession);
+  form.append("fileId", String(fileId));
+  form.append("w", String(w));
+  form.append("h", String(h));
+  const resolvedViewUrl = String(viewUrl || "").trim();
+  if (resolvedViewUrl) {
+    form.append("viewUrl", resolvedViewUrl);
+  }
+
+  const resp = await fetch(n8nActionUrl(), {
+    method: "POST",
+    headers: getN8nHeaders(),
+    body: form,
+  });
+  if (!resp.ok) return null;
+  const blob = await resp.blob();
+  return URL.createObjectURL(blob);
+};
+
+export const useThumbnailUrl = (
+  fileId,
+  viewUrl,
+  provider = null,
+  w = 120,
+  h = 120,
+) => {
+  const [blobUrl, setBlobUrl] = useState(null);
+
+  useEffect(() => {
+    setBlobUrl(null);
+    if (!fileId) return;
+    let cancelled = false;
+    let activeBlob = null;
+
+    fetchThumbnailBlobUrl(fileId, viewUrl, provider, w, h)
+      .then((url) => {
+        if (cancelled) {
+          if (url) URL.revokeObjectURL(url);
+          return;
+        }
+        activeBlob = url;
+        setBlobUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setBlobUrl(null);
+      });
+
+    return () => {
+      cancelled = true;
+      if (activeBlob) URL.revokeObjectURL(activeBlob);
+    };
+  }, [fileId, viewUrl, provider, w, h]);
+
+  return blobUrl;
 };
 
 // ─── Storage provider helpers (unchanged public API) ───────────────────────
@@ -181,22 +339,6 @@ export const initStorageTokenClient = async (_params = {}) => ({
 
 // ─── URL helpers ────────────────────────────────────────────────────────────
 
-/**
- * Build a file view URL. For n8n-stored files the url/viewUrl from metadata
- * is canonical; this helper is kept for backward compatibility.
- */
-export const buildDriveViewLink = (fileId, provider = null) =>
-  normalizeProvider(provider || getStorageProvider()) ===
-  STORAGE_PROVIDER_ONEDRIVE
-    ? `https://onedrive.live.com/?id=${fileId}`
-    : `https://drive.google.com/file/d/${fileId}/view`;
-
-export const buildDriveDirectViewLink = (fileId, provider = null) =>
-  normalizeProvider(provider || getStorageProvider()) ===
-  STORAGE_PROVIDER_ONEDRIVE
-    ? buildDriveViewLink(fileId, provider)
-    : `https://drive.google.com/uc?export=view&id=${fileId}`;
-
 // ─── Core n8n file operations ───────────────────────────────────────────────
 
 /**
@@ -206,13 +348,17 @@ export const buildDriveDirectViewLink = (fileId, provider = null) =>
  * @param {File} file
  * @param {string|null} _accessToken - ignored
  * @param {string|null} folderId - forwarded to n8n as a form field
- * @returns {Promise<string>} canonical file URL returned by n8n
+ * @returns {Promise<object>} canonical file metadata returned by n8n
  */
 export const uploadFileToDrive = async (
   file,
   _accessToken,
   folderId = null,
 ) => {
+  if (!isImageFile(file)) {
+    throw new Error("Only image files are supported by file helper uploads");
+  }
+
   const provider = getStorageProvider();
   const resolvedSession = resolveSessionNumber(true);
   const form = new FormData();
@@ -234,14 +380,12 @@ export const uploadFileToDrive = async (
   }
 
   const result = await resp.json();
-  // Prefer viewUrl, then url, then construct from id
-  return (
-    result.viewUrl ||
-    result.url ||
-    (result.id
-      ? buildDriveViewLink(result.id, result.provider || provider)
-      : "")
-  );
+  return normalizeFileMetadata(result, {
+    name: file?.name || "",
+    mimeType: file?.type || "",
+    provider,
+    uploadedAt: new Date().toISOString(),
+  });
 };
 
 /**
@@ -306,12 +450,12 @@ export const listFilesFromStorage = async (folderId = null) => {
  * @param {string} fileId
  * @returns {Promise<Response>}
  */
-export const downloadFileFromStorage = async (fileId) => {
-  const provider = getStorageProvider();
+export const downloadFileFromStorage = async (fileId, provider = null) => {
+  const resolvedProvider = normalizeProvider(provider || getStorageProvider());
   const resolvedSession = resolveSessionNumber(true);
   const form = new FormData();
   form.append("action", "download");
-  form.append("provider", provider);
+  form.append("provider", resolvedProvider);
   appendSessionNumber(form, resolvedSession);
   form.append("fileId", fileId);
 
@@ -328,22 +472,19 @@ export const downloadFileFromStorage = async (fileId) => {
 };
 
 /**
- * Get a thumbnail URL via n8n webhook (returns a direct URL string).
- * Falls back to Google Drive thumbnail API for google provider when no
- * n8n base URL is configured yet.
+ * Legacy helper retained for compatibility.
+ * Drive-backed thumbnails must be fetched through POST FormData via
+ * fetchThumbnailBlobUrl/useThumbnailUrl instead of direct provider URLs.
  * @param {string} fileId
  * @param {number} w
  * @param {number} h
- * @returns {string}
+ * @returns {string|null}
  */
 export const getThumbnailUrl = (fileId, w = 120, h = 120) => {
-  const base = getN8nBaseUrl();
-  const provider = getStorageProvider();
-  if (base) {
-    return n8nThumbnailUrl(provider, fileId, w, h);
-  }
-  // fallback (offline/dev without n8n)
-  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w${w}-h${h}`;
+  void fileId;
+  void w;
+  void h;
+  return null;
 };
 
 const parseResponsePayload = async (resp) => {
@@ -489,10 +630,8 @@ export const downloadDocument = (driveLink, fileName = "document") => {
     return;
   }
 
-  // Convert Google Drive view link to download link
   let downloadLink = driveLink;
 
-  // If it's a Google Drive sharing link, convert to direct download
   if (driveLink.includes("drive.google.com")) {
     const fileId = driveLink.match(/\/d\/([a-zA-Z0-9-_]+)/)?.[1];
     if (fileId) {
@@ -500,7 +639,6 @@ export const downloadDocument = (driveLink, fileName = "document") => {
     }
   }
 
-  // Create a temporary anchor element and trigger download
   const link = document.createElement("a");
   link.href = downloadLink;
   link.download = fileName;
@@ -546,9 +684,9 @@ export const getFileIdFromLink = (driveLink) => {
  * @returns {string} - Preview link or original link
  */
 export const getPreviewLink = (driveLink, width = "400", height = "300") => {
-  const fileId = getFileIdFromLink(driveLink);
-  if (!fileId) return driveLink;
-  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w${width}-h${height}`;
+  void width;
+  void height;
+  return driveLink || null;
 };
 
 /**
@@ -559,13 +697,48 @@ export const getPreviewLink = (driveLink, width = "400", height = "300") => {
 export const getDisplayImageInfo = (pic) => {
   if (!pic) return { imageUrl: null, meta: null };
 
+  const buildMeta = (source = {}, overrides = {}) => ({
+    id: source.id || overrides.id || null,
+    name: source.name || source.title || overrides.name || "",
+    mimeType: source.mimeType || source.type || overrides.mimeType || "",
+    provider: source.provider || overrides.provider || null,
+    viewUrl:
+      source.viewUrl ||
+      source.url ||
+      source.webViewLink ||
+      source.webContentLink ||
+      source.link ||
+      source.fileUrl ||
+      source.driveLink ||
+      source.previewLink ||
+      overrides.viewUrl ||
+      "",
+  });
+
+  const asDriveMetadata = (value, source = {}, provider = STORAGE_PROVIDER_GOOGLE) => {
+    const fileId = getFileIdFromLink(value || "") || source.id || null;
+    if (!fileId || !value) return null;
+
+    return {
+      imageUrl: null,
+      meta: buildMeta(source, {
+        id: fileId,
+        provider,
+        viewUrl: value,
+      }),
+    };
+  };
+
   let parsed = pic;
   if (typeof pic === "string") {
     // try parse JSON; if not JSON and looks like URL return directly
     try {
       parsed = JSON.parse(pic);
     } catch (e) {
-      if (pic.startsWith("http")) return { imageUrl: pic, meta: null };
+      if (pic.startsWith("http")) {
+        const driveMeta = asDriveMetadata(pic);
+        return driveMeta || { imageUrl: pic, meta: null };
+      }
       parsed = pic;
     }
   }
@@ -590,68 +763,24 @@ export const getDisplayImageInfo = (pic) => {
           c.includes("onedrive.live.com") ||
           c.includes("1drv.ms") ||
           c.includes("sharepoint.com");
-        // prefer returning an embedable thumbnail link when we can extract an ID
-        const id = getFileIdFromLink(c);
-        if (id && !isOneDriveUrl) {
-          const thumb = `https://drive.google.com/thumbnail?id=${id}&sz=w120-h120`;
-          const view =
-            parsed.webViewLink ||
-            parsed.webContentLink ||
-            c ||
-            `https://drive.google.com/file/d/${id}/view`;
-          return {
-            imageUrl: thumb,
-            meta: {
-              id: parsed.id || id,
-              name: parsed.name || parsed.title || "",
-              mimeType: parsed.mimeType || parsed.type || "",
-              provider: parsed.provider || STORAGE_PROVIDER_GOOGLE,
-              viewUrl: view,
-            },
-          };
+        if (!isOneDriveUrl) {
+          const driveMeta = asDriveMetadata(c, parsed, parsed.provider || STORAGE_PROVIDER_GOOGLE);
+          if (driveMeta) return driveMeta;
         }
-        // otherwise return as-is
+
         return {
           imageUrl: c,
-          meta: {
-            id: parsed.id || null,
-            name: parsed.name || parsed.title || "",
-            mimeType: parsed.mimeType || parsed.type || "",
-            provider: parsed.provider || null,
-          },
+          meta: buildMeta(parsed),
         };
       }
     }
-    // if contains id only, return embedable thumbnail and include a view URL
+
     if (parsed.id) {
-      if (parsed.provider === STORAGE_PROVIDER_ONEDRIVE) {
-        return {
-          imageUrl:
-            parsed.webUrl || parsed.url || buildDriveViewLink(parsed.id),
-          meta: {
-            id: parsed.id,
-            name: parsed.name || "",
-            mimeType: parsed.mimeType || parsed.type || "",
-            provider: STORAGE_PROVIDER_ONEDRIVE,
-            viewUrl:
-              parsed.webUrl || parsed.url || buildDriveViewLink(parsed.id),
-          },
-        };
-      }
-      const thumb = `https://drive.google.com/thumbnail?id=${parsed.id}&sz=w120-h120`;
-      const view =
-        parsed.webViewLink ||
-        parsed.webContentLink ||
-        `https://drive.google.com/file/d/${parsed.id}/view`;
+      const meta = buildMeta(parsed);
       return {
-        imageUrl: thumb,
-        meta: {
-          id: parsed.id,
-          name: parsed.name || "",
-          mimeType: parsed.mimeType || parsed.type || "",
-          provider: parsed.provider || STORAGE_PROVIDER_GOOGLE,
-          viewUrl: view,
-        },
+        imageUrl:
+          meta.provider === STORAGE_PROVIDER_ONEDRIVE && meta.viewUrl ? meta.viewUrl : null,
+        meta,
       };
     }
   }
@@ -673,6 +802,38 @@ import CloseIcon from "@mui/icons-material/Close";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 
+export const ThumbnailImg = ({
+  fileId,
+  viewUrl,
+  provider = null,
+  width = 56,
+  height = 56,
+  alt = "",
+  style = {},
+  onClick,
+}) => {
+  const blobUrl = useThumbnailUrl(fileId, viewUrl, provider, width, height);
+
+  if (!blobUrl) {
+    return null;
+  }
+
+  return (
+    <img
+      src={blobUrl}
+      alt={alt}
+      style={{
+        width,
+        height,
+        objectFit: "cover",
+        ...style,
+      }}
+      referrerPolicy="no-referrer"
+      onClick={onClick}
+    />
+  );
+};
+
 export const FileIcon = ({ mimeType, fileName, fontSize = 20, sx = {} }) => {
   const icon = getFileIcon(mimeType, fileName);
   return (
@@ -691,8 +852,23 @@ export const FileIcon = ({ mimeType, fileName, fontSize = 20, sx = {} }) => {
 
 export const FileChip = ({ file, size = 56, onRemove, onClick }) => {
   const info = getDisplayImageInfo(file);
-  const imageUrl = info?.imageUrl || null;
   const meta = info?.meta || {};
+  const thumbCtx = resolveThumbnailContext(
+    {
+      id: meta.id,
+      viewUrl: meta.viewUrl || info?.imageUrl || "",
+      provider: meta.provider,
+    },
+    meta.provider || null,
+  );
+  const thumbnailUrl = useThumbnailUrl(
+    thumbCtx.fileId,
+    thumbCtx.viewUrl,
+    thumbCtx.provider,
+    size,
+    size,
+  );
+  const imageUrl = thumbnailUrl || null;
 
   return (
     <Box sx={{ position: "relative", width: size, height: size, mr: 1 }}>
@@ -771,6 +947,38 @@ export const ImageCarousel = ({
   const prev = () => setIdx((i) => (i - 1 + images.length) % images.length);
   const next = () => setIdx((i) => (i + 1) % images.length);
 
+  const CarouselImage = ({ item, index }) => {
+    const ctx = resolveThumbnailContext(
+      {
+        id: item?.meta?.id,
+        viewUrl: item?.viewUrl || item?.displayUrl || item?.url || "",
+        provider: item?.provider || item?.meta?.provider || null,
+      },
+      item?.provider || item?.meta?.provider || null,
+    );
+    const blobUrl = useThumbnailUrl(
+      ctx.fileId,
+      ctx.viewUrl,
+      ctx.provider,
+      1200,
+      1200,
+    );
+
+    if (!blobUrl) return null;
+    const keyId = ctx.fileId || item?.meta?.id || index;
+
+    return (
+      <img
+        key={`carousel-img-${keyId}-${index}`}
+        src={blobUrl}
+        alt={item?.title || `Image ${index + 1}`}
+        style={{ maxWidth: "100%", maxHeight: "80vh" }}
+        referrerPolicy="no-referrer"
+        onError={() => setBrokenIndex(index)}
+      />
+    );
+  };
+
   return (
     <Dialog
       open={open}
@@ -817,62 +1025,7 @@ export const ImageCarousel = ({
             </Button>
           </Box>
         ) : (
-          (() => {
-            const item = images[idx] || {};
-            const id =
-              getFileIdFromLink(item.displayUrl || item.viewUrl || item.url) ||
-              item.meta?.id;
-            const candidates = [];
-            // prefer explicit fullImageUrl
-            if (item.fullImageUrl) candidates.push(item.fullImageUrl);
-            // construct uc direct view if id exists
-            if (id)
-              candidates.push(
-                `https://drive.google.com/uc?export=view&id=${id}`,
-              );
-            // try a large thumbnail
-            if (id)
-              candidates.push(
-                `https://drive.google.com/thumbnail?id=${id}&sz=w1200-h1200`,
-              );
-            // fallbacks
-            if (item.webContentLink) candidates.push(item.webContentLink);
-            if (item.thumbnailUrl) candidates.push(item.thumbnailUrl);
-            if (item.displayUrl) candidates.push(item.displayUrl);
-            if (item.url) candidates.push(item.url);
-
-            // dedupe
-            const seen = new Set();
-            const filtered = candidates.filter((c) => {
-              if (!c) return false;
-              if (seen.has(c)) return false;
-              seen.add(c);
-              return true;
-            });
-
-            const keyId = id || item.meta?.id || idx;
-            return (
-              <img
-                key={`carousel-img-${keyId}-${idx}`}
-                src={filtered[0]}
-                alt={item.title || `Image ${idx + 1}`}
-                style={{ maxWidth: "100%", maxHeight: "80vh" }}
-                referrerPolicy="no-referrer"
-                onError={(e) => {
-                  const cur = e.currentTarget;
-                  const attempt = Number(cur.dataset.attempt || "0");
-                  const next = attempt + 1;
-                  if (next < filtered.length) {
-                    cur.dataset.attempt = String(next);
-                    cur.src = filtered[next];
-                    return;
-                  }
-                  cur.style.display = "none";
-                  setBrokenIndex(idx);
-                }}
-              />
-            );
-          })()
+          <CarouselImage item={images[idx] || {}} index={idx} />
         )}
         <IconButton
           onClick={next}

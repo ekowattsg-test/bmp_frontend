@@ -5,7 +5,8 @@ import { request } from "../../helpers/axios_helper";
 import {
   getDisplayImageInfo,
   ImageCarousel,
-  getFileIdFromLink,
+  ThumbnailImg,
+  normalizeFileMetadata,
   commit,
   abort,
 } from "../../helpers/file_helper";
@@ -105,11 +106,13 @@ const ProductEdit = ({ product, onCancel }) => {
     const arr = Array.isArray(files) ? files : [files];
     return arr
       .map((f) => getDisplayImageInfo(f.url || f))
-      .filter((info) => info && info.imageUrl)
+      .filter((info) => info && (info.imageUrl || info.meta?.id))
       .map((info) => ({
-        displayUrl: info.imageUrl,
+        displayUrl: info.imageUrl || null,
         viewUrl: info.meta?.viewUrl || null,
         title: info.meta?.name || "",
+        provider: info.meta?.provider || null,
+        meta: info.meta || null,
       }));
   };
 
@@ -128,12 +131,9 @@ const ProductEdit = ({ product, onCancel }) => {
     setErrorMsg("");
     setSuccess(false);
     try {
-      const normalized = (productFiles || []).map((f) => ({
-        id: f.id || getFileIdFromLink(f.url) || null,
-        name: f.name || "",
-        mimeType: f.mimeType || f.type || "",
-        uploadedAt: f.uploadedAt || new Date().toISOString(),
-      }));
+      const normalized = (productFiles || []).map((f) =>
+        normalizeFileMetadata(f),
+      );
       const payload = {
         productName: form.productName,
         productCode: form.productCode,
@@ -232,9 +232,7 @@ const ProductEdit = ({ product, onCancel }) => {
               try {
                 const parsed = json ? JSON.parse(json) : [];
                 const arr = Array.isArray(parsed) ? parsed : [parsed];
-                const norm = arr.map((p) =>
-                  typeof p === "string" ? { url: p } : p,
-                );
+                const norm = arr.map((p) => normalizeFileMetadata(p));
                 // runtime debug: child -> parent change sequence
                 console.debug("ProductEdit:onChange received", {
                   norm,

@@ -12,9 +12,10 @@ import {
 import Modal, { ModalForm } from "../common/Modal";
 import { request } from "../../helpers/axios_helper";
 import {
-  getFileIdFromLink,
+  normalizeFileMetadata,
   getFileIcon,
   getDisplayImageInfo,
+  ThumbnailImg,
   commit,
   abort,
 } from "../../helpers/file_helper";
@@ -79,12 +80,7 @@ const ProductDialog = ({
         return;
       }
 
-      const normalized = productFiles.map((f) => ({
-        id: f.id || getFileIdFromLink(f.url),
-        name: f.name || "",
-        mimeType: f.mimeType || "",
-        uploadedAt: f.uploadedAt || new Date().toISOString(),
-      }));
+      const normalized = productFiles.map((f) => normalizeFileMetadata(f));
       const payload = {
         ...newProduct,
         productPicture: JSON.stringify(normalized),
@@ -211,30 +207,42 @@ const ProductDialog = ({
                       "source:",
                       first,
                     );
-                    if (info.imageUrl)
+                    if (info.imageUrl || info.meta?.id)
                       return (
                         <Box
                           sx={{ width: 64, height: 64, position: "relative" }}
                         >
-                          <Box
-                            component="img"
-                            src={info.imageUrl}
-                            sx={{
-                              width: 64,
-                              height: 64,
-                              objectFit: "cover",
-                              borderRadius: 1,
-                            }}
-                            referrerPolicy="no-referrer"
-                            onError={(e) => {
-                              e.currentTarget.style.display = "none";
-                              const fb =
-                                e.currentTarget.parentElement.querySelector(
-                                  ".fallback-icon",
-                                );
-                              if (fb) fb.style.display = "flex";
-                            }}
-                          />
+                          {info.meta?.id ? (
+                            <ThumbnailImg
+                              fileId={info.meta.id}
+                              viewUrl={info.meta.viewUrl || ""}
+                              provider={info.meta.provider || null}
+                              width={64}
+                              height={64}
+                              alt={first?.name || "product image"}
+                              style={{ borderRadius: 4 }}
+                            />
+                          ) : (
+                            <Box
+                              component="img"
+                              src={info.imageUrl}
+                              sx={{
+                                width: 64,
+                                height: 64,
+                                objectFit: "cover",
+                                borderRadius: 1,
+                              }}
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                                const fb =
+                                  e.currentTarget.parentElement.querySelector(
+                                    ".fallback-icon",
+                                  );
+                                if (fb) fb.style.display = "flex";
+                              }}
+                            />
+                          )}
                           <Box
                             className="fallback-icon"
                             sx={{
