@@ -8,6 +8,7 @@ import {
 } from "@mui/material";
 import { request } from "../../helpers/axios_helper";
 import { useTranslation } from "react-i18next";
+import { HeaderBar } from "../common";
 
 const CompanyEdit = ({ company, onCancel }) => {
   const [form, setForm] = useState({ ...company });
@@ -80,14 +81,12 @@ const CompanyEdit = ({ company, onCancel }) => {
         borderRadius: 2,
       }}
     >
-      <h2
-        style={{
-          fontSize: "clamp(1.2rem, 4vw, 2rem)",
-          margin: 0,
-        }}
-      >
-        {t("companyList.editTitle")}
-      </h2>
+      <HeaderBar
+        title={t("companyList.editTitle")}
+        titleVariant="h5"
+        titleSx={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 600 }}
+        sx={{ mb: 1 }}
+      />
       <TextField
         label={t("companyList.companyId")}
         name="companyId"

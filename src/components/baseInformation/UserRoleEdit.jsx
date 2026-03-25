@@ -3,6 +3,7 @@ import { Box, Button, TextField, MenuItem } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import { AuthContext } from "../../context/authContext";
+import { HeaderBar } from "../common";
 
 const UserRoleEdit = ({ userRole, onCancel }) => {
   const { t } = useTranslation();
@@ -119,9 +120,12 @@ const UserRoleEdit = ({ userRole, onCancel }) => {
         borderRadius: 2,
       }}
     >
-      <h2 style={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", margin: 0 }}>
-        {t("userRole.editTitle", "Edit UserRole")}
-      </h2>
+      <HeaderBar
+        title={t("userRole.editTitle", "Edit UserRole")}
+        titleVariant="h5"
+        titleSx={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 600 }}
+        sx={{ mb: 1 }}
+      />
       {/* ID field hidden */}
       <TextField
         select

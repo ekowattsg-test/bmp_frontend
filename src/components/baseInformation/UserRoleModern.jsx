@@ -10,7 +10,8 @@ import {
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import { AuthContext } from "../../context/authContext";
-import { PageHeader, EmptyState, LoadingState } from "../common";
+import { PageHeader, EmptyState, LoadingState, BlockListItem } from "../common";
+import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import HelpDialog from "../common/HelpDialog";
 import UserRoleAdd from "./UserRoleAdd";
 import UserRoleEdit from "./UserRoleEdit";
@@ -28,6 +29,7 @@ const UserRoleModern = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const { t } = useTranslation();
+  const { shouldUseBlockLayout } = useResponsiveLayout();
   const [helpOpen, setHelpOpen] = useState(false);
   const { userInfo } = useContext(AuthContext);
 
@@ -104,27 +106,24 @@ const UserRoleModern = () => {
     );
   });
 
+  const normalizedUserRoles = filteredUserRoles.map((ur) => ({
+    ...ur,
+    displayUserName: getUserName(ur.user_id),
+    displayRoleName: getRoleName(ur.role_id),
+  }));
+
   const columns = [
     {
-      field: "id",
-      headerName: t("userRole.id", "ID"),
-      width: 80,
-      headerAlign: "center",
-      align: "center",
-    },
-    {
-      field: "user_id",
+      field: "displayUserName",
       headerName: t("userRole.user_id", "User"),
       flex: 1,
       minWidth: 200,
-      valueGetter: (params) => getUserName(params),
     },
     {
-      field: "role_id",
+      field: "displayRoleName",
       headerName: t("userRole.role_id", "Role"),
       flex: 1,
       minWidth: 150,
-      valueGetter: (params) => getRoleName(params),
     },
     {
       field: "actions",
@@ -200,6 +199,10 @@ const UserRoleModern = () => {
     return <UserRoleAdd onCancel={handleAddCancel} />;
   }
 
+  const blockColumnDefs = columns
+    .filter((c) => c.field !== "actions")
+    .map((c) => ({ field: c.field, label: c.headerName }));
+
   return (
     <Box>
       <PageHeader
@@ -236,37 +239,54 @@ const UserRoleModern = () => {
         />
       </Box>
 
-      <Box
-        sx={{
-          height: 600,
-          width: "100%",
-          bgcolor: "background.paper",
-          borderRadius: 2,
-          boxShadow: 1,
-        }}
-      >
-        {filteredUserRoles.length === 0 && !loading ? (
-          <EmptyState
-            title={t("userRole.noUserRoles", "No user roles found")}
-            description={
-              search
-                ? t(
-                    "userRole.noSearchResults",
-                    "Try adjusting your search terms",
-                  )
-                : t(
-                    "userRole.noUserRolesDescription",
-                    "Get started by assigning roles to users",
-                  )
-            }
-            actionLabel={
-              !search ? t("userRole.addTitle", "Add User Role") : null
-            }
-            onActionClick={!search ? () => setShowAdd(true) : null}
-          />
-        ) : (
+      {filteredUserRoles.length === 0 && !loading ? (
+        <EmptyState
+          title={t("userRole.noUserRoles", "No user roles found")}
+          description={
+            search
+              ? t("userRole.noSearchResults", "Try adjusting your search terms")
+              : t(
+                  "userRole.noUserRolesDescription",
+                  "Get started by assigning roles to users",
+                )
+          }
+          actionLabel={!search ? t("userRole.addTitle", "Add User Role") : null}
+          onActionClick={!search ? () => setShowAdd(true) : null}
+        />
+      ) : shouldUseBlockLayout ? (
+        <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
+          {normalizedUserRoles.map((item, idx) => (
+            <BlockListItem
+              key={item.userrole_id || item.id || idx}
+              columnDefs={blockColumnDefs}
+              item={item}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              leadingMedia={{
+                placeholder: (
+                  <AssignmentIndIcon
+                    sx={{ color: "text.secondary", fontSize: "1.1rem" }}
+                  />
+                ),
+                width: 40,
+                height: 40,
+              }}
+              t={t}
+            />
+          ))}
+        </Box>
+      ) : (
+        <Box
+          sx={{
+            height: 600,
+            width: "100%",
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            boxShadow: 1,
+          }}
+        >
           <DataGrid
-            rows={filteredUserRoles}
+            rows={normalizedUserRoles}
             columns={columns}
             getRowId={(row) => row.userrole_id || row.id}
             initialState={{
@@ -322,17 +342,17 @@ const UserRoleModern = () => {
               },
             }}
           />
+        </Box>
+      )}
+      <HelpDialog
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title={t("userRole.helpTitle", "User role help")}
+        content={t(
+          "userRole.helpBody",
+          "This page assigns roles to users. Use Add to create a mapping, Edit to modify, and Delete to remove a mapping.",
         )}
-        <HelpDialog
-          open={helpOpen}
-          onClose={() => setHelpOpen(false)}
-          title={t("userRole.helpTitle", "User role help")}
-          content={t(
-            "userRole.helpBody",
-            "This page assigns roles to users. Use Add to create a mapping, Edit to modify, and Delete to remove a mapping.",
-          )}
-        />
-      </Box>
+      />
     </Box>
   );
 };

@@ -15,7 +15,8 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
-import { PageHeader, EmptyState, LoadingState } from "../common";
+import { PageHeader, EmptyState, LoadingState, BlockListItem } from "../common";
+import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import HelpDialog from "../common/HelpDialog";
 import CustomerAdd from "./CustomerAdd";
 import CustomerEdit from "./CustomerEdit";
@@ -31,6 +32,7 @@ const CustomerModern = () => {
   const [deleteMode, setDeleteMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const { t } = useTranslation();
+  const { shouldUseBlockLayout } = useResponsiveLayout();
   const enableActions = false;
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -84,11 +86,6 @@ const CustomerModern = () => {
 
   const columns = useMemo(
     () => [
-      {
-        field: "customerId",
-        headerName: t("customerList.customerId", "Customer ID"),
-        width: 150,
-      },
       {
         field: "customerName",
         headerName: t("customerList.customerName", "Customer Name"),
@@ -211,6 +208,10 @@ const CustomerModern = () => {
     return <CustomerAdd onCancel={handleAddCancel} />;
   }
 
+  const blockColumnDefs = columns
+    .filter((c) => !["latitude", "longitude", "actions"].includes(c.field))
+    .map((c) => ({ field: c.field, label: c.headerName }));
+
   return (
     <Box>
       <PageHeader
@@ -262,35 +263,58 @@ const CustomerModern = () => {
         />
       </Box>
 
-      <Box
-        sx={{
-          height: 600,
-          width: "100%",
-          bgcolor: "background.paper",
-          borderRadius: 2,
-          boxShadow: 1,
-        }}
-      >
-        {filteredCustomers.length === 0 && !loading ? (
-          <EmptyState
-            title={t("customerList.noCustomers", "No customers found")}
-            description={
-              search
-                ? t(
-                    "customerList.noSearchResults",
-                    "Try adjusting your search terms",
-                  )
-                : t(
-                    "customerList.noCustomersDescription",
-                    "Get started by adding your first customer",
-                  )
-            }
-            actionLabel={
-              !search ? t("customerList.addTitle", "Add Customer") : null
-            }
-            onActionClick={!search ? () => setShowAdd(true) : null}
-          />
-        ) : (
+      {filteredCustomers.length === 0 && !loading ? (
+        <EmptyState
+          title={t("customerList.noCustomers", "No customers found")}
+          description={
+            search
+              ? t(
+                  "customerList.noSearchResults",
+                  "Try adjusting your search terms",
+                )
+              : t(
+                  "customerList.noCustomersDescription",
+                  "Get started by adding your first customer",
+                )
+          }
+          actionLabel={
+            !search ? t("customerList.addTitle", "Add Customer") : null
+          }
+          onActionClick={!search ? () => setShowAdd(true) : null}
+        />
+      ) : shouldUseBlockLayout ? (
+        <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
+          {filteredCustomers.map((item, idx) => (
+            <BlockListItem
+              key={item.customerId || idx}
+              columnDefs={blockColumnDefs}
+              item={item}
+              onEdit={enableActions ? handleEdit : undefined}
+              onDelete={enableActions ? handleDelete : undefined}
+              enableActions={enableActions}
+              leadingMedia={{
+                placeholder: (
+                  <PeopleIcon
+                    sx={{ color: "text.secondary", fontSize: "1.1rem" }}
+                  />
+                ),
+                width: 40,
+                height: 40,
+              }}
+              t={t}
+            />
+          ))}
+        </Box>
+      ) : (
+        <Box
+          sx={{
+            height: 600,
+            width: "100%",
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            boxShadow: 1,
+          }}
+        >
           <DataGrid
             rows={filteredCustomers}
             columns={columns}
@@ -348,8 +372,8 @@ const CustomerModern = () => {
               },
             }}
           />
-        )}
-      </Box>
+        </Box>
+      )}
     </Box>
   );
 };

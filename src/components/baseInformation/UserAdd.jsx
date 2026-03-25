@@ -11,6 +11,7 @@ import { request } from "../../helpers/axios_helper";
 import { useTranslation } from "react-i18next";
 import { AuthContext } from "../../context/authContext";
 import { hasRole } from "../../helpers/roles_helper";
+import { HeaderBar } from "../common";
 
 const UserAdd = ({ onCancel }) => {
   const { userInfo, roles } = useContext(AuthContext);
@@ -151,14 +152,12 @@ const UserAdd = ({ onCancel }) => {
         borderRadius: 2,
       }}
     >
-      <h2
-        style={{
-          fontSize: "clamp(1.2rem, 4vw, 2rem)",
-          margin: 0,
-        }}
-      >
-        {t("userList.addTitle", "Add User")}
-      </h2>
+      <HeaderBar
+        title={t("userList.addTitle", "Add User")}
+        titleVariant="h5"
+        titleSx={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 600 }}
+        sx={{ mb: 1 }}
+      />
       <TextField
         label={t("userList.firstName")}
         name="firstName"

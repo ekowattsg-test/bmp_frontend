@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Delete } from "@mui/icons-material";
 import AddIcon from "@mui/icons-material/Add";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { Box } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import {
-  TextField,
-  InputAdornment,
-  IconButton,
-  Typography,
-} from "@mui/material";
+import { TextField, InputAdornment, IconButton } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 
 import { request } from "../../helpers/axios_helper";
@@ -17,6 +11,7 @@ import CustomerAdd from "./CustomerAdd";
 import CustomerEdit from "./CustomerEdit";
 import CustomerDelete from "./CustomerDelete";
 import HelpDialog from "../common/HelpDialog";
+import { HeaderBar } from "../common";
 
 const Customer = () => {
   const [action, setAction] = useState("view");
@@ -66,86 +61,48 @@ const Customer = () => {
       ) : (
         <div>
           {!showAdd && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                marginBottom: 16,
-                gap: 12,
+            <HeaderBar
+              title={t("customerList.title")}
+              subtitle={t("customerList.subtitle", "Manage customers")}
+              onHelp={() => setHelpOpen(true)}
+              titleVariant="h5"
+              titleSx={{
+                fontSize: { xs: "1.1rem", sm: "1.5rem" },
+                fontWeight: 600,
               }}
-            >
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                <Typography variant="h5" component="h2" sx={{ margin: 0 }}>
-                  {t("customerList.title")}
-                </Typography>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {t("customerList.subtitle", "Manage customers")}
-                  </Typography>
-                  <IconButton
+              actions={
+                <>
+                  <TextField
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={t(
+                      "customerList.searchPlaceholder",
+                      "Search...",
+                    )}
                     size="small"
-                    aria-label="help"
-                    onClick={() => setHelpOpen(true)}
-                  >
-                    <HelpOutlineIcon fontSize="small" />
-                  </IconButton>
-                </div>
-              </div>
-              <TextField
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("customerList.searchPlaceholder", "Search...")}
-                size="small"
-                style={{ marginLeft: 16, minWidth: 220 }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton tabIndex={-1}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            fontSize: {
-                              xs: "clamp(1.2rem, 4vw, 2rem)",
-                              md: "2rem",
-                            },
-                          }}
-                        >
-                          <SearchIcon
-                            sx={{
-                              fontSize: {
-                                xs: "clamp(1.2rem, 4vw, 2rem)",
-                                md: "2rem",
-                              },
-                            }}
-                          />
-                        </Box>
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              <div style={{ flex: 1 }} />
-              {enableActions && (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "flex-end",
-                    flex: 1,
-                  }}
-                >
-                  <IconButton
-                    color="primary"
-                    aria-label="add customer"
-                    onClick={() => setShowAdd(true)}
-                    style={{ marginLeft: 16 }}
-                  >
-                    <AddIcon />
-                  </IconButton>
-                </div>
-              )}
-            </div>
+                    sx={{ minWidth: { xs: 160, sm: 220 } }}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton tabIndex={-1}>
+                            <SearchIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  {enableActions && (
+                    <IconButton
+                      color="primary"
+                      aria-label="add customer"
+                      onClick={() => setShowAdd(true)}
+                    >
+                      <AddIcon />
+                    </IconButton>
+                  )}
+                </>
+              }
+            />
           )}
           {enableActions && showAdd ? (
             <CustomerAdd onCancel={handleAddCancel} />

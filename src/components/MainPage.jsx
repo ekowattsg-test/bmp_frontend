@@ -19,7 +19,7 @@ import UserProfile from "./baseInformation/UserProfile";
 import Settings from "./baseInformation/Settings";
 import EulaPage from "./information/EulaPage";
 import PrivacyPage from "./information/PrivacyPage";
-import Product from "./baseInformation/Product";
+import ProductModern from "./baseInformation/ProductModern";
 import StaffExcelUpload from "./baseInformation/StaffExcelUpload";
 import UserLoginList from "./baseInformation/UserLoginList";
 
@@ -42,7 +42,7 @@ function MainPage() {
         <Route path="/staff-excel-upload" element={<StaffExcelUpload />} />
         <Route path="/stockmovementcode" element={<StockMovementCode />} />
         <Route path="/stocktakeon" element={<StockTakeOn />} />
-        <Route path="/product" element={<Product />} />
+        <Route path="/product" element={<ProductModern />} />
         <Route path="/staffprofile" element={<StaffProfile />} />
         <Route path="/language-settings" element={<LanguageSettings />} />
         <Route path="/settings" element={<Settings />} />

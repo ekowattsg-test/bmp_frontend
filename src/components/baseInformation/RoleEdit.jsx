@@ -4,6 +4,7 @@ import { AuthContext } from "../../context/authContext";
 import { Box, Button, TextField } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
+import { HeaderBar } from "../common";
 
 const RoleEdit = ({ role, onCancel }) => {
   const { t } = useTranslation();
@@ -69,14 +70,12 @@ const RoleEdit = ({ role, onCancel }) => {
         borderRadius: 2,
       }}
     >
-      <h2
-        style={{
-          fontSize: "clamp(1.2rem, 4vw, 2rem)",
-          margin: 0,
-        }}
-      >
-        {t("roleList.editTitle")}
-      </h2>
+      <HeaderBar
+        title={t("roleList.editTitle")}
+        titleVariant="h5"
+        titleSx={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 600 }}
+        sx={{ mb: 1 }}
+      />
       {/* Remove id field from edit form (do not show) */}
       <TextField
         label={t("roleList.role")}

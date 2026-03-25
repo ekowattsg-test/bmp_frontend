@@ -24,7 +24,8 @@ import { useTranslation } from "react-i18next";
 import { AuthContext } from "../../context/authContext";
 import { hasRole } from "../../helpers/roles_helper";
 import { request } from "../../helpers/axios_helper";
-import { PageHeader, EmptyState, LoadingState } from "../common";
+import { PageHeader, EmptyState, LoadingState, BlockListItem } from "../common";
+import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import HelpDialog from "../common/HelpDialog";
 import UserAdd from "./UserAdd";
 import UserEdit from "./UserEdit";
@@ -41,6 +42,7 @@ const UserModern = () => {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const { t } = useTranslation();
+  const { shouldUseBlockLayout } = useResponsiveLayout();
   const [helpOpen, setHelpOpen] = useState(false);
   const { userInfo, roles } = useContext(AuthContext);
 
@@ -187,14 +189,22 @@ const UserModern = () => {
   });
 
   // DataGrid columns configuration
+  const normalizedUsers = filteredUsers.map((user) => {
+    const rawActive =
+      getRawActiveValue(user) ?? user.active ?? user.isActive ?? user.enabled;
+    const displayLastPasswordChanged = user.lastPasswordChanged
+      ? new Date(user.lastPasswordChanged).toLocaleDateString()
+      : "";
+
+    return {
+      ...user,
+      displayCompanyName: getCompanyName(user.companyId),
+      displayActive: isActiveValue(rawActive),
+      displayLastPasswordChanged,
+    };
+  });
+
   const columns = [
-    {
-      field: "id",
-      headerName: t("userList.id", "ID"),
-      width: 80,
-      headerAlign: "center",
-      align: "center",
-    },
     {
       field: "firstName",
       headerName: t("userList.firstName", "First Name"),
@@ -220,11 +230,10 @@ const UserModern = () => {
       minWidth: 140,
     },
     {
-      field: "companyId",
+      field: "displayCompanyName",
       headerName: t("userList.companyId", "Company"),
       flex: 1,
       minWidth: 150,
-      valueGetter: (params) => getCompanyName(params),
     },
     {
       field: "level",
@@ -234,15 +243,13 @@ const UserModern = () => {
       align: "center",
     },
     {
-      field: "active",
+      field: "displayActive",
       headerName: t("userList.active", "Active"),
       width: 100,
       headerAlign: "center",
       align: "center",
       renderCell: (params) => {
-        const rawActive =
-          params.value ?? getRawActiveValue(params.row) ?? params.row?.active;
-        const isActive = isActiveValue(rawActive);
+        const isActive = Boolean(params.row?.displayActive);
         return (
           <Chip
             label={isActive ? t("basic.true", "Yes") : t("basic.false", "No")}
@@ -253,14 +260,9 @@ const UserModern = () => {
       },
     },
     {
-      field: "lastPasswordChanged",
+      field: "displayLastPasswordChanged",
       headerName: t("userList.lastPasswordChanged", "PW Last Changed"),
       width: 150,
-      valueFormatter: (params) => {
-        if (!params) return "";
-        const date = new Date(params);
-        return date.toLocaleDateString();
-      },
     },
     {
       field: "actions",
@@ -333,6 +335,10 @@ const UserModern = () => {
     return <UserAdd onCancel={handleAddCancel} />;
   }
 
+  const blockColumnDefs = columns
+    .filter((c) => !["lastPasswordChanged", "actions"].includes(c.field))
+    .map((c) => ({ field: c.field, label: c.headerName }));
+
   return (
     <Box>
       {/* Page Header */}
@@ -384,36 +390,54 @@ const UserModern = () => {
         />
       </Box>
 
-      {/* Data Grid */}
-      <Box
-        sx={{
-          height: 600,
-          width: "100%",
-          bgcolor: "background.paper",
-          borderRadius: 2,
-          boxShadow: 1,
-        }}
-      >
-        {filteredUsers.length === 0 && !loading ? (
-          <EmptyState
-            title={t("userList.noUsers", "No users found")}
-            description={
-              search
-                ? t(
-                    "userList.noSearchResults",
-                    "Try adjusting your search terms",
-                  )
-                : t(
-                    "userList.noUsersDescription",
-                    "Get started by adding your first user",
-                  )
-            }
-            actionLabel={!search ? t("userList.addTitle", "Add User") : null}
-            onActionClick={!search ? () => setShowAdd(true) : null}
-          />
-        ) : (
+      {filteredUsers.length === 0 && !loading ? (
+        <EmptyState
+          title={t("userList.noUsers", "No users found")}
+          description={
+            search
+              ? t("userList.noSearchResults", "Try adjusting your search terms")
+              : t(
+                  "userList.noUsersDescription",
+                  "Get started by adding your first user",
+                )
+          }
+          actionLabel={!search ? t("userList.addTitle", "Add User") : null}
+          onActionClick={!search ? () => setShowAdd(true) : null}
+        />
+      ) : shouldUseBlockLayout ? (
+        <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
+          {normalizedUsers.map((item, idx) => (
+            <BlockListItem
+              key={item.id || idx}
+              columnDefs={blockColumnDefs}
+              item={item}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              leadingMedia={{
+                placeholder: (
+                  <PeopleIcon
+                    sx={{ color: "text.secondary", fontSize: "1.1rem" }}
+                  />
+                ),
+                width: 40,
+                height: 40,
+              }}
+              t={t}
+            />
+          ))}
+        </Box>
+      ) : (
+        <Box
+          sx={{
+            height: 600,
+            width: "100%",
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            boxShadow: 1,
+          }}
+        >
           <DataGrid
-            rows={filteredUsers}
+            rows={normalizedUsers}
             columns={columns}
             getRowId={(row) => row.id}
             initialState={{
@@ -473,8 +497,8 @@ const UserModern = () => {
               },
             }}
           />
-        )}
-      </Box>
+        </Box>
+      )}
     </Box>
   );
 };

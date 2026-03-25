@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import {
@@ -19,12 +19,15 @@ import {
   DialogContent,
 } from "@mui/material";
 import { Close as CloseIcon } from "@mui/icons-material";
+import { BlockListItem } from "../common";
+import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 
 const PurchaseOrderView = ({ order, onClose }) => {
   const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [vendor, setVendor] = useState(null);
+  const { shouldUseBlockLayout } = useResponsiveLayout();
 
   useEffect(() => {
     // Load vendor details
@@ -75,6 +78,79 @@ const PurchaseOrderView = ({ order, onClose }) => {
       return sum + lineTotal;
     }, 0);
   };
+
+  const normalizedItems = useMemo(() => {
+    return items.map((item, index) => {
+      const rawItemType = item.itemType;
+      const normalizedType = rawItemType
+        ? String(rawItemType).trim().toUpperCase()
+        : "";
+
+      let displayItemType = rawItemType || "-";
+      if (normalizedType === "A") {
+        displayItemType = t("purchaseOrderList.itemType.assets", "Assets");
+      } else if (normalizedType === "I") {
+        displayItemType = t(
+          "purchaseOrderList.itemType.inventory",
+          "Inventory",
+        );
+      }
+
+      const lineTotal =
+        item.lineTotal !== undefined && item.lineTotal !== null
+          ? Number(item.lineTotal)
+          : (item.quantity || 0) * (item.unitPrice || 0);
+
+      return {
+        ...item,
+        lineNo: index + 1,
+        displayItemType,
+        displayInternalProductCode: item.internalProductCode || "-",
+        displayInternalOrderId: item.internalOrderId || "-",
+        displayQuantity: item.quantity,
+        displayUnitPrice: `$${Number(item.unitPrice || 0).toFixed(2)}`,
+        displayLineTotal: `$${lineTotal.toFixed(2)}`,
+      };
+    });
+  }, [items, t]);
+
+  const itemColumnDefs = useMemo(
+    () => [
+      { field: "lineNo", label: t("purchaseOrderList.lineNo", "#") },
+      {
+        field: "productCode",
+        label: t("purchaseOrderList.productCode", "Product Code"),
+      },
+      {
+        field: "displayItemType",
+        label: t("purchaseOrderList.itemType", "Item Type"),
+      },
+      {
+        field: "displayInternalProductCode",
+        label: t(
+          "purchaseOrderList.internalProductCode",
+          "Internal Product Code",
+        ),
+      },
+      {
+        field: "displayInternalOrderId",
+        label: t("purchaseOrderList.internalOrderId", "Internal Order ID"),
+      },
+      {
+        field: "displayQuantity",
+        label: t("purchaseOrderList.quantity", "Quantity"),
+      },
+      {
+        field: "displayUnitPrice",
+        label: t("purchaseOrderList.unitPrice", "Unit Price"),
+      },
+      {
+        field: "displayLineTotal",
+        label: t("purchaseOrderList.lineTotal", "Line Total"),
+      },
+    ],
+    [t],
+  );
 
   return (
     <Dialog open={true} onClose={onClose} maxWidth="lg" fullWidth>
@@ -203,6 +279,33 @@ const PurchaseOrderView = ({ order, onClose }) => {
                   {t("purchaseOrderList.noItems", "No items found")}
                 </Typography>
               </Box>
+            ) : shouldUseBlockLayout ? (
+              <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
+                {normalizedItems.map((item, index) => (
+                  <BlockListItem
+                    key={item.itemId || index}
+                    columnDefs={itemColumnDefs}
+                    item={item}
+                    enableActions={false}
+                    t={t}
+                  />
+                ))}
+                <Paper
+                  sx={{
+                    p: 2,
+                    border: "1px solid var(--color-gray-200)",
+                    borderRadius: 1,
+                    backgroundColor: "background.default",
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary">
+                    {t("purchaseOrderList.total", "Total")}
+                  </Typography>
+                  <Typography variant="h6" sx={{ color: "primary.main" }}>
+                    ${calculateTotal().toFixed(2)}
+                  </Typography>
+                </Paper>
+              </Box>
             ) : (
               <TableContainer component={Paper} sx={{ boxShadow: 1 }}>
                 <Table size="small">
@@ -241,41 +344,21 @@ const PurchaseOrderView = ({ order, onClose }) => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {items.map((item, index) => (
+                    {normalizedItems.map((item, index) => (
                       <TableRow key={item.itemId || index}>
-                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>{item.lineNo}</TableCell>
                         <TableCell>{item.productCode}</TableCell>
-                        <TableCell>
-                          {(() => {
-                            const val = item.itemType;
-                            if (!val) return "-";
-                            const normalized = String(val).trim().toUpperCase();
-                            if (normalized === "A")
-                              return t(
-                                "purchaseOrderList.itemType.assets",
-                                "Assets",
-                              );
-                            if (normalized === "I")
-                              return t(
-                                "purchaseOrderList.itemType.inventory",
-                                "Inventory",
-                              );
-                            return val;
-                          })()}
-                        </TableCell>
-                        <TableCell>{item.internalProductCode || "-"}</TableCell>
-                        <TableCell>{item.internalOrderId || "-"}</TableCell>
-                        <TableCell align="right">{item.quantity}</TableCell>
+                        <TableCell>{item.displayItemType}</TableCell>
+                        <TableCell>{item.displayInternalProductCode}</TableCell>
+                        <TableCell>{item.displayInternalOrderId}</TableCell>
                         <TableCell align="right">
-                          ${Number(item.unitPrice).toFixed(2)}
+                          {item.displayQuantity}
                         </TableCell>
                         <TableCell align="right">
-                          $
-                          {(item.lineTotal !== undefined &&
-                          item.lineTotal !== null
-                            ? Number(item.lineTotal)
-                            : (item.quantity || 0) * (item.unitPrice || 0)
-                          ).toFixed(2)}
+                          {item.displayUnitPrice}
+                        </TableCell>
+                        <TableCell align="right">
+                          {item.displayLineTotal}
                         </TableCell>
                       </TableRow>
                     ))}

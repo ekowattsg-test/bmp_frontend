@@ -3,7 +3,12 @@ import { TextField, Button, Box, MenuItem } from "@mui/material";
 import { request } from "../../helpers/axios_helper";
 import { useTranslation } from "react-i18next";
 import FileGallery from "../common/FileGallery";
-import { normalizeFileMetadata, commit, abort } from "../../helpers/file_helper";
+import { HeaderBar } from "../common";
+import {
+  normalizeFileMetadata,
+  commit,
+  abort,
+} from "../../helpers/file_helper";
 
 const ProductAdd = ({ onCancel }) => {
   const { t } = useTranslation();
@@ -78,9 +83,12 @@ const ProductAdd = ({ onCancel }) => {
         borderRadius: 2,
       }}
     >
-      <h2 style={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", margin: 0 }}>
-        {t("product.addTitle", "Add Product")}
-      </h2>
+      <HeaderBar
+        title={t("product.addTitle", "Add Product")}
+        titleVariant="h5"
+        titleSx={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 600 }}
+        sx={{ mb: 1 }}
+      />
       <TextField
         label={t("product.productCode", "Product Code")}
         name="productCode"

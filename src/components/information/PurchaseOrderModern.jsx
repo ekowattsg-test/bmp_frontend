@@ -16,8 +16,9 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
-import { PageHeader, EmptyState, LoadingState } from "../common";
+import { PageHeader, EmptyState, LoadingState, BlockListItem } from "../common";
 import HelpDialog from "../common/HelpDialog";
+import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import PurchaseOrderAdd from "./PurchaseOrderAdd";
 import PurchaseOrderEdit from "./PurchaseOrderEdit";
 import PurchaseOrderDelete from "./PurchaseOrderDelete";
@@ -36,6 +37,7 @@ const PurchaseOrderModern = () => {
   const [loading, setLoading] = useState(true);
   const [helpOpen, setHelpOpen] = useState(false);
   const { t } = useTranslation();
+  const { shouldUseBlockLayout } = useResponsiveLayout();
   const enableActions = true;
 
   useEffect(() => {
@@ -113,6 +115,33 @@ const PurchaseOrderModern = () => {
     });
   }, [purchaseOrderData, search, getVendorName]);
 
+  const normalizedOrders = useMemo(() => {
+    return filteredOrders.map((order) => {
+      const status = order.orderStatus || "NEW";
+      const displayVendorName = getVendorName(order.vendorId);
+      const displayOrderDate = order.orderDate
+        ? new Date(order.orderDate).toLocaleDateString()
+        : "";
+      const displayPurchaseAmount =
+        order.purchaseAmount === null || order.purchaseAmount === undefined
+          ? ""
+          : `$${Number(order.purchaseAmount).toFixed(2)}`;
+      const displayOrderStatus = t(
+        `purchaseOrderList.status.${status.toLowerCase()}`,
+        status,
+      );
+
+      return {
+        ...order,
+        displayVendorName,
+        displayOrderDate,
+        displayPurchaseAmount,
+        displayOrderStatus,
+        orderStatus: status,
+      };
+    });
+  }, [filteredOrders, getVendorName, t]);
+
   const columns = useMemo(
     () => [
       {
@@ -121,43 +150,31 @@ const PurchaseOrderModern = () => {
         width: 120,
       },
       {
-        field: "vendorId",
+        field: "displayVendorName",
         headerName: t("purchaseOrderList.vendorId", "Vendor"),
         width: 200,
-        renderCell: (params) => {
-          const vendorName = getVendorName(params.value);
-          return vendorName;
-        },
       },
       {
-        field: "orderDate",
+        field: "displayOrderDate",
         headerName: t("purchaseOrderList.orderDate", "Order Date"),
         flex: 1,
         minWidth: 150,
-        renderCell: (params) => {
-          if (!params.value) return "";
-          return new Date(params.value).toLocaleDateString();
-        },
       },
       {
-        field: "purchaseAmount",
+        field: "displayPurchaseAmount",
         headerName: t("purchaseOrderList.purchaseAmount", "Purchase Amount"),
         width: 150,
         headerAlign: "right",
         align: "right",
-        renderCell: (params) => {
-          if (params.value === null || params.value === undefined) return "";
-          return `$${Number(params.value).toFixed(2)}`;
-        },
       },
       {
-        field: "orderStatus",
+        field: "displayOrderStatus",
         headerName: t("purchaseOrderList.orderStatus", "Order Status"),
         width: 130,
         headerAlign: "center",
         align: "center",
         renderCell: (params) => {
-          const status = params.value || "NEW";
+          const status = params.row.orderStatus || "NEW";
           let color = "default";
           if (status === "COMPLETED") color = "success";
           else if (status === "PROCESSING") color = "primary";
@@ -247,8 +264,12 @@ const PurchaseOrderModern = () => {
           ]
         : []),
     ],
-    [t, enableActions, handleEdit, handleDelete, handleView, getVendorName],
+    [t, enableActions, handleEdit, handleDelete, handleView],
   );
+
+  const blockColumnDefs = columns
+    .filter((c) => c.field !== "actions")
+    .map((c) => ({ field: c.field, label: c.headerName }));
 
   if (showAdd) {
     return <PurchaseOrderAdd onCancel={handleAddCancel} />;
@@ -345,10 +366,33 @@ const PurchaseOrderModern = () => {
                 : t("purchaseOrderList.noOrders", "No purchase orders found")
             }
           />
+        ) : shouldUseBlockLayout ? (
+          <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
+            {normalizedOrders.map((item, idx) => (
+              <BlockListItem
+                key={item.orderId || idx}
+                columnDefs={blockColumnDefs}
+                item={item}
+                onView={handleView}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                leadingMedia={{
+                  placeholder: (
+                    <ShoppingCartIcon
+                      sx={{ color: "text.secondary", fontSize: "1.1rem" }}
+                    />
+                  ),
+                  width: 40,
+                  height: 40,
+                }}
+                t={t}
+              />
+            ))}
+          </Box>
         ) : (
           <Box sx={{ flex: 1, minHeight: 0 }}>
             <DataGrid
-              rows={filteredOrders}
+              rows={normalizedOrders}
               columns={columns}
               getRowId={(row) => row.orderId}
               initialState={{

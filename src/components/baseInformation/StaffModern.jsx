@@ -16,7 +16,8 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
-import { PageHeader, EmptyState, LoadingState } from "../common";
+import { PageHeader, EmptyState, LoadingState, BlockListItem } from "../common";
+import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import HelpDialog from "../common/HelpDialog";
 import StaffAdd from "./StaffAdd";
 import StaffEdit from "./StaffEdit";
@@ -38,6 +39,7 @@ const StaffModern = () => {
   const [checkingUsage, setCheckingUsage] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const { t } = useTranslation();
+  const { shouldUseBlockLayout } = useResponsiveLayout();
   const { userInfo } = useContext(AuthContext);
   const userCompanyId = userInfo?.companyId || "";
   const userLevel = userInfo?.userLevel || userInfo?.level || 0;
@@ -198,6 +200,25 @@ const StaffModern = () => {
     });
   }, [staffData, search, roles, companies]);
 
+  const normalizedStaff = useMemo(() => {
+    return filteredStaff.map((staff) => {
+      const displayRoleName = getRoleName(staff.staffRoleCode);
+      const displayCompanyName = getCompanyName(staff.companyId);
+      const displayServiceStartDate = formatDate(staff.serviceStartDate);
+      const displayServiceEndDate = formatDate(staff.serviceEndDate);
+      const displayActive = isActiveValue(staff.active);
+
+      return {
+        ...staff,
+        displayRoleName,
+        displayCompanyName,
+        displayServiceStartDate,
+        displayServiceEndDate,
+        displayActive,
+      };
+    });
+  }, [filteredStaff, roles, companies]);
+
   const columns = [
     {
       field: "staffName",
@@ -226,37 +247,34 @@ const StaffModern = () => {
       width: 120,
     },
     {
-      field: "staffRoleCode",
+      field: "displayRoleName",
       headerName: t("staffList.role", "Role"),
       width: 120,
     },
     {
-      field: "companyId",
+      field: "displayCompanyName",
       headerName: t("staffList.company", "Company"),
       flex: 1,
       minWidth: 140,
-      renderCell: (params) => getCompanyName(params.row?.companyId),
     },
     {
-      field: "serviceStartDate",
+      field: "displayServiceStartDate",
       headerName: t("staffList.serviceStartDate", "Start Date"),
       width: 110,
-      renderCell: (params) => formatDate(params.row?.serviceStartDate),
     },
     {
-      field: "serviceEndDate",
+      field: "displayServiceEndDate",
       headerName: t("staffList.serviceEndDate", "End Date"),
       width: 110,
-      renderCell: (params) => formatDate(params.row?.serviceEndDate),
     },
     {
-      field: "active",
+      field: "displayActive",
       headerName: t("staffList.active", "Active"),
       width: 100,
       headerAlign: "center",
       align: "center",
       renderCell: (params) => {
-        const activeValue = isActiveValue(params.row.active);
+        const activeValue = Boolean(params.row.displayActive);
         return (
           <Chip
             size="small"
@@ -342,6 +360,10 @@ const StaffModern = () => {
     return <StaffAdd onCancel={handleAddCancel} />;
   }
 
+  const blockColumnDefs = columns
+    .filter((c) => c.field !== "actions")
+    .map((c) => ({ field: c.field, label: c.headerName }));
+
   return (
     <Box>
       <PageHeader
@@ -416,36 +438,58 @@ const StaffModern = () => {
         </Box>
       )}
 
-      <Box
-        sx={{
-          height: "calc(100vh - 280px)",
-          minHeight: 400,
-          width: "100%",
-          bgcolor: "background.paper",
-          borderRadius: 2,
-          boxShadow: 1,
-        }}
-      >
-        {filteredStaff.length === 0 && !loading ? (
-          <EmptyState
-            title={t("staffList.noStaff", "No staff found")}
-            description={
-              search
-                ? t(
-                    "staffList.noSearchResults",
-                    "Try adjusting your search terms",
-                  )
-                : t(
-                    "staffList.noStaffDescription",
-                    "Get started by adding your first staff member",
-                  )
-            }
-            actionLabel={!search ? t("staffList.addTitle", "Add Staff") : null}
-            onActionClick={!search ? () => setShowAdd(true) : null}
-          />
-        ) : (
+      {filteredStaff.length === 0 && !loading ? (
+        <EmptyState
+          title={t("staffList.noStaff", "No staff found")}
+          description={
+            search
+              ? t(
+                  "staffList.noSearchResults",
+                  "Try adjusting your search terms",
+                )
+              : t(
+                  "staffList.noStaffDescription",
+                  "Get started by adding your first staff member",
+                )
+          }
+          actionLabel={!search ? t("staffList.addTitle", "Add Staff") : null}
+          onActionClick={!search ? () => setShowAdd(true) : null}
+        />
+      ) : shouldUseBlockLayout ? (
+        <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
+          {normalizedStaff.map((item, idx) => (
+            <BlockListItem
+              key={item.staffName || idx}
+              columnDefs={blockColumnDefs}
+              item={item}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              leadingMedia={{
+                placeholder: (
+                  <PeopleIcon
+                    sx={{ color: "text.secondary", fontSize: "1.1rem" }}
+                  />
+                ),
+                width: 40,
+                height: 40,
+              }}
+              t={t}
+            />
+          ))}
+        </Box>
+      ) : (
+        <Box
+          sx={{
+            height: "calc(100vh - 280px)",
+            minHeight: 400,
+            width: "100%",
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            boxShadow: 1,
+          }}
+        >
           <DataGrid
-            rows={filteredStaff}
+            rows={normalizedStaff}
             columns={columns}
             getRowId={(row) => row.staffName}
             initialState={{
@@ -474,8 +518,8 @@ const StaffModern = () => {
               },
             }}
           />
-        )}
-      </Box>
+        </Box>
+      )}
     </Box>
   );
 };

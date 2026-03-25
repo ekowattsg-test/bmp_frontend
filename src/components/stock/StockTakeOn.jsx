@@ -7,6 +7,7 @@ import {
   ButtonBase,
   IconButton,
   InputAdornment,
+  Autocomplete,
 } from "@mui/material";
 import QrCodeScannerIcon from "@mui/icons-material/QrCodeScanner";
 import { useTranslation } from "react-i18next";
@@ -18,9 +19,20 @@ import {
   ImageCarousel,
   ThumbnailImg,
 } from "../../helpers/file_helper";
+import {
+  normalizeLocationValue,
+  buildLocationSuggestions,
+  resolveStockLocationLimit,
+  isLocationCreationDisabled,
+  findLocationOption,
+  upsertLocationSuggestion,
+} from "../../helpers/common_options_helper";
 import ProductDialog from "./ProductDialog";
 import { PageHeader } from "../common";
 import HelpDialog from "../common/HelpDialog";
+
+const { hasLimit: HAS_LOCATION_LIMIT, maxLocations: STOCKTAKE_MAX_LOCATIONS } =
+  resolveStockLocationLimit(import.meta.env.VITE_STOCK_MAX_LOCATION);
 
 const StockTakeOn = () => {
   const { t } = useTranslation();
@@ -32,6 +44,8 @@ const StockTakeOn = () => {
   const [selectedProductImage, setSelectedProductImage] = useState(null);
   const [foundStock, setFoundStock] = useState(null);
   const [qty, setQty] = useState(1);
+  const [location, setLocation] = useState("central");
+  const [locationSuggestions, setLocationSuggestions] = useState([]);
   const [busy, setBusy] = useState(false);
   const [recentRecord, setRecentRecord] = useState(null);
   const [carouselOpen, setCarouselOpen] = useState(false);
@@ -53,6 +67,11 @@ const StockTakeOn = () => {
       ""
     );
   };
+
+  const locationCreationDisabled = isLocationCreationDisabled(
+    locationSuggestions.length,
+    STOCKTAKE_MAX_LOCATIONS,
+  );
 
   const hasProductPictureData = (item) => {
     if (!item) return false;
@@ -317,6 +336,25 @@ const StockTakeOn = () => {
     };
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+
+    const loadLocationSuggestions = async () => {
+      try {
+        const res = await request("GET", "/api/stockmovements");
+        if (!mounted) return;
+        setLocationSuggestions(buildLocationSuggestions(res?.data));
+      } catch (err) {
+        console.debug("Failed to load stock movement location summary", err);
+      }
+    };
+
+    loadLocationSuggestions();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const handleScan = async (scannedValue) => {
     const codeToUse = scannedValue ?? code;
     if (!codeToUse) return;
@@ -471,6 +509,7 @@ const StockTakeOn = () => {
 
   const handleRecord = async () => {
     const quantity = Number(qty);
+    const movementLocation = normalizeLocationValue(location);
     if (!(quantity > 0)) {
       alert(t("stockTake.quantityRequired"));
       return;
@@ -533,8 +572,12 @@ const StockTakeOn = () => {
         stockId,
         movementType: "N",
         quantity,
+        location: movementLocation,
         recordDate: new Date().toISOString(),
       });
+      setLocationSuggestions((prev) =>
+        upsertLocationSuggestion(prev, movementLocation, STOCKTAKE_MAX_LOCATIONS),
+      );
       // show saved stock details inline instead of alert
       const savedProductName = foundStock
         ? getProductDisplayName(foundStock)
@@ -547,6 +590,7 @@ const StockTakeOn = () => {
         productName: savedProductName,
         stockCode: code,
         quantity,
+        location: movementLocation,
         recordedAt: new Date().toISOString(),
       });
       // reset for next scan input but keep recentRecord visible
@@ -568,6 +612,7 @@ const StockTakeOn = () => {
   const createMovement = async (stockId, quantityParam) => {
     const quantity =
       quantityParam !== undefined ? Number(quantityParam) : Number(qty);
+    const movementLocation = normalizeLocationValue(location);
     if (!(quantity > 0)) {
       // nothing to do if quantity not provided or non-positive
       alert(
@@ -585,8 +630,12 @@ const StockTakeOn = () => {
         stockId,
         movementType: "N",
         quantity: quantity,
+        location: movementLocation,
         recordDate: new Date().toISOString(),
       });
+      setLocationSuggestions((prev) =>
+        upsertLocationSuggestion(prev, movementLocation, STOCKTAKE_MAX_LOCATIONS),
+      );
       setFoundStock(null);
       setQty(1);
       setCode("");
@@ -679,6 +728,9 @@ const StockTakeOn = () => {
                 </Typography>
                 <Typography variant="body2">
                   {t("stockTake.quantity", "Quantity")}: {recentRecord.quantity}
+                </Typography>
+                <Typography variant="body2">
+                  {t("stockTake.location", "Location")}: {recentRecord.location}
                 </Typography>
                 <Typography variant="body2" sx={{ color: "text.secondary" }}>
                   {new Date(recentRecord.recordedAt).toLocaleString()}
@@ -821,24 +873,83 @@ const StockTakeOn = () => {
                 </Typography>
               </Box>
             </Box>
-            <Box sx={{ display: "flex", gap: 1, mt: 2, alignItems: "center" }}>
-              <TextField
-                label={t("stockTake.quantity")}
-                type="number"
-                value={qty}
-                onChange={(e) => setQty(e.target.value)}
-                size="small"
-              />
-              <Button
-                variant="contained"
-                onClick={handleRecord}
-                disabled={busy}
-              >
-                {t("stockTake.record")}
-              </Button>
-              <Button variant="outlined" onClick={() => setFoundStock(null)}>
-                {t("basic.cancel")}
-              </Button>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 2 }}>
+              <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
+                <TextField
+                  label={t("stockTake.quantity")}
+                  type="number"
+                  value={qty}
+                  onChange={(e) => setQty(e.target.value)}
+                  size="small"
+                />
+                <Autocomplete
+                  freeSolo={!locationCreationDisabled}
+                  options={locationSuggestions}
+                  value={findLocationOption(locationSuggestions, location)}
+                  inputValue={location}
+                  onInputChange={(_, newInputValue, reason) => {
+                    if (reason === "reset") return;
+                    if (locationCreationDisabled) return;
+                    setLocation(newInputValue);
+                  }}
+                  onChange={(_, newValue) => {
+                    if (typeof newValue === "string") {
+                      if (!locationCreationDisabled) {
+                        setLocation(newValue);
+                      }
+                      return;
+                    }
+                    if (newValue && typeof newValue === "object") {
+                      setLocation(newValue.value);
+                      return;
+                    }
+                    if (!locationCreationDisabled) {
+                      setLocation("");
+                    }
+                  }}
+                  getOptionLabel={(option) =>
+                    typeof option === "string" ? option : option.value
+                  }
+                  renderOption={(props, option) => (
+                    <Box component="li" {...props}>
+                      {option.value}
+                    </Box>
+                  )}
+                  isOptionEqualToValue={(option, value) =>
+                    option.value.toLowerCase() === value.value.toLowerCase()
+                  }
+                  sx={{ minWidth: 260 }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label={t("stockTake.location", "Location")}
+                      placeholder={t(
+                        "stockTake.locationPlaceholder",
+                        "e.g. central",
+                      )}
+                      size="small"
+                    />
+                  )}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleRecord}
+                  disabled={busy}
+                >
+                  {t("stockTake.record")}
+                </Button>
+                <Button variant="outlined" onClick={() => setFoundStock(null)}>
+                  {t("basic.cancel")}
+                </Button>
+              </Box>
+              {HAS_LOCATION_LIMIT && locationCreationDisabled && (
+                <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                  {t(
+                    "stockTake.locationLimitReached",
+                    "Limit reached: choose an existing location",
+                  )}
+                </Typography>
+              )}
             </Box>
           </Box>
         )}
@@ -1013,27 +1124,86 @@ const StockTakeOn = () => {
                 </Typography>
               </Box>
             </Box>
-            <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
-              <TextField
-                label={t("stockTake.quantity")}
-                type="number"
-                value={qty}
-                onChange={(e) => setQty(e.target.value)}
-                size="small"
-              />
-              <Button
-                variant="contained"
-                onClick={handleRecord}
-                disabled={busy}
-              >
-                {t("stockTake.record")}
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => setSelectedProduct(null)}
-              >
-                {t("basic.cancel")}
-              </Button>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 2 }}>
+              <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
+                <TextField
+                  label={t("stockTake.quantity")}
+                  type="number"
+                  value={qty}
+                  onChange={(e) => setQty(e.target.value)}
+                  size="small"
+                />
+                <Autocomplete
+                  freeSolo={!locationCreationDisabled}
+                  options={locationSuggestions}
+                  value={findLocationOption(locationSuggestions, location)}
+                  inputValue={location}
+                  onInputChange={(_, newInputValue, reason) => {
+                    if (reason === "reset") return;
+                    if (locationCreationDisabled) return;
+                    setLocation(newInputValue);
+                  }}
+                  onChange={(_, newValue) => {
+                    if (typeof newValue === "string") {
+                      if (!locationCreationDisabled) {
+                        setLocation(newValue);
+                      }
+                      return;
+                    }
+                    if (newValue && typeof newValue === "object") {
+                      setLocation(newValue.value);
+                      return;
+                    }
+                    if (!locationCreationDisabled) {
+                      setLocation("");
+                    }
+                  }}
+                  getOptionLabel={(option) =>
+                    typeof option === "string" ? option : option.value
+                  }
+                  renderOption={(props, option) => (
+                    <Box component="li" {...props}>
+                      {option.value}
+                    </Box>
+                  )}
+                  isOptionEqualToValue={(option, value) =>
+                    option.value.toLowerCase() === value.value.toLowerCase()
+                  }
+                  sx={{ minWidth: 260 }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label={t("stockTake.location", "Location")}
+                      placeholder={t(
+                        "stockTake.locationPlaceholder",
+                        "e.g. central",
+                      )}
+                      size="small"
+                    />
+                  )}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleRecord}
+                  disabled={busy}
+                >
+                  {t("stockTake.record")}
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => setSelectedProduct(null)}
+                >
+                  {t("basic.cancel")}
+                </Button>
+              </Box>
+              {HAS_LOCATION_LIMIT && locationCreationDisabled && (
+                <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                  {t(
+                    "stockTake.locationLimitReached",
+                    "Limit reached: choose an existing location",
+                  )}
+                </Typography>
+              )}
             </Box>
           </Box>
         )}

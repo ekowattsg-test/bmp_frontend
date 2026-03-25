@@ -9,6 +9,12 @@ import {
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import { AuthContext } from "../../context/authContext";
+import { HeaderBar } from "../common";
+import {
+  buildUniqueOptionObjects,
+  extractListFromResponse,
+  findOptionByValue,
+} from "../../helpers/common_options_helper";
 
 const StaffSkillAdd = ({ onCancel }) => {
   const { t } = useTranslation();
@@ -34,21 +40,17 @@ const StaffSkillAdd = ({ onCancel }) => {
     setCategoriesLoading(true);
     request("GET", "/api/staffskills")
       .then((response) => {
-        const skillsData = response.data || [];
+        const skillsData = extractListFromResponse(response.data);
         // Filter by company unless user is level 9
         const filteredSkills = isUserLevelNine
           ? skillsData
           : skillsData.filter(
               (skill) => String(skill.companyId) === String(userCompanyId),
             );
-        // Extract unique categories
-        const uniqueCategories = [
-          ...new Set(
-            filteredSkills
-              .map((skill) => skill.skillCategory)
-              .filter((cat) => cat && cat.trim() !== ""),
-          ),
-        ].sort();
+        const uniqueCategories = buildUniqueOptionObjects(
+          filteredSkills,
+          (staffSkill) => staffSkill.skillCategory,
+        );
         setCategories(uniqueCategories);
       })
       .catch(() => {
@@ -106,14 +108,12 @@ const StaffSkillAdd = ({ onCancel }) => {
         borderRadius: 2,
       }}
     >
-      <h2
-        style={{
-          fontSize: "clamp(1.2rem, 4vw, 2rem)",
-          margin: 0,
-        }}
-      >
-        {t("staffSkillList.addTitle", "Add Skill")}
-      </h2>
+      <HeaderBar
+        title={t("staffSkillList.addTitle", "Add Skill")}
+        titleVariant="h5"
+        titleSx={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 600 }}
+        sx={{ mb: 1 }}
+      />
       <TextField
         label={t("staffSkillList.skillName", "Skill Name")}
         name="skillName"
@@ -136,20 +136,42 @@ const StaffSkillAdd = ({ onCancel }) => {
         freeSolo
         loading={categoriesLoading}
         options={categories}
-        value={form.skillCategory}
+        value={findOptionByValue(categories, form.skillCategory) ?? null}
         onChange={(event, newValue) => {
+          if (typeof newValue === "string") {
+            setForm((prev) => ({
+              ...prev,
+              skillCategory: newValue,
+            }));
+            return;
+          }
+          if (newValue && typeof newValue === "object") {
+            setForm((prev) => ({
+              ...prev,
+              skillCategory: newValue.value || "",
+            }));
+            return;
+          }
           setForm((prev) => ({
             ...prev,
-            skillCategory: newValue || "",
+            skillCategory: "",
           }));
         }}
         inputValue={form.skillCategory}
-        onInputChange={(event, newInputValue) => {
+        onInputChange={(event, newInputValue, reason) => {
+          if (reason === "reset") return;
           setForm((prev) => ({
             ...prev,
             skillCategory: newInputValue,
           }));
         }}
+        getOptionLabel={(option) =>
+          typeof option === "string" ? option : option.value
+        }
+        renderOption={(props, option) => <li {...props}>{option.value}</li>}
+        isOptionEqualToValue={(option, value) =>
+          option.value.toLowerCase() === value.value.toLowerCase()
+        }
         renderInput={(params) => (
           <TextField
             {...params}

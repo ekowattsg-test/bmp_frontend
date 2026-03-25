@@ -17,6 +17,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import { AuthContext } from "../../context/authContext";
+import { HeaderBar } from "../common";
 
 const formatDateForInput = (value) => {
   if (!value) return "";
@@ -288,14 +289,12 @@ const StaffEdit = ({ staff, onCancel }) => {
         borderRadius: 2,
       }}
     >
-      <h2
-        style={{
-          fontSize: "clamp(1.2rem, 4vw, 2rem)",
-          margin: 0,
-        }}
-      >
-        {t("staffList.editTitle", "Edit Staff")}
-      </h2>
+      <HeaderBar
+        title={t("staffList.editTitle", "Edit Staff")}
+        titleVariant="h5"
+        titleSx={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 600 }}
+        sx={{ mb: 1 }}
+      />
       <TextField
         label={t("staffList.name", "Staff Name")}
         name="staffName"
@@ -335,12 +334,20 @@ const StaffEdit = ({ staff, onCancel }) => {
         select
         label={t("staffList.company", "Company")}
         name="companyId"
-        value={form.companyId}
+        value={
+          filteredCompanies.some((c) => c.companyId === form.companyId)
+            ? form.companyId
+            : ""
+        }
         onChange={handleChange}
         fullWidth
         margin="normal"
         disabled={!isUserLevelNine}
       >
+        {!filteredCompanies.some((c) => c.companyId === form.companyId) &&
+          form.companyId && (
+            <MenuItem value={form.companyId}>{form.companyId}</MenuItem>
+          )}
         {filteredCompanies.map((company) => (
           <MenuItem key={company.companyId} value={company.companyId}>
             {company.companyName}

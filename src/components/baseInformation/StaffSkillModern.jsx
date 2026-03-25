@@ -15,7 +15,8 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
-import { PageHeader, EmptyState, LoadingState } from "../common";
+import { PageHeader, EmptyState, LoadingState, BlockListItem } from "../common";
+import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import HelpDialog from "../common/HelpDialog";
 import StaffSkillAdd from "./StaffSkillAdd";
 import StaffSkillEdit from "./StaffSkillEdit";
@@ -33,6 +34,7 @@ const StaffSkillModern = () => {
   const [deleteError, setDeleteError] = useState("");
   const [checkingUsage, setCheckingUsage] = useState(false);
   const { t } = useTranslation();
+  const { shouldUseBlockLayout } = useResponsiveLayout();
   const [helpOpen, setHelpOpen] = useState(false);
   const showAddSkillButton = false;
 
@@ -110,13 +112,6 @@ const StaffSkillModern = () => {
   });
 
   const columns = [
-    {
-      field: "staffSkillId",
-      headerName: t("staffSkillList.id", "ID"),
-      width: 80,
-      headerAlign: "center",
-      align: "center",
-    },
     {
       field: "skillName",
       headerName: t("staffSkillList.skillName", "Skill Name"),
@@ -209,6 +204,10 @@ const StaffSkillModern = () => {
     return <StaffSkillAdd onCancel={handleAddCancel} />;
   }
 
+  const blockColumnDefs = columns
+    .filter((c) => c.field !== "actions")
+    .map((c) => ({ field: c.field, label: c.headerName }));
+
   return (
     <Box>
       <PageHeader
@@ -287,35 +286,57 @@ const StaffSkillModern = () => {
         </Box>
       )}
 
-      <Box
-        sx={{
-          height: 600,
-          width: "100%",
-          bgcolor: "background.paper",
-          borderRadius: 2,
-          boxShadow: 1,
-        }}
-      >
-        {filteredSkills.length === 0 && !loading ? (
-          <EmptyState
-            title={t("staffSkillList.noSkills", "No skills found")}
-            description={
-              search
-                ? t(
-                    "staffSkillList.noSearchResults",
-                    "Try adjusting your search terms",
-                  )
-                : t(
-                    "staffSkillList.noSkillsDescription",
-                    "Get started by adding your first skill",
-                  )
-            }
-            actionLabel={
-              !search ? t("staffSkillList.addTitle", "Add Skill") : null
-            }
-            onActionClick={!search ? () => setShowAdd(true) : null}
-          />
-        ) : (
+      {filteredSkills.length === 0 && !loading ? (
+        <EmptyState
+          title={t("staffSkillList.noSkills", "No skills found")}
+          description={
+            search
+              ? t(
+                  "staffSkillList.noSearchResults",
+                  "Try adjusting your search terms",
+                )
+              : t(
+                  "staffSkillList.noSkillsDescription",
+                  "Get started by adding your first skill",
+                )
+          }
+          actionLabel={
+            !search ? t("staffSkillList.addTitle", "Add Skill") : null
+          }
+          onActionClick={!search ? () => setShowAdd(true) : null}
+        />
+      ) : shouldUseBlockLayout ? (
+        <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
+          {filteredSkills.map((item, idx) => (
+            <BlockListItem
+              key={item.staffSkillId || idx}
+              columnDefs={blockColumnDefs}
+              item={item}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              leadingMedia={{
+                placeholder: (
+                  <SkillIcon
+                    sx={{ color: "text.secondary", fontSize: "1.1rem" }}
+                  />
+                ),
+                width: 40,
+                height: 40,
+              }}
+              t={t}
+            />
+          ))}
+        </Box>
+      ) : (
+        <Box
+          sx={{
+            height: 600,
+            width: "100%",
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            boxShadow: 1,
+          }}
+        >
           <DataGrid
             rows={filteredSkills}
             columns={columns}
@@ -351,8 +372,8 @@ const StaffSkillModern = () => {
               },
             }}
           />
-        )}
-      </Box>
+        </Box>
+      )}
     </Box>
   );
 };

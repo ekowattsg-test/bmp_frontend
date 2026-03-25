@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
-import { Add as AddIcon, Delete as DeleteIcon, HelpOutline as HelpOutlineIcon } from "@mui/icons-material";
+import { Add as AddIcon, Delete as DeleteIcon } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { Box, TextField, InputAdornment, IconButton } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
@@ -9,6 +9,7 @@ import UserRoleAdd from "./UserRoleAdd";
 import UserRoleEdit from "./UserRoleEdit";
 import UserRoleDelete from "./UserRoleDelete";
 import HelpDialog from "../common/HelpDialog";
+import { HeaderBar } from "../common";
 
 const UserRole = () => {
   const [action, setAction] = useState("view");
@@ -72,63 +73,43 @@ const UserRole = () => {
       ) : (
         <div>
           {!showAdd && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                marginBottom: 16,
+            <HeaderBar
+              title={t("userRole.title", "User-Role Mapping")}
+              subtitle={t("userRole.subtitle", "Assign roles to users")}
+              onHelp={() => setHelpOpen(true)}
+              titleVariant="h5"
+              titleSx={{
+                fontSize: { xs: "1.1rem", sm: "1.5rem" },
+                fontWeight: 600,
               }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <h2 style={{ margin: 0 }}>{t("userRole.title", "User-Role Mapping")}</h2>
-                    <div style={{ color: "var(--color-text-secondary)" }}>
-                      {t("userRole.subtitle", "Assign roles to users")}
-                    </div>
-                    <IconButton
-                      size="small"
-                      aria-label="help"
-                      onClick={() => setHelpOpen(true)}
-                      tabIndex={0}
-                    >
-                      <HelpOutlineIcon fontSize="small" />
-                    </IconButton>
-                  </div>
-              </div>
-              <TextField
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("userRole.searchPlaceholder", "Search...")}
-                size="small"
-                style={{ marginLeft: 16, minWidth: 220 }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton tabIndex={-1}>
-                        <SearchIcon />
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              <div style={{ flex: 1 }} />
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-end",
-                  flex: 1,
-                }}
-              >
-                <IconButton
-                  color="primary"
-                  aria-label="add userrole"
-                  onClick={() => setShowAdd(true)}
-                  style={{ marginLeft: 16 }}
-                >
-                  <AddIcon />
-                </IconButton>
-              </div>
-            </div>
+              actions={
+                <>
+                  <TextField
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={t("userRole.searchPlaceholder", "Search...")}
+                    size="small"
+                    sx={{ minWidth: { xs: 160, sm: 220 } }}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton tabIndex={-1}>
+                            <SearchIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <IconButton
+                    color="primary"
+                    aria-label="add userrole"
+                    onClick={() => setShowAdd(true)}
+                  >
+                    <AddIcon />
+                  </IconButton>
+                </>
+              }
+            />
           )}
           {showAdd ? (
             <UserRoleAdd onCancel={handleAddCancel} />
@@ -288,7 +269,7 @@ const UserRole = () => {
         title={t("userRole.helpTitle", "User role help")}
         content={t(
           "userRole.helpBody",
-          "This page assigns roles to users. Use Add to create a mapping, Edit to modify, and Delete to remove a mapping."
+          "This page assigns roles to users. Use Add to create a mapping, Edit to modify, and Delete to remove a mapping.",
         )}
       />
     </div>

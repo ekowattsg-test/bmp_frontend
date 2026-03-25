@@ -15,7 +15,8 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
-import { PageHeader, EmptyState, LoadingState } from "../common";
+import { PageHeader, EmptyState, LoadingState, BlockListItem } from "../common";
+import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import HelpDialog from "../common/HelpDialog";
 import CompanyAdd from "./CompanyAdd";
 import CompanyEdit from "./CompanyEdit";
@@ -31,6 +32,7 @@ const CompanyModern = () => {
   const [deleteMode, setDeleteMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const { t } = useTranslation();
+  const { shouldUseBlockLayout } = useResponsiveLayout();
   const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
@@ -180,6 +182,10 @@ const CompanyModern = () => {
     return <CompanyAdd onCancel={handleAddCancel} />;
   }
 
+  const blockColumnDefs = columns
+    .filter((c) => c.field !== "actions")
+    .map((c) => ({ field: c.field, label: c.headerName }));
+
   return (
     <Box>
       <PageHeader
@@ -229,35 +235,45 @@ const CompanyModern = () => {
         />
       </Box>
 
-      <Box
-        sx={{
-          height: 600,
-          width: "100%",
-          bgcolor: "background.paper",
-          borderRadius: 2,
-          boxShadow: 1,
-        }}
-      >
-        {filteredCompanies.length === 0 && !loading ? (
-          <EmptyState
-            title={t("companyList.noCompanies", "No companies found")}
-            description={
-              search
-                ? t(
-                    "companyList.noSearchResults",
-                    "Try adjusting your search terms",
-                  )
-                : t(
-                    "companyList.noCompaniesDescription",
-                    "Get started by adding your first company",
-                  )
-            }
-            actionLabel={
-              !search ? t("companyList.addTitle", "Add Company") : null
-            }
-            onActionClick={!search ? () => setShowAdd(true) : null}
-          />
-        ) : (
+      {filteredCompanies.length === 0 && !loading ? (
+        <EmptyState
+          title={t("companyList.noCompanies", "No companies found")}
+          description={
+            search
+              ? t("companyList.noSearchResults", "Try adjusting your search terms")
+              : t("companyList.noCompaniesDescription", "Get started by adding your first company")
+          }
+          actionLabel={!search ? t("companyList.addTitle", "Add Company") : null}
+          onActionClick={!search ? () => setShowAdd(true) : null}
+        />
+      ) : shouldUseBlockLayout ? (
+        <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
+          {filteredCompanies.map((item, idx) => (
+            <BlockListItem
+              key={item.companyId || idx}
+              columnDefs={blockColumnDefs}
+              item={item}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              leadingMedia={{
+                placeholder: <BusinessIcon sx={{ color: "text.secondary", fontSize: "1.1rem" }} />,
+                width: 40,
+                height: 40,
+              }}
+              t={t}
+            />
+          ))}
+        </Box>
+      ) : (
+        <Box
+          sx={{
+            height: 600,
+            width: "100%",
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            boxShadow: 1,
+          }}
+        >
           <DataGrid
             rows={filteredCompanies}
             columns={columns}
@@ -315,8 +331,8 @@ const CompanyModern = () => {
               },
             }}
           />
-        )}
-      </Box>
+        </Box>
+      )}
     </Box>
   );
 };

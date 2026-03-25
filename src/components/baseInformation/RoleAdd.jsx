@@ -3,6 +3,7 @@ import { MenuItem } from "@mui/material";
 import { Box, Button, TextField } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
+import { HeaderBar } from "../common";
 
 import { useContext } from "react";
 import { AuthContext } from "../../context/authContext";
@@ -68,14 +69,12 @@ const RoleAdd = ({ onCancel }) => {
         borderRadius: 2,
       }}
     >
-      <h2
-        style={{
-          fontSize: "clamp(1.2rem, 4vw, 2rem)",
-          margin: 0,
-        }}
-      >
-        {t("roleList.addTitle")}
-      </h2>
+      <HeaderBar
+        title={t("roleList.addTitle")}
+        titleVariant="h5"
+        titleSx={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 600 }}
+        sx={{ mb: 1 }}
+      />
       <TextField
         label={t("roleList.role")}
         name="role"

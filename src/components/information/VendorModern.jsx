@@ -15,7 +15,8 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
-import { PageHeader, EmptyState, LoadingState } from "../common";
+import { PageHeader, EmptyState, LoadingState, BlockListItem } from "../common";
+import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import HelpDialog from "../common/HelpDialog";
 import VendorAdd from "./VendorAdd";
 import VendorEdit from "./VendorEdit";
@@ -31,6 +32,7 @@ const VendorModern = () => {
   const [deleteMode, setDeleteMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const { t } = useTranslation();
+  const { shouldUseBlockLayout } = useResponsiveLayout();
   const enableActions = false;
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -84,11 +86,6 @@ const VendorModern = () => {
 
   const columns = useMemo(
     () => [
-      {
-        field: "vendorId",
-        headerName: t("vendorList.vendorId", "Vendor ID"),
-        width: 150,
-      },
       {
         field: "vendorName",
         headerName: t("vendorList.vendorName", "Vendor Name"),
@@ -207,6 +204,10 @@ const VendorModern = () => {
     return <VendorAdd onCancel={handleAddCancel} />;
   }
 
+  const blockColumnDefs = columns
+    .filter((c) => !["latitude", "longitude", "actions"].includes(c.field))
+    .map((c) => ({ field: c.field, label: c.headerName }));
+
   return (
     <Box>
       <PageHeader
@@ -255,35 +256,56 @@ const VendorModern = () => {
         />
       </Box>
 
-      <Box
-        sx={{
-          height: 600,
-          width: "100%",
-          bgcolor: "background.paper",
-          borderRadius: 2,
-          boxShadow: 1,
-        }}
-      >
-        {filteredVendors.length === 0 && !loading ? (
-          <EmptyState
-            title={t("vendorList.noVendors", "No vendors found")}
-            description={
-              search
-                ? t(
-                    "vendorList.noSearchResults",
-                    "Try adjusting your search terms",
-                  )
-                : t(
-                    "vendorList.noVendorsDescription",
-                    "Get started by adding your first vendor",
-                  )
-            }
-            actionLabel={
-              !search ? t("vendorList.addTitle", "Add Vendor") : null
-            }
-            onActionClick={!search ? () => setShowAdd(true) : null}
-          />
-        ) : (
+      {filteredVendors.length === 0 && !loading ? (
+        <EmptyState
+          title={t("vendorList.noVendors", "No vendors found")}
+          description={
+            search
+              ? t(
+                  "vendorList.noSearchResults",
+                  "Try adjusting your search terms",
+                )
+              : t(
+                  "vendorList.noVendorsDescription",
+                  "Get started by adding your first vendor",
+                )
+          }
+          actionLabel={!search ? t("vendorList.addTitle", "Add Vendor") : null}
+          onActionClick={!search ? () => setShowAdd(true) : null}
+        />
+      ) : shouldUseBlockLayout ? (
+        <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
+          {filteredVendors.map((item, idx) => (
+            <BlockListItem
+              key={item.vendorId || idx}
+              columnDefs={blockColumnDefs}
+              item={item}
+              onEdit={enableActions ? handleEdit : undefined}
+              onDelete={enableActions ? handleDelete : undefined}
+              enableActions={enableActions}
+              leadingMedia={{
+                placeholder: (
+                  <StoreIcon
+                    sx={{ color: "text.secondary", fontSize: "1.1rem" }}
+                  />
+                ),
+                width: 40,
+                height: 40,
+              }}
+              t={t}
+            />
+          ))}
+        </Box>
+      ) : (
+        <Box
+          sx={{
+            height: 600,
+            width: "100%",
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            boxShadow: 1,
+          }}
+        >
           <DataGrid
             rows={filteredVendors}
             columns={columns}
@@ -341,8 +363,8 @@ const VendorModern = () => {
               },
             }}
           />
-        )}
-      </Box>
+        </Box>
+      )}
     </Box>
   );
 };

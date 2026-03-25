@@ -12,15 +12,16 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Typography,
 } from "@mui/material";
 import {
   Add as AddIcon,
   Search as SearchIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  HelpOutline as HelpOutlineIcon,
 } from "@mui/icons-material";
+import HeaderBar from "./HeaderBar";
+import BlockListItem from "./BlockListItem";
+import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 
 /**
  * Common List Container Component
@@ -61,6 +62,8 @@ const ListContainer = ({
   loading = false,
   emptyMessage = "No data available",
 }) => {
+  const { shouldUseBlockLayout } = useResponsiveLayout();
+
   const filtered = filterFunction
     ? data.filter(filterFunction)
     : data.filter((item) => {
@@ -74,66 +77,41 @@ const ListContainer = ({
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      {/* Header with Title & Search */}
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 2,
-          flexWrap: "wrap",
-        }}
-      >
-        <Box sx={{ flex: 1 }}>
-          <h2 style={{ margin: 0 }}>{title}</h2>
-          {subtitle && (
-            <Box
-              sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}
-            >
-              <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                {subtitle}
-              </Typography>
-              {onHelpClick && (
-                <IconButton
-                  size="small"
-                  aria-label="help"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onHelpClick();
-                  }}
-                >
-                  <HelpOutlineIcon fontSize="small" />
-                </IconButton>
-              )}
-            </Box>
-          )}
-        </Box>
+      <HeaderBar
+        title={title}
+        subtitle={subtitle}
+        onHelp={onHelpClick}
+        actions={
+          <>
+            <TextField
+              value={searchValue}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder={searchPlaceholder}
+              size="small"
+              sx={{ minWidth: { xs: 160, sm: 200 } }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
 
-        <TextField
-          value={searchValue}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder={searchPlaceholder}
-          size="small"
-          sx={{ minWidth: 220 }}
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-
-        {enableActions && onAdd && (
-          <IconButton
-            color="primary"
-            aria-label="add item"
-            onClick={onAdd}
-            size="medium"
-          >
-            <AddIcon />
-          </IconButton>
-        )}
-      </Box>
+            {enableActions && onAdd && (
+              <IconButton
+                color="primary"
+                aria-label="add item"
+                onClick={onAdd}
+                size="medium"
+                sx={{ flexShrink: 0 }}
+              >
+                <AddIcon />
+              </IconButton>
+            )}
+          </>
+        }
+      />
 
       {/* Content */}
       {loading ? (
@@ -141,94 +119,130 @@ const ListContainer = ({
           Loading...
         </Box>
       ) : filtered && Array.isArray(filtered) && filtered.length > 0 ? (
-        <TableContainer component={Paper} sx={{ boxShadow: 1 }}>
-          <Table size="small">
-            <TableHead sx={{ backgroundColor: "background.default" }}>
-              <TableRow>
-                {columns.map((col) => (
-                  <TableCell
-                    key={col}
-                    align={col === "active" ? "center" : "left"}
-                    sx={{ fontWeight: 600, color: "text.primary" }}
-                  >
-                    {t ? t(`list.${col}`, col) : col}
-                  </TableCell>
-                ))}
-                {enableActions && (
-                  <TableCell
-                    align="center"
-                    sx={{ fontWeight: 600, color: "text.primary" }}
-                  >
-                    {t ? t("basic.actions", "Actions") : "Actions"}
-                  </TableCell>
-                )}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filtered.map((item, idx) => (
-                <TableRow
-                  key={idx}
-                  sx={{
-                    "&:hover": {
-                      backgroundColor: "action.hover",
-                    },
-                  }}
-                >
-                  {columns.map((col) => (
-                    <TableCell
-                      key={col}
-                      align={col === "active" ? "center" : "left"}
-                    >
-                      {typeof item[col] === "boolean"
-                        ? t
-                          ? t(`basic.${item[col] ? "true" : "false"}`)
-                          : item[col]
-                            ? "Yes"
-                            : "No"
-                        : item[col]}
-                    </TableCell>
-                  ))}
-                  {enableActions && (
-                    <TableCell align="center">
-                      <Box
-                        sx={{
-                          display: "flex",
-                          gap: 1,
-                          justifyContent: "center",
-                        }}
+        <>
+          {/* Table Layout - visible on md and larger or when block layout is disabled */}
+          {!shouldUseBlockLayout && (
+            <TableContainer
+              component={Paper}
+              sx={{
+                boxShadow: 1,
+                overflowX: "auto",
+                overflowY: "hidden",
+                "-webkit-overflow-scrolling": "touch",
+              }}
+            >
+              <Table size="small" sx={{ minWidth: 500 }}>
+                <TableHead sx={{ backgroundColor: "background.default" }}>
+                  <TableRow>
+                    {columns.map((col) => (
+                      <TableCell
+                        key={col}
+                        align={col === "active" ? "center" : "left"}
+                        sx={{ fontWeight: 600, color: "text.primary" }}
                       >
-                        {onEdit && (
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onEdit(item);
+                        {t ? t(`list.${col}`, col) : col}
+                      </TableCell>
+                    ))}
+                    {enableActions && (
+                      <TableCell
+                        align="center"
+                        sx={{ fontWeight: 600, color: "text.primary" }}
+                      >
+                        {t ? t("basic.actions", "Actions") : "Actions"}
+                      </TableCell>
+                    )}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filtered.map((item, idx) => (
+                    <TableRow
+                      key={idx}
+                      sx={{
+                        "&:hover": {
+                          backgroundColor: "action.hover",
+                        },
+                      }}
+                    >
+                      {columns.map((col) => (
+                        <TableCell
+                          key={col}
+                          align={col === "active" ? "center" : "left"}
+                        >
+                          {typeof item[col] === "boolean"
+                            ? t
+                              ? t(`basic.${item[col] ? "true" : "false"}`)
+                              : item[col]
+                                ? "Yes"
+                                : "No"
+                            : item[col]}
+                        </TableCell>
+                      ))}
+                      {enableActions && (
+                        <TableCell align="center">
+                          <Box
+                            sx={{
+                              display: "flex",
+                              gap: 1,
+                              justifyContent: "center",
                             }}
                           >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        )}
-                        {onDelete && (
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDelete(item);
-                            }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        )}
-                      </Box>
-                    </TableCell>
-                  )}
-                </TableRow>
+                            {onEdit && (
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEdit(item);
+                                }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            )}
+                            {onDelete && (
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDelete(item);
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            )}
+                          </Box>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+
+          {/* Block Layout - visible on small screens when enabled */}
+          {shouldUseBlockLayout && (
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "1fr",
+                gap: 2,
+              }}
+            >
+              {filtered.map((item, idx) => (
+                <BlockListItem
+                  key={idx}
+                  columns={columns}
+                  item={item}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  t={t}
+                  enableActions={enableActions}
+                />
               ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+            </Box>
+          )}
+        </>
       ) : (
         <Box sx={{ textAlign: "center", py: 4, color: "text.secondary" }}>
           {emptyMessage}

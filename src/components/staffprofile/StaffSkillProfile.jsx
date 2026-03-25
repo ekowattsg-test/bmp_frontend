@@ -1,7 +1,39 @@
 import React, { useState, useEffect, useContext } from "react";
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+  InputAdornment,
+  Typography,
+} from "@mui/material";
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Add as AddIcon,
+  Search as SearchIcon,
+  ArrowBack as ArrowBackIcon,
+} from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { AuthContext } from "../../context/authContext";
 import { request } from "../../helpers/axios_helper";
+import { HeaderBar } from "../common";
+import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
+import {
+  buildUniqueOptionObjects,
+  extractListFromResponse,
+} from "../../helpers/common_options_helper";
 import {
   getStorageConfig,
   getFileIdFromLink,
@@ -9,56 +41,48 @@ import {
   commit,
   abort,
 } from "../../helpers/file_helper";
-import FileGallery from "../common/FileGallery";
+import { ListContainer, BlockListItem } from "../common";
+import StaffSkillAdd from "./StaffSkillAdd";
+import StaffSkillEdit from "./StaffSkillEdit";
 
 const StaffSkillProfile = ({ onBack }) => {
   const { t } = useTranslation();
   const { userInfo } = useContext(AuthContext);
+  const { shouldUseBlockLayout } = useResponsiveLayout();
+
+  // Staff List View States
   const [staffList, setStaffList] = useState([]);
+  const [staffLoading, setStaffLoading] = useState(true);
+  const [staffSearch, setStaffSearch] = useState("");
+  const [refreshStaff, setRefreshStaff] = useState(false);
+
+  // Skills View States
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [staffSkills, setStaffSkills] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [skillsLoading, setSkillsLoading] = useState(false);
-  const [showSkillModal, setShowSkillModal] = useState(false);
-  const [availableSkills, setAvailableSkills] = useState([]);
-  const [selectedSkill, setSelectedSkill] = useState(null);
-  const [showSkillForm, setShowSkillForm] = useState(false);
-  const [showNewSkillForm, setShowNewSkillForm] = useState(false);
-  const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [skillSearchTerm, setSkillSearchTerm] = useState("");
-  const [skillCategoryFilter, setSkillCategoryFilter] = useState(null);
-  const [skillFormData, setSkillFormData] = useState({
-    issuedBy: "",
-    acquiredDate: "",
-    expiryDate: "",
-    noExpiry: false,
-    certificationLinks: [],
-  });
-  const [newSkillData, setNewSkillData] = useState({
-    skillName: "",
-    skillDescription: "",
-    skillCategory: "",
-  });
-  const [showEditSkillForm, setShowEditSkillForm] = useState(false);
-  const [editingSkill, setEditingSkill] = useState(null);
+  const [skillSearch, setSkillSearch] = useState("");
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [skillToDelete, setSkillToDelete] = useState(null);
+  const [error, setError] = useState("");
+
+  // Dialog States
+  const [showAddFrame, setShowAddFrame] = useState(false);
+  const [showEditFrame, setShowEditFrame] = useState(false);
+  const [skillToEdit, setSkillToEdit] = useState(null);
 
   // Get user level and company info
   const userLevel = userInfo?.userLevel || userInfo?.level || 0;
   const isUserLevelNine = userLevel === 9 || userLevel === "9";
   const userCompanyId = userInfo?.companyId;
 
+  // Load staff list
   useEffect(() => {
     loadStaffList();
-  }, [userCompanyId, isUserLevelNine]);
+  }, [userCompanyId, isUserLevelNine, refreshStaff]);
 
   const loadStaffList = async () => {
     try {
-      setLoading(true);
-      // Fetch all staff
+      setStaffLoading(true);
       const response = await request("GET", "/api/staffs");
 
       if (response.data) {
@@ -129,8 +153,9 @@ const StaffSkillProfile = ({ onBack }) => {
       }
     } catch (error) {
       console.error("Error loading staff list:", error);
+      setStaffList([]);
     } finally {
-      setLoading(false);
+      setStaffLoading(false);
     }
   };
 
@@ -201,300 +226,26 @@ const StaffSkillProfile = ({ onBack }) => {
     loadStaffSkills(staff.staffName);
   };
 
-  const handleBack = () => {
+  const handleBackFromSkills = () => {
     setSelectedStaff(null);
     setStaffSkills([]);
-    // Reload staff list to refresh badges
-    loadStaffList();
+    setRefreshStaff(!refreshStaff);
   };
 
-  const loadAvailableSkills = async () => {
-    try {
-      const response = await request("GET", "/api/staffskills");
-      if (response.data) {
-        const skills = Array.isArray(response.data)
-          ? response.data
-          : response.data.items || [];
-        setAvailableSkills(skills);
-      }
-    } catch (error) {
-      console.error("Error loading available skills:", error);
-      setAvailableSkills([]);
+  const handleAddSkillSuccess = () => {
+    setShowAddFrame(false);
+    if (selectedStaff) {
+      loadStaffSkills(selectedStaff.staffName);
+      loadStaffList(); // Refresh staff list to update skill count badge
     }
   };
 
-  const handleCertificationLinksChange = (json) => {
-    try {
-      const parsed = json ? JSON.parse(json) : [];
-      const arr = Array.isArray(parsed) ? parsed : [parsed];
-      const certificationLinks = arr.filter(Boolean).map((item) =>
-        normalizeFileMetadata(item, {
-          provider: getStorageConfig().provider,
-        }),
-      );
-      setSkillFormData((prev) => ({
-        ...prev,
-        certificationLinks,
-      }));
-    } catch (error) {
-      console.error("Error parsing certification links:", error);
-    }
-  };
-
-  const handleAddSkillClick = () => {
-    loadAvailableSkills();
-    setShowSkillModal(true);
-  };
-
-  const handleSkillSelect = (skill) => {
-    setSelectedSkill(skill);
-    setShowSkillModal(false);
-    setShowSkillForm(true);
-    setSkillFormData({
-      issuedBy: "",
-      acquiredDate: "",
-      expiryDate: "",
-      noExpiry: false,
-      certificationLinks: [],
-    });
-  };
-
-  const handleSkillFormChange = (field, value) => {
-    setSkillFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleSkillFormSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    try {
-      const normalizedCertLinks = skillFormData.certificationLinks
-        .map((cert) => {
-          const normalizedCert = normalizeFileMetadata(cert, {
-            provider: getStorageConfig().provider,
-          });
-          const id = normalizedCert.id;
-          // Only include documents with valid IDs
-          if (!id) {
-            console.warn("Skipping document without valid ID:", cert);
-            return null;
-          }
-          return normalizedCert;
-        })
-        .filter((cert) => cert !== null); // Remove null entries
-
-      if (
-        normalizedCertLinks.length === 0 &&
-        skillFormData.certificationLinks.length > 0
-      ) {
-        throw new Error(
-          "No valid certification documents found. Please upload valid files.",
-        );
-      }
-
-      const payload = {
-        staffName: selectedStaff.staffName,
-        staffSkillId: selectedSkill.staffSkillId,
-        issuedBy: skillFormData.issuedBy,
-        acquiredDate: skillFormData.acquiredDate,
-        expiryDate: skillFormData.noExpiry ? null : skillFormData.expiryDate,
-        noExpiry: skillFormData.noExpiry ? 1 : 0,
-        certificationLink: JSON.stringify(normalizedCertLinks),
-      };
-
-      await request("POST", "/api/staffskillprofiles", payload);
-      await commit();
-
-      // Reload both staff skills and staff list to update badges
-      await Promise.all([
-        loadStaffSkills(selectedStaff.staffName),
-        loadStaffList(),
-      ]);
-
-      // Close form
-      setShowSkillForm(false);
-      setSelectedSkill(null);
-    } catch (error) {
-      console.error("Error saving staff skill profile:", error);
-      console.error("Error response:", error.response?.data);
-      const errorMsg =
-        error.response?.status === 401
-          ? t("staffManagement.unauthorizedError")
-          : error.response?.data?.message ||
-            t("staffManagement.errorSavingSkill");
-      setError(errorMsg);
-    }
-  };
-
-  const handleNewSkillClick = () => {
-    setShowSkillModal(false);
-    setShowNewSkillForm(true);
-    setNewSkillData({
-      skillName: "",
-      skillDescription: "",
-      skillCategory: "",
-    });
-  };
-
-  const handleNewSkillChange = (field, value) => {
-    setNewSkillData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleNewSkillSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    try {
-      const response = await request("POST", "/api/staffskills", newSkillData);
-
-      if (response.data) {
-        // Auto-select the newly created skill
-        const newSkill = response.data;
-        setShowNewSkillForm(false);
-        setSelectedSkill(newSkill);
-        setShowSkillForm(true);
-        setSkillFormData({
-          issuedBy: "",
-          acquiredDate: "",
-          expiryDate: "",
-          noExpiry: false,
-          certificationLinks: [],
-        });
-      }
-    } catch (error) {
-      console.error("Error creating new skill:", error);
-      const errorMsg =
-        error.response?.status === 401
-          ? t("staffManagement.unauthorizedError")
-          : error.response?.data?.message ||
-            t("staffManagement.errorCreatingSkill");
-      setError(errorMsg);
-    }
-  };
-
-  const handleEditSkillClick = (skill) => {
-    setEditingSkill(skill);
-    let certificationLinks = [];
-    try {
-      if (skill.certificationLink) {
-        certificationLinks = JSON.parse(skill.certificationLink);
-        // Handle old string format for backward compatibility
-        if (typeof certificationLinks === "string") {
-          certificationLinks = [
-            {
-              id: getFileIdFromLink(certificationLinks),
-              name: "Legacy Certificate",
-              url: certificationLinks,
-              uploadedAt: new Date().toISOString(),
-            },
-          ];
-        }
-        if (Array.isArray(certificationLinks)) {
-          certificationLinks = certificationLinks.map((cert) => {
-            const normalizedCert = normalizeFileMetadata(cert, {
-              name: typeof cert === "string" ? "Legacy Certificate" : "",
-              provider: getStorageConfig().provider,
-              uploadedAt: new Date().toISOString(),
-            });
-            return normalizedCert;
-          });
-        }
-      }
-    } catch (e) {
-      // If parsing fails, treat as old string format
-      if (skill.certificationLink) {
-        certificationLinks = [
-          {
-            id: getFileIdFromLink(skill.certificationLink),
-            name: "Legacy Certificate",
-            url: skill.certificationLink,
-            uploadedAt: new Date().toISOString(),
-          },
-        ];
-      }
-    }
-    setSkillFormData({
-      issuedBy: skill.issuedBy || "",
-      acquiredDate: skill.acquiredDate || "",
-      expiryDate: skill.expiryDate || "",
-      noExpiry: skill.noExpiry === 1 || skill.noExpiry === true,
-      certificationLinks: certificationLinks,
-    });
-    setShowEditSkillForm(true);
-  };
-
-  const handleEditSkillSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    try {
-      if (!editingSkill || !editingSkill.staffSkillProfileId) {
-        throw new Error("Invalid skill to edit");
-      }
-
-      const normalizedCertLinks = skillFormData.certificationLinks
-        .map((cert) => {
-          const normalizedCert = normalizeFileMetadata(cert, {
-            provider: getStorageConfig().provider,
-          });
-          const id = normalizedCert.id;
-          // Only include documents with valid IDs
-          if (!id) {
-            console.warn("Skipping document without valid ID:", cert);
-            return null;
-          }
-          return normalizedCert;
-        })
-        .filter((cert) => cert !== null); // Remove null entries
-
-      if (
-        normalizedCertLinks.length === 0 &&
-        skillFormData.certificationLinks.length > 0
-      ) {
-        throw new Error(
-          "No valid certification documents found. Please upload valid files.",
-        );
-      }
-
-      const payload = {
-        staffSkillProfileId: editingSkill.staffSkillProfileId,
-        staffName: editingSkill.staffName,
-        staffSkillId: editingSkill.staffSkillId,
-        issuedBy: skillFormData.issuedBy,
-        acquiredDate: skillFormData.acquiredDate,
-        expiryDate: skillFormData.noExpiry ? null : skillFormData.expiryDate,
-        noExpiry: skillFormData.noExpiry ? 1 : 0,
-        certificationLink: JSON.stringify(normalizedCertLinks),
-      };
-
-      await request(
-        "PUT",
-        `/api/staffskillprofiles/${editingSkill.staffSkillProfileId}`,
-        payload,
-      );
-      await commit();
-
-      // Reload both staff skills and staff list to update badges
-      await Promise.all([
-        loadStaffSkills(editingSkill.staffName),
-        loadStaffList(),
-      ]);
-
-      // Close form
-      setShowEditSkillForm(false);
-      setEditingSkill(null);
-    } catch (error) {
-      console.error("Error updating staff skill profile:", error);
-      console.error("Error response data:", error.response?.data);
-      const errorMsg =
-        error.response?.status === 401
-          ? t("staffManagement.unauthorizedError")
-          : error.response?.data?.message ||
-            t("staffManagement.errorUpdatingSkill");
-      setError(errorMsg);
+  const handleEditSkillSuccess = () => {
+    setShowEditFrame(false);
+    setSkillToEdit(null);
+    if (selectedStaff) {
+      loadStaffSkills(selectedStaff.staffName);
+      loadStaffList(); // Refresh staff list to update skill count badge
     }
   };
 
@@ -535,748 +286,372 @@ const StaffSkillProfile = ({ onBack }) => {
     }
   };
 
-  const closeAllModals = () => {
-    abort();
-    setShowSkillModal(false);
-    setShowSkillForm(false);
-    setShowNewSkillForm(false);
-    setShowEditSkillForm(false);
-    setSelectedSkill(null);
-    setEditingSkill(null);
-    setShowDeleteConfirmation(false);
-    setSkillToDelete(null);
+  const filterStaffList = (staff) => {
+    const q = staffSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (staff.staffName && staff.staffName.toLowerCase().includes(q)) ||
+      (staff.name && staff.name.toLowerCase().includes(q)) ||
+      (staff.firstName && staff.firstName.toLowerCase().includes(q)) ||
+      (staff.lastName && staff.lastName.toLowerCase().includes(q))
+    );
   };
 
+  const filteredSkills = staffSkills.filter((skill) => {
+    const q = skillSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (skill.skillName && skill.skillName.toLowerCase().includes(q)) ||
+      (skill.skillCategory && skill.skillCategory.toLowerCase().includes(q))
+    );
+  });
+
+  const staffListViewData = staffList.map((staff) => ({
+    ...staff,
+    skillCountDisplay: (
+      <Box
+        sx={{
+          display: "inline-block",
+          px: 1.5,
+          py: 0.5,
+          backgroundColor: "primary.lighter",
+          color: "primary.main",
+          borderRadius: 1,
+          fontWeight: 500,
+          fontSize: "0.875rem",
+        }}
+      >
+        {staff.skillCount || 0} {t("common.skills")}
+      </Box>
+    ),
+  }));
+
+  const getCertificationCount = (skill) => {
+    try {
+      const certLinks = skill.certificationLink
+        ? JSON.parse(skill.certificationLink)
+        : null;
+      if (Array.isArray(certLinks) && certLinks.length > 0) {
+        return certLinks.length;
+      }
+      if (typeof certLinks === "string" && certLinks) {
+        return 1;
+      }
+      if (
+        skill.certificationLink &&
+        typeof skill.certificationLink === "string"
+      ) {
+        return 1;
+      }
+    } catch (e) {
+      if (skill.certificationLink) {
+        return 1;
+      }
+    }
+    return 0;
+  };
+
+  const skillBlockColumnDefs = [
+    { field: "skillName", label: t("staffManagement.skillName") },
+    { field: "skillCategory", label: t("staffManagement.skillCategory") },
+    { field: "issuedBy", label: t("staffManagement.issuedBy") },
+    { field: "acquiredDateDisplay", label: t("staffManagement.acquiredDate") },
+    { field: "expiryDateDisplay", label: t("staffManagement.expiryDate") },
+    {
+      field: "certificationDisplay",
+      label: t("staffManagement.certification"),
+    },
+  ];
+
+  const blockSkills = filteredSkills.map((skill) => ({
+    ...skill,
+    acquiredDateDisplay: skill.acquiredDate
+      ? new Date(skill.acquiredDate).toLocaleDateString()
+      : "-",
+    expiryDateDisplay: skill.noExpiry
+      ? t("staffManagement.noExpiry")
+      : skill.expiryDate
+        ? new Date(skill.expiryDate).toLocaleDateString()
+        : "-",
+    certificationDisplay: (() => {
+      const count = getCertificationCount(skill);
+      return count > 0 ? count : "-";
+    })(),
+  }));
+
+  // Component rendered when Add form is shown
+  if (showAddFrame && selectedStaff) {
+    return (
+      <StaffSkillAdd
+        staff={selectedStaff}
+        onCancel={() => setShowAddFrame(false)}
+        onSuccess={handleAddSkillSuccess}
+      />
+    );
+  }
+
+  // Component rendered when Edit form is shown
+  if (showEditFrame && skillToEdit && selectedStaff) {
+    return (
+      <StaffSkillEdit
+        skill={skillToEdit}
+        staff={selectedStaff}
+        onCancel={() => {
+          setShowEditFrame(false);
+          setSkillToEdit(null);
+        }}
+        onSuccess={handleEditSkillSuccess}
+      />
+    );
+  }
+
+  // Skills detail view for selected staff
   if (selectedStaff) {
     return (
-      <div className="staff-skill-profile">
-        <div className="header">
-          <button className="back-btn" onClick={handleBack}>
-            ← {t("common.back")}
-          </button>
-          <h2>
-            {t("staffManagement.staffSkillProfile")} -{" "}
-            {selectedStaff.staffName || selectedStaff.name}
-          </h2>
-          <button className="add-skill-btn" onClick={handleAddSkillClick}>
-            + {t("staffManagement.addSkill")}
-          </button>
-        </div>
-
-        {skillsLoading ? (
-          <p>{t("common.loading")}</p>
-        ) : error ? (
-          <div className="error-container">
-            <div className="error-message">{error}</div>
-            <button
-              className="retry-btn"
-              onClick={() => loadStaffSkills(selectedStaff.staffName)}
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <HeaderBar
+          showBackButton
+          onBack={handleBackFromSkills}
+          backLabel={t("common.back")}
+          title={t("staffManagement.staffSkillProfile")}
+          subtitle={selectedStaff.staffName || selectedStaff.name}
+          actions={
+            <Button
+              variant="contained"
+              color="success"
+              startIcon={<AddIcon />}
+              onClick={() => setShowAddFrame(true)}
+              sx={{ textTransform: "none" }}
             >
-              {t("common.retry")}
-            </button>
-          </div>
-        ) : (
-          <div className="skills-detail-container">
-            {staffSkills.length > 0 ? (
-              <table className="skills-table">
-                <thead>
-                  <tr>
-                    <th>{t("staffManagement.skillName")}</th>
-                    <th>{t("staffManagement.skillDescription")}</th>
-                    <th>{t("staffManagement.skillCategory")}</th>
-                    <th>{t("staffManagement.issuedBy")}</th>
-                    <th>{t("staffManagement.acquiredDate")}</th>
-                    <th>{t("staffManagement.expiryDate")}</th>
-                    <th>{t("staffManagement.certification")}</th>
-                    <th>{t("staffManagement.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {staffSkills.map((skill) => (
-                    <tr key={skill.staffSkillProfileId}>
-                      <td>{skill.skillName || "-"}</td>
-                      <td>{skill.skillDescription || "-"}</td>
-                      <td>{skill.skillCategory || "-"}</td>
-                      <td>{skill.issuedBy || "-"}</td>
-                      <td>
+              {t("staffManagement.addSkill")}
+            </Button>
+          }
+        />
+
+        {/* Error Message */}
+        {error && (
+          <Box
+            sx={{
+              backgroundColor: "error.lighter",
+              color: "error.main",
+              p: 2,
+              borderRadius: 1,
+              border: "1px solid",
+              borderColor: "error.light",
+            }}
+          >
+            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+              <Typography>{error}</Typography>
+              <Button
+                size="small"
+                onClick={() => {
+                  if (selectedStaff) {
+                    loadStaffSkills(selectedStaff.staffName);
+                  }
+                }}
+              >
+                {t("common.retry")}
+              </Button>
+            </Box>
+          </Box>
+        )}
+
+        {/* Search Bar */}
+        <TextField
+          value={skillSearch}
+          onChange={(e) => setSkillSearch(e.target.value)}
+          placeholder={t("staffManagement.searchSkills", "Search skills...")}
+          size="small"
+          sx={{ minWidth: 200, maxWidth: 300 }}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
+
+        {/* Skills Table */}
+        {skillsLoading ? (
+          <Box sx={{ textAlign: "center", py: 4, color: "text.secondary" }}>
+            {t("common.loading")}
+          </Box>
+        ) : filteredSkills.length > 0 ? (
+          shouldUseBlockLayout ? (
+            <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
+              {blockSkills.map((skill, idx) => (
+                <BlockListItem
+                  key={skill.staffSkillProfileId || idx}
+                  columnDefs={skillBlockColumnDefs}
+                  item={skill}
+                  onEdit={(item) => {
+                    setSkillToEdit(item);
+                    setShowEditFrame(true);
+                  }}
+                  onDelete={(item) => handleDeleteSkillClick(item)}
+                  t={t}
+                />
+              ))}
+            </Box>
+          ) : (
+            <TableContainer component={Paper} sx={{ boxShadow: 1 }}>
+              <Table size="small">
+                <TableHead sx={{ backgroundColor: "background.default" }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600 }}>
+                      {t("staffManagement.skillName")}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>
+                      {t("staffManagement.skillCategory")}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>
+                      {t("staffManagement.issuedBy")}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>
+                      {t("staffManagement.acquiredDate")}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>
+                      {t("staffManagement.expiryDate")}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }} align="center">
+                      {t("staffManagement.certification")}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }} align="center">
+                      {t("basic.actions")}
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredSkills.map((skill) => (
+                    <TableRow
+                      key={skill.staffSkillProfileId}
+                      sx={{
+                        "&:hover": {
+                          backgroundColor: "action.hover",
+                        },
+                      }}
+                    >
+                      <TableCell>{skill.skillName || "-"}</TableCell>
+                      <TableCell>{skill.skillCategory || "-"}</TableCell>
+                      <TableCell>{skill.issuedBy || "-"}</TableCell>
+                      <TableCell>
                         {skill.acquiredDate
                           ? new Date(skill.acquiredDate).toLocaleDateString()
                           : "-"}
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         {skill.noExpiry
                           ? t("staffManagement.noExpiry")
                           : skill.expiryDate
                             ? new Date(skill.expiryDate).toLocaleDateString()
                             : "-"}
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell align="center">
                         {(() => {
-                          try {
-                            const certLinks = skill.certificationLink
-                              ? JSON.parse(skill.certificationLink)
-                              : null;
-                            if (
-                              Array.isArray(certLinks) &&
-                              certLinks.length > 0
-                            ) {
-                              return (
-                                <span className="cert-count-badge">
-                                  📄 {certLinks.length}
-                                </span>
-                              );
-                            } else if (
-                              typeof certLinks === "string" &&
-                              certLinks
-                            ) {
-                              // Backward compatibility for old string format
-                              return (
-                                <span className="cert-count-badge">📄 1</span>
-                              );
-                            } else if (
-                              skill.certificationLink &&
-                              typeof skill.certificationLink === "string"
-                            ) {
-                              // Handle non-JSON string (old format)
-                              return (
-                                <span className="cert-count-badge">📄 1</span>
-                              );
-                            }
-                          } catch (e) {
-                            // If JSON parsing fails, treat as old string format
-                            if (skill.certificationLink) {
-                              return (
-                                <span className="cert-count-badge">📄 1</span>
-                              );
-                            }
-                          }
-                          return "-";
+                          const count = getCertificationCount(skill);
+                          return count > 0 ? <span>{count}</span> : "-";
                         })()}
-                      </td>
-                      <td className="action-buttons">
-                        <button
-                          className="btn-edit"
-                          onClick={() => handleEditSkillClick(skill)}
-                          title={t("staffManagement.edit")}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box
+                          sx={{
+                            display: "flex",
+                            gap: 1,
+                            justifyContent: "center",
+                          }}
                         >
-                          ✎
-                        </button>
-                        <button
-                          className="btn-delete"
-                          onClick={() => handleDeleteSkillClick(skill)}
-                          title={t("staffManagement.delete")}
-                        >
-                          🗑
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p className="no-skills-message">
-                {t("staffManagement.noSkillsFound")}
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Skill Selection Modal */}
-        {showSkillModal && (
-          <div className="modal-overlay" onClick={closeAllModals}>
-            <div
-              className="modal-content skill-selection-modal"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="modal-header">
-                <h3>{t("staffManagement.selectSkill")}</h3>
-                <button className="close-btn" onClick={closeAllModals}>
-                  ×
-                </button>
-              </div>
-              <div className="modal-body">
-                {/* Search and Filter Section */}
-                <div className="skill-filter-section">
-                  <input
-                    type="text"
-                    className="skill-search-input"
-                    placeholder={t("staffManagement.searchSkills")}
-                    value={skillSearchTerm}
-                    onChange={(e) => setSkillSearchTerm(e.target.value)}
-                  />
-                  <div className="skill-category-filters">
-                    <button
-                      className={`skill-filter-badge ${!skillCategoryFilter ? "active" : ""}`}
-                      onClick={() => setSkillCategoryFilter(null)}
-                    >
-                      {t("common.all")}
-                    </button>
-                    {(() => {
-                      const categories = new Set();
-                      availableSkills.forEach((skill) => {
-                        if (skill.skillCategory)
-                          categories.add(skill.skillCategory);
-                      });
-                      return Array.from(categories)
-                        .sort()
-                        .map((category) => (
-                          <button
-                            key={category}
-                            className={`skill-filter-badge ${skillCategoryFilter === category ? "active" : ""}`}
-                            onClick={() =>
-                              setSkillCategoryFilter(
-                                skillCategoryFilter === category
-                                  ? null
-                                  : category,
-                              )
-                            }
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setSkillToEdit(skill);
+                              setShowEditFrame(true);
+                            }}
+                            title={t("staffManagement.edit")}
                           >
-                            {category}
-                          </button>
-                        ));
-                    })()}
-                  </div>
-                </div>
-
-                {/* Skills List */}
-                <div className="skills-list-container">
-                  {availableSkills
-                    .filter((skill) => {
-                      // Filter by search term
-                      if (skillSearchTerm) {
-                        const search = skillSearchTerm.toLowerCase();
-                        const name = (skill.skillName || "").toLowerCase();
-                        const desc = (
-                          skill.skillDescription || ""
-                        ).toLowerCase();
-                        if (!name.includes(search) && !desc.includes(search))
-                          return false;
-                      }
-                      // Filter by category
-                      if (
-                        skillCategoryFilter &&
-                        skill.skillCategory !== skillCategoryFilter
-                      )
-                        return false;
-                      return true;
-                    })
-                    .map((skill) => (
-                      <div
-                        key={skill.staffSkillId}
-                        className="skill-item"
-                        onClick={() => handleSkillSelect(skill)}
-                      >
-                        <h4>{skill.skillName}</h4>
-                        <p>{skill.skillDescription || "-"}</p>
-                        <span className="skill-category">
-                          {skill.skillCategory || "-"}
-                        </span>
-                      </div>
-                    ))}
-                </div>
-
-                <button className="new-skill-btn" onClick={handleNewSkillClick}>
-                  + {t("staffManagement.addNewSkill")}
-                </button>
-              </div>
-            </div>
-          </div>
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleDeleteSkillClick(skill)}
+                            title={t("staffManagement.delete")}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )
+        ) : (
+          <Box sx={{ textAlign: "center", py: 4, color: "text.secondary" }}>
+            {t("staffManagement.noSkillsFound")}
+          </Box>
         )}
 
-        {/* Skill Profile Form Modal */}
-        {showSkillForm && selectedSkill && (
-          <div className="modal-overlay" onClick={closeAllModals}>
-            <div
-              className="modal-content skill-form-modal"
-              onClick={(e) => e.stopPropagation()}
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={showDeleteConfirmation}
+          onClose={() => {
+            setShowDeleteConfirmation(false);
+            setSkillToDelete(null);
+          }}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>{t("staffManagement.confirmDeleteSkill")}</DialogTitle>
+          <DialogContent>
+            <Typography>
+              {t(
+                "staffManagement.deleteSkillMessage",
+                `Are you sure you want to delete this skill?`,
+              )}
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setShowDeleteConfirmation(false);
+                setSkillToDelete(null);
+              }}
             >
-              <div className="modal-header">
-                <h3>
-                  {t("staffManagement.addSkillDetails")} -{" "}
-                  {selectedSkill.skillName}
-                </h3>
-                <button className="close-btn" onClick={closeAllModals}>
-                  ×
-                </button>
-              </div>
-              <div className="modal-body">
-                {error && <div className="error-message">{error}</div>}
-                <form onSubmit={handleSkillFormSubmit} className="skill-form">
-                  <div className="form-group">
-                    <label>{t("staffManagement.issuedBy")}</label>
-                    <input
-                      type="text"
-                      value={skillFormData.issuedBy}
-                      onChange={(e) =>
-                        handleSkillFormChange("issuedBy", e.target.value)
-                      }
-                      placeholder="e.g., Company Training Center"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t("staffManagement.acquiredDate")} *</label>
-                    <input
-                      type="date"
-                      value={skillFormData.acquiredDate}
-                      onChange={(e) =>
-                        handleSkillFormChange("acquiredDate", e.target.value)
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="form-group checkbox-group">
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={skillFormData.noExpiry}
-                        onChange={(e) =>
-                          handleSkillFormChange("noExpiry", e.target.checked)
-                        }
-                      />
-                      <span>{t("staffManagement.noExpiry")}</span>
-                    </label>
-                  </div>
-                  {!skillFormData.noExpiry && (
-                    <div className="form-group">
-                      <label>{t("staffManagement.expiryDate")}</label>
-                      <input
-                        type="date"
-                        value={skillFormData.expiryDate}
-                        onChange={(e) =>
-                          handleSkillFormChange("expiryDate", e.target.value)
-                        }
-                      />
-                    </div>
-                  )}
-                  <div className="form-group">
-                    <label>{t("staffManagement.certificationLinks")}</label>
-                    <FileGallery
-                      productPicture={skillFormData.certificationLinks}
-                      allowRemove={true}
-                      allowAdd={true}
-                      repoConfig={null}
-                      onChange={handleCertificationLinksChange}
-                    />
-                  </div>
-                  <div className="form-actions">
-                    <button
-                      type="button"
-                      className="cancel-btn"
-                      onClick={closeAllModals}
-                    >
-                      {t("common.cancel")}
-                    </button>
-                    <button type="submit" className="submit-btn">
-                      {t("common.save")}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Edit Skill Form Modal */}
-        {showEditSkillForm && editingSkill && (
-          <div className="modal-overlay" onClick={closeAllModals}>
-            <div
-              className="modal-content skill-form-modal"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="modal-header">
-                <h3>
-                  {t("staffManagement.editSkillDetails")} -{" "}
-                  {editingSkill.skillName}
-                </h3>
-                <button className="close-btn" onClick={closeAllModals}>
-                  ×
-                </button>
-              </div>
-              <div className="modal-body">
-                {error && <div className="error-message">{error}</div>}
-                <form onSubmit={handleEditSkillSubmit} className="skill-form">
-                  <div className="form-group">
-                    <label>{t("staffManagement.issuedBy")}</label>
-                    <input
-                      type="text"
-                      value={skillFormData.issuedBy}
-                      onChange={(e) =>
-                        handleSkillFormChange("issuedBy", e.target.value)
-                      }
-                      placeholder="e.g., Company Training Center"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t("staffManagement.acquiredDate")} *</label>
-                    <input
-                      type="date"
-                      value={skillFormData.acquiredDate}
-                      onChange={(e) =>
-                        handleSkillFormChange("acquiredDate", e.target.value)
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="form-group checkbox-group">
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={skillFormData.noExpiry}
-                        onChange={(e) =>
-                          handleSkillFormChange("noExpiry", e.target.checked)
-                        }
-                      />
-                      <span>{t("staffManagement.noExpiry")}</span>
-                    </label>
-                  </div>
-                  {!skillFormData.noExpiry && (
-                    <div className="form-group">
-                      <label>{t("staffManagement.expiryDate")}</label>
-                      <input
-                        type="date"
-                        value={skillFormData.expiryDate}
-                        onChange={(e) =>
-                          handleSkillFormChange("expiryDate", e.target.value)
-                        }
-                      />
-                    </div>
-                  )}
-                  <div className="form-group">
-                    <label>{t("staffManagement.certificationLinks")}</label>
-                    <FileGallery
-                      productPicture={skillFormData.certificationLinks}
-                      allowRemove={true}
-                      allowAdd={true}
-                      repoConfig={null}
-                      onChange={handleCertificationLinksChange}
-                    />
-                  </div>
-                  <div className="form-actions">
-                    <button
-                      type="button"
-                      className="cancel-btn"
-                      onClick={closeAllModals}
-                    >
-                      {t("common.cancel")}
-                    </button>
-                    <button type="submit" className="submit-btn">
-                      {t("common.save")}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* New Skill Form Modal */}
-        {showNewSkillForm && (
-          <div className="modal-overlay" onClick={closeAllModals}>
-            <div
-              className="modal-content skill-form-modal"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="modal-header">
-                <h3>{t("staffManagement.createNewSkill")}</h3>
-                <button className="close-btn" onClick={closeAllModals}>
-                  ×
-                </button>
-              </div>
-              <div className="modal-body">
-                {error && <div className="error-message">{error}</div>}
-                <form onSubmit={handleNewSkillSubmit} className="skill-form">
-                  <div className="form-group">
-                    <label>{t("staffManagement.skillName")} *</label>
-                    <input
-                      type="text"
-                      value={newSkillData.skillName}
-                      onChange={(e) =>
-                        handleNewSkillChange("skillName", e.target.value)
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t("staffManagement.skillDescription")}</label>
-                    <textarea
-                      value={newSkillData.skillDescription}
-                      onChange={(e) =>
-                        handleNewSkillChange("skillDescription", e.target.value)
-                      }
-                      rows="3"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t("staffManagement.skillCategory")}</label>
-                    <input
-                      type="text"
-                      list="skill-categories-list"
-                      value={newSkillData.skillCategory}
-                      onChange={(e) =>
-                        handleNewSkillChange("skillCategory", e.target.value)
-                      }
-                      placeholder={t("staffManagement.selectOrEnterCategory")}
-                    />
-                    <datalist id="skill-categories-list">
-                      {(() => {
-                        // Get unique categories from all staff
-                        const categories = new Set();
-                        staffList.forEach((staff) => {
-                          if (
-                            staff.skillCategories &&
-                            staff.skillCategories.length > 0
-                          ) {
-                            staff.skillCategories.forEach((category) =>
-                              categories.add(category),
-                            );
-                          }
-                        });
-                        return Array.from(categories)
-                          .sort()
-                          .map((category) => (
-                            <option key={category} value={category} />
-                          ));
-                      })()}
-                    </datalist>
-                  </div>
-                  <div className="form-actions">
-                    <button
-                      type="button"
-                      className="cancel-btn"
-                      onClick={closeAllModals}
-                    >
-                      {t("common.cancel")}
-                    </button>
-                    <button type="submit" className="submit-btn">
-                      {t("common.save")}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Delete Confirmation Modal */}
-        {showDeleteConfirmation && skillToDelete && (
-          <div className="modal-overlay" onClick={closeAllModals}>
-            <div
-              className="modal-content delete-confirmation-modal"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="modal-header">
-                <h3>{t("staffManagement.confirmDelete")}</h3>
-                <button className="close-btn" onClick={closeAllModals}>
-                  ×
-                </button>
-              </div>
-              <div className="modal-body">
-                {error && <div className="error-message">{error}</div>}
-                <p className="delete-message">
-                  {t("staffManagement.deleteSkillMessage", {
-                    skillName: skillToDelete.skillName,
-                  })}
-                </p>
-                <div className="confirmation-actions">
-                  <button className="cancel-btn" onClick={closeAllModals}>
-                    {t("common.cancel")}
-                  </button>
-                  <button
-                    className="delete-btn"
-                    onClick={handleDeleteSkillConfirm}
-                  >
-                    {t("common.delete")}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={handleDeleteSkillConfirm} color="error">
+              {t("common.delete")}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
     );
   }
 
+  // Main staff list view
   return (
-    <div className="staff-skill-profile">
-      <div className="header">
-        <button className="back-btn" onClick={onBack}>
-          ← {t("common.back")}
-        </button>
-        <h2>{t("staffManagement.staffSkillProfile")}</h2>
-      </div>
-
-      {loading ? (
-        <p>{t("common.loading")}</p>
-      ) : (
-        <>
-          <div className="filter-frame">
-            <div className="search-section">
-              <input
-                type="text"
-                className="search-input"
-                placeholder={t("common.search")}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="category-filter-section">
-              <h4>{t("staffManagement.skillCategories")}</h4>
-              <div className="category-badges">
-                <button
-                  className={`filter-category-badge ${!selectedCategory ? "active" : ""}`}
-                  onClick={() => setSelectedCategory(null)}
-                >
-                  {t("common.all")}
-                </button>
-                {(() => {
-                  // Get unique categories from filtered staff
-                  const filteredBySearch = staffList.filter((staff) => {
-                    if (!searchTerm) return true;
-                    const search = searchTerm.toLowerCase();
-                    const name = (
-                      staff.staffName ||
-                      staff.name ||
-                      ""
-                    ).toLowerCase();
-                    const code = (
-                      staff.staffCode ||
-                      staff.code ||
-                      ""
-                    ).toLowerCase();
-                    return name.includes(search) || code.includes(search);
-                  });
-
-                  const categoriesMap = new Map();
-                  filteredBySearch.forEach((staff) => {
-                    if (
-                      staff.skillCategories &&
-                      staff.skillCategories.length > 0
-                    ) {
-                      staff.skillCategories.forEach((category) => {
-                        categoriesMap.set(
-                          category,
-                          (categoriesMap.get(category) || 0) + 1,
-                        );
-                      });
-                    }
-                  });
-
-                  return Array.from(categoriesMap.entries())
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([category, count]) => (
-                      <button
-                        key={category}
-                        className={`filter-category-badge ${selectedCategory === category ? "active" : ""}`}
-                        onClick={() =>
-                          setSelectedCategory(
-                            selectedCategory === category ? null : category,
-                          )
-                        }
-                      >
-                        {category} ({count})
-                      </button>
-                    ));
-                })()}
-              </div>
-            </div>
-          </div>
-          <div className="staff-list-container">
-            {staffList.filter((staff) => {
-              // Filter by search term
-              if (searchTerm) {
-                const search = searchTerm.toLowerCase();
-                const name = (
-                  staff.staffName ||
-                  staff.name ||
-                  ""
-                ).toLowerCase();
-                const code = (
-                  staff.staffCode ||
-                  staff.code ||
-                  ""
-                ).toLowerCase();
-                if (!name.includes(search) && !code.includes(search))
-                  return false;
-              }
-              // Filter by selected category
-              if (selectedCategory) {
-                if (
-                  !staff.skillCategories ||
-                  !staff.skillCategories.includes(selectedCategory)
-                )
-                  return false;
-              }
-              return true;
-            }).length > 0 ? (
-              <div className="staff-list">
-                {staffList
-                  .filter((staff) => {
-                    // Filter by search term
-                    if (searchTerm) {
-                      const search = searchTerm.toLowerCase();
-                      const name = (
-                        staff.staffName ||
-                        staff.name ||
-                        ""
-                      ).toLowerCase();
-                      const code = (
-                        staff.staffCode ||
-                        staff.code ||
-                        ""
-                      ).toLowerCase();
-                      if (!name.includes(search) && !code.includes(search))
-                        return false;
-                    }
-                    // Filter by selected category
-                    if (selectedCategory) {
-                      if (
-                        !staff.skillCategories ||
-                        !staff.skillCategories.includes(selectedCategory)
-                      )
-                        return false;
-                    }
-                    return true;
-                  })
-                  .map((staff) => (
-                    <div
-                      key={staff.staffName}
-                      className="staff-card"
-                      onClick={() => handleStaffClick(staff)}
-                    >
-                      <div className="staff-info">
-                        <h3>{staff.staffName || staff.name}</h3>
-                        <p>{staff.staffCode || staff.code}</p>
-                      </div>
-                      <div className="staff-skills-summary">
-                        <span className="skill-badge">
-                          {t("staffManagement.skills")}: {staff.skillCount || 0}
-                        </span>
-                        {staff.skillCategories &&
-                          staff.skillCategories.length > 0 && (
-                            <div className="skill-categories-container">
-                              {staff.skillCategories.map((category, index) => (
-                                <span
-                                  key={index}
-                                  className="skill-category-badge"
-                                >
-                                  {category}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            ) : (
-              <p className="no-staff-message">
-                {t("staffManagement.noStaffFound")}
-              </p>
-            )}
-          </div>
-        </>
+    <ListContainer
+      title={t("staffManagement.staffSkillProfile")}
+      subtitle={t(
+        "staffManagement.staffSkillProfileSubtitle",
+        "Manage staff member skills and certifications",
       )}
-    </div>
+      searchPlaceholder={t("staffManagement.searchStaff", "Search staff...")}
+      data={staffListViewData}
+      columns={["staffName", "skillCountDisplay"]}
+      t={t}
+      onAdd={() => {}}
+      onEdit={handleStaffClick}
+      onDelete={() => {}}
+      searchValue={staffSearch}
+      onSearchChange={setStaffSearch}
+      filterFunction={filterStaffList}
+      emptyMessage={t("staffManagement.noStaffFound", "No staff found.")}
+      loading={staffLoading}
+      enableActions={true}
+    />
   );
 };
 

@@ -9,8 +9,9 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
-import { PageHeader, EmptyState, LoadingState } from "../common";
+import { PageHeader, EmptyState, LoadingState, BlockListItem } from "../common";
 import HelpDialog from "../common/HelpDialog";
+import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import StockMovementCodeAdd from "./StockMovementCodeAdd";
 import StockMovementCodeEdit from "./StockMovementCodeEdit";
 import StockMovementCodeDelete from "./StockMovementCodeDelete";
@@ -26,6 +27,7 @@ const StockMovementCode = () => {
   const [loading, setLoading] = useState(true);
   const { t } = useTranslation();
   const [helpOpen, setHelpOpen] = useState(false);
+  const { shouldUseBlockLayout } = useResponsiveLayout();
   const enableActions = true;
 
   useEffect(() => {
@@ -73,6 +75,14 @@ const StockMovementCode = () => {
     });
   }, [data, search]);
 
+  const normalizedRows = useMemo(() => {
+    return filtered.map((item) => ({
+      ...item,
+      displayStockModifier: item.stockModifier,
+      displayHoldModifier: item.holdModifier,
+    }));
+  }, [filtered]);
+
   const columns = useMemo(
     () => [
       {
@@ -87,14 +97,14 @@ const StockMovementCode = () => {
         minWidth: 200,
       },
       {
-        field: "stockModifier",
+        field: "displayStockModifier",
         headerName: t("stockMovementCode.stockModifier"),
         width: 150,
         headerAlign: "center",
         align: "center",
       },
       {
-        field: "holdModifier",
+        field: "displayHoldModifier",
         headerName: t("stockMovementCode.holdModifier"),
         width: 150,
         headerAlign: "center",
@@ -144,6 +154,10 @@ const StockMovementCode = () => {
     ],
     [t, enableActions, handleEdit, handleDelete],
   );
+
+  const blockColumnDefs = columns
+    .filter((c) => c.field !== "actions")
+    .map((c) => ({ field: c.field, label: c.headerName }));
 
   if (loading)
     return (
@@ -233,9 +247,33 @@ const StockMovementCode = () => {
             actionLabel={t("stockMovementCode.add")}
             onActionClick={() => setShowAdd(true)}
           />
+        ) : shouldUseBlockLayout ? (
+          <Box
+            sx={{ p: 2, display: "grid", gridTemplateColumns: "1fr", gap: 2 }}
+          >
+            {normalizedRows.map((item, idx) => (
+              <BlockListItem
+                key={item.movementType || idx}
+                columnDefs={blockColumnDefs}
+                item={item}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                leadingMedia={{
+                  placeholder: (
+                    <PeopleIcon
+                      sx={{ color: "text.secondary", fontSize: "1.1rem" }}
+                    />
+                  ),
+                  width: 40,
+                  height: 40,
+                }}
+                t={t}
+              />
+            ))}
+          </Box>
         ) : (
           <DataGrid
-            rows={filtered}
+            rows={normalizedRows}
             columns={columns}
             getRowId={(row) => row.movementType}
             initialState={{

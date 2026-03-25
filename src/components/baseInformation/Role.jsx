@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Add as AddIcon, Delete as DeleteIcon } from "@mui/icons-material";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { useTranslation } from "react-i18next";
 import {
   TextField,
   InputAdornment,
   IconButton,
   Box,
-  Button,
   Paper,
-  Typography,
 } from "@mui/material";
 import { request } from "../../helpers/axios_helper";
 import RoleAdd from "./RoleAdd";
@@ -17,6 +14,7 @@ import RoleEdit from "./RoleEdit";
 import RoleDelete from "./RoleDelete";
 import SearchIcon from "@mui/icons-material/Search";
 import HelpDialog from "../common/HelpDialog";
+import { HeaderBar } from "../common";
 
 const Role = () => {
   const [action, setAction] = useState("view");
@@ -64,87 +62,46 @@ const Role = () => {
       ) : (
         <div>
           {!showAdd && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                marginBottom: 16,
+            <HeaderBar
+              title={t("roleList.title", "Role List")}
+              subtitle={t(
+                "roleList.subtitle",
+                "Manage user roles and permissions",
+              )}
+              onHelp={() => setHelpOpen(true)}
+              titleVariant="h5"
+              titleSx={{
+                fontSize: { xs: "1.1rem", sm: "1.5rem" },
+                fontWeight: 600,
               }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <h2 style={{ margin: 0 }}>
-                  {t("roleList.title", "Role List")}
-                </h2>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ color: "var(--color-text-secondary)" }}>
-                    {t(
-                      "roleList.subtitle",
-                      "Manage user roles and permissions",
-                    )}
-                  </div>
-                  <IconButton
+              actions={
+                <>
+                  <TextField
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={t("roleList.searchPlaceholder", "Search...")}
                     size="small"
-                    aria-label="help"
-                    onClick={() => setHelpOpen(true)}
-                    tabIndex={0}
+                    sx={{ minWidth: { xs: 160, sm: 220 } }}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton tabIndex={-1}>
+                            <SearchIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <IconButton
+                    color="primary"
+                    aria-label="add role"
+                    onClick={() => setShowAdd(true)}
                   >
-                    <HelpOutlineIcon fontSize="small" />
+                    <AddIcon />
                   </IconButton>
-                </div>
-              </div>
-              <TextField
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("roleList.searchPlaceholder", "Search...")}
-                size="small"
-                style={{ marginLeft: 16, minWidth: 220 }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton tabIndex={-1}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            fontSize: {
-                              xs: "clamp(1.2rem, 4vw, 2rem)",
-                              md: "2rem",
-                            },
-                          }}
-                        >
-                          <SearchIcon
-                            sx={{
-                              fontSize: {
-                                xs: "clamp(1.2rem, 4vw, 2rem)",
-                                md: "2rem",
-                              },
-                            }}
-                          />
-                        </Box>
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              <div style={{ flex: 1 }} />
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-end",
-                  flex: 1,
-                }}
-              >
-                <IconButton
-                  color="primary"
-                  aria-label="add role"
-                  onClick={() => setShowAdd(true)}
-                  style={{ marginLeft: 16 }}
-                >
-                  <AddIcon />
-                </IconButton>
-              </div>
-            </div>
+                </>
+              }
+            />
           )}
           {showAdd ? (
             <RoleAdd onCancel={handleAddCancel} />

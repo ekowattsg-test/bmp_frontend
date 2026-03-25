@@ -783,174 +783,44 @@
 /* ================================================================
    STAFF PROFILE COMPONENTS
    ================================================================ */
+/* Staff Skill Profile - Responsive Design */
 .staff-skill-profile,
 .staff-merit-profile {
   padding: var(--space-lg);
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-lg);
-  margin-bottom: var(--space-2xl);
+/* Responsive Table Layout for Narrow Screens */
+@media (max-width: 768px) {
+  /* Skills table responsive adjustments */
+  .MuiTable-root {
+    font-size: var(--font-size-sm);
+  }
+
+  .MuiTableCell-root {
+    padding: var(--space-sm) !important;
+  }
+
+  /* Adjust header layout for mobile */
+  .MuiBox-root > h2 {
+    font-size: var(--font-size-xl);
+  }
 }
 
-.back-btn {
-  padding: var(--space-sm) var(--space-md);
-  background-color: var(--color-gray-100);
-  border: 1px solid var(--color-gray-300);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-size: var(--font-size-base);
-  transition: background-color var(--transition-base);
-}
+@media (max-width: 480px) {
+  /* Extra small screens */
+  .MuiButton-root {
+    font-size: var(--font-size-sm);
+    padding: var(--space-xs) var(--space-sm);
+  }
 
-.back-btn:hover {
-  background-color: var(--color-gray-200);
-}
+  .MuiTextField-root {
+    width: 100%;
+  }
 
-.add-skill-btn {
-  margin-left: auto;
-  padding: var(--space-sm) var(--space-lg);
-  background-color: var(--color-success);
-  color: var(--color-white);
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  transition: background-color var(--transition-base);
-}
-
-.add-skill-btn:hover {
-  background-color: var(--color-success-hover);
-}
-
-/* Skills Detail Container */
-.skills-detail-container {
-  background: var(--color-white);
-  border: 1px solid var(--color-gray-200);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-}
-
-.skills-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--font-size-base);
-}
-
-.skills-table thead {
-  background-color: var(--color-gray-100);
-}
-
-.skills-table th {
-  padding: var(--space-base);
-  text-align: left;
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-dark);
-  border-bottom: 2px solid var(--color-gray-200);
-}
-
-.skills-table td {
-  padding: var(--space-base);
-  border-bottom: 1px solid var(--color-gray-200);
-  color: var(--color-gray-600);
-}
-
-.skills-table tbody tr:hover {
-  background-color: var(--color-gray-50);
-}
-
-.skills-table a {
-  color: var(--color-primary);
-  text-decoration: none;
-  font-weight: var(--font-weight-medium);
-}
-
-.skills-table a:hover {
-  text-decoration: underline;
-}
-
-.cert-count-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: var(--space-xs) 10px;
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  border-radius: 16px;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-}
-
-.action-buttons {
-  display: flex;
-  gap: var(--space-sm);
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-edit,
-.btn-delete {
-  padding: 6px 10px;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: var(--font-size-lg);
-  transition: all var(--transition-fast);
-  background-color: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-edit {
-  color: var(--color-primary);
-}
-
-.btn-edit:hover {
-  background-color: var(--color-primary-light);
-  transform: scale(1.1);
-}
-
-.btn-delete {
-  color: var(--color-danger);
-}
-
-.btn-delete:hover {
-  background-color: var(--color-danger-light);
-  transform: scale(1.1);
-}
-
-.no-skills-message,
-.no-staff-message {
-  text-align: center;
-  color: var(--color-gray-400);
-  padding: var(--space-3xl) var(--space-lg);
-  font-size: var(--font-size-lg);
-}
-
-/* Error Container */
-.error-container {
-  background: var(--color-white);
-  border: 1px solid var(--color-gray-200);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-  text-align: center;
-}
-
-.retry-btn {
-  margin-top: var(--space-md);
-  padding: 10px var(--space-lg);
-  background-color: var(--color-primary);
-  color: var(--color-white);
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  transition: background-color var(--transition-base);
+  /* Stack buttons vertically on very small screens */
+  .MuiBox-root > .MuiBox-root:first-of-type {
+    flex-direction: column;
+  }
 }
 
 .retry-btn:hover {
@@ -1051,171 +921,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sm);
-}
-
-.skill-filter-badge {
-  display: inline-block;
-  padding: 6px 14px;
-  border: 1px solid var(--color-category-border);
-  background-color: var(--color-white);
-  color: var(--color-category-text);
-  border-radius: 20px;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: all var(--transition-base);
-}
-
-.skill-filter-badge:hover {
-  background-color: var(--color-category-bg);
-  border-color: var(--color-category-hover-border);
-  transform: translateY(-1px);
-}
-
-.skill-filter-badge.active {
-  background-color: var(--color-category-active-bg);
-  color: var(--color-white);
-  border-color: var(--color-category-active-border);
-}
-
-/* Skills List in Modal */
-.skills-list-container {
-  padding: var(--space-lg);
-  max-height: 350px;
-  overflow-y: auto;
-}
-
-.skill-item {
-  padding: var(--space-md);
-  border: 1px solid var(--color-gray-200);
-  background: var(--color-white);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-base);
-  box-shadow: var(--shadow-sm);
-  margin-bottom: 10px;
-}
-
-.skill-item:hover {
-  border-color: var(--color-primary);
-  background-color: var(--color-bg-alt);
-  transform: translateX(5px);
-  box-shadow: var(--shadow-md);
-}
-
-.skill-item h4 {
-  margin: 0 0 var(--space-sm) 0;
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-dark);
-}
-
-.skill-item p {
-  margin: 0 0 var(--space-sm) 0;
-  font-size: var(--font-size-base);
-  color: var(--color-gray-600);
-}
-
-.skill-category {
-  display: inline-block;
-  background-color: var(--color-primary-light);
-  color: var(--color-primary);
-  padding: var(--space-xs) 10px;
-  border-radius: var(--radius-xl);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-}
-
-.new-skill-btn {
-  width: calc(100% - 40px);
-  margin: 0 var(--space-lg) var(--space-lg) var(--space-lg);
-  padding: 14px;
-  background-color: var(--color-success);
-  color: var(--color-white);
-  border: none;
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-semibold);
-  transition: all var(--transition-base);
-  box-shadow: 0 2px 4px rgba(157, 198, 57, 0.3);
-}
-
-.new-skill-btn:hover {
-  background-color: var(--color-success-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(157, 198, 57, 0.4);
-}
-
-/* Skill Form */
-.skill-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.checkbox-group {
-  flex-direction: row;
-  align-items: center;
-  margin-bottom: var(--space-lg);
-}
-
-.checkbox-group label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-dark);
-  margin-bottom: 0;
-}
-
-.checkbox-group input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  accent-color: var(--color-primary);
-}
-
-/* File Upload */
-.file-input-hidden {
-  display: none;
-}
-
-.upload-button {
-  padding: 6px var(--space-base);
-  background: var(--color-primary);
-  color: var(--color-white);
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: var(--font-size-base);
-  white-space: nowrap;
-  transition: background var(--transition-fast);
-}
-
-.upload-button:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-}
-
-.upload-button:disabled {
-  background: var(--color-gray-300);
-  cursor: not-allowed;
-}
-
-.upload-status {
-  margin-top: var(--space-sm);
-  font-size: var(--font-size-sm);
-  color: var(--color-primary);
-  font-weight: var(--font-weight-semibold);
-}
-
-.upload-error {
-  margin-top: var(--space-sm);
-  font-size: var(--font-size-sm);
-  color: var(--color-danger);
-  font-weight: var(--font-weight-semibold);
 }
 
 .upload-hint {

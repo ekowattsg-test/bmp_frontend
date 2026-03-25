@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
+import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import {
   TextField,
   Button,
@@ -25,6 +26,7 @@ import { AuthContext } from "../../context/authContext";
 
 const PurchaseOrderAdd = ({ onCancel }) => {
   const { t } = useTranslation();
+  const { shouldUseBlockLayout } = useResponsiveLayout();
   const userContext = useContext(UserContext);
   const authContext = useContext(AuthContext);
   const [vendors, setVendors] = useState([]);
@@ -255,7 +257,7 @@ const PurchaseOrderAdd = ({ onCancel }) => {
         <Box
           sx={{
             backgroundColor: "var(--color-gray-100)",
-            p: 3,
+            p: { xs: 2, sm: 3 },
             borderRadius: 1,
             mb: 3,
           }}
@@ -264,7 +266,13 @@ const PurchaseOrderAdd = ({ onCancel }) => {
             {t("purchaseOrderList.orderDetails", "Order Details")}
           </Typography>
 
-          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: "1fr 1fr" }}>
+          <Box
+            sx={{
+              display: "grid",
+              gap: 2,
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+            }}
+          >
             <TextField
               fullWidth
               label={t("purchaseOrderList.orderId", "Order ID")}
@@ -368,6 +376,194 @@ const PurchaseOrderAdd = ({ onCancel }) => {
                   "No items added yet. Click 'Add Item' to begin.",
                 )}
               </Typography>
+            </Box>
+          ) : shouldUseBlockLayout ? (
+            <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
+              {items.map((item, index) => (
+                <Paper
+                  key={item.tempId}
+                  sx={{
+                    p: 2,
+                    border: "1px solid var(--color-gray-200)",
+                    borderRadius: 1,
+                    backgroundColor: "background.paper",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 1.5,
+                    }}
+                  >
+                    <Typography variant="subtitle2" color="text.secondary">
+                      {t("purchaseOrderList.lineNo", "#")} {index + 1}
+                    </Typography>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleRemoveItem(item.tempId)}
+                      sx={{ color: "error.main" }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr",
+                      gap: 1.5,
+                    }}
+                  >
+                    <TextField
+                      size="small"
+                      label={t("purchaseOrderList.productCode", "Product Code")}
+                      value={item.productCode}
+                      onChange={(e) =>
+                        handleItemChange(
+                          item.tempId,
+                          "productCode",
+                          e.target.value,
+                        )
+                      }
+                      required
+                      fullWidth
+                    />
+
+                    <FormControl size="small" fullWidth>
+                      <InputLabel>
+                        {t("purchaseOrderList.itemType", "Item Type")}
+                      </InputLabel>
+                      <Select
+                        value={item.itemType === "A" ? "A" : "I"}
+                        onChange={(e) =>
+                          handleItemChange(
+                            item.tempId,
+                            "itemType",
+                            e.target.value,
+                          )
+                        }
+                        label={t("purchaseOrderList.itemType", "Item Type")}
+                      >
+                        <MenuItem value="I">
+                          {t(
+                            "purchaseOrderList.itemType.inventory",
+                            "Inventory",
+                          )}
+                        </MenuItem>
+                        <MenuItem value="A">
+                          {t("purchaseOrderList.itemType.assets", "Assets")}
+                        </MenuItem>
+                      </Select>
+                    </FormControl>
+
+                    <TextField
+                      size="small"
+                      label={t(
+                        "purchaseOrderList.internalProductCode",
+                        "Internal Product Code",
+                      )}
+                      value={item.internalProductCode || ""}
+                      onChange={(e) =>
+                        handleItemChange(
+                          item.tempId,
+                          "internalProductCode",
+                          e.target.value,
+                        )
+                      }
+                      fullWidth
+                    />
+
+                    <TextField
+                      size="small"
+                      type="number"
+                      label={t(
+                        "purchaseOrderList.internalOrderId",
+                        "Internal Order ID",
+                      )}
+                      value={item.internalOrderId || ""}
+                      onChange={(e) =>
+                        handleItemChange(
+                          item.tempId,
+                          "internalOrderId",
+                          e.target.value,
+                        )
+                      }
+                      fullWidth
+                    />
+
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 1.5,
+                      }}
+                    >
+                      <TextField
+                        size="small"
+                        type="number"
+                        label={t("purchaseOrderList.quantity", "Quantity")}
+                        value={item.quantity}
+                        onChange={(e) =>
+                          handleItemChange(
+                            item.tempId,
+                            "quantity",
+                            e.target.value,
+                          )
+                        }
+                        required
+                        inputProps={{ min: 1 }}
+                        fullWidth
+                      />
+                      <TextField
+                        size="small"
+                        type="number"
+                        label={t("purchaseOrderList.unitPrice", "Unit Price")}
+                        value={item.unitPrice}
+                        onChange={(e) =>
+                          handleItemChange(
+                            item.tempId,
+                            "unitPrice",
+                            e.target.value,
+                          )
+                        }
+                        required
+                        inputProps={{ min: 0, step: 0.01 }}
+                        fullWidth
+                      />
+                    </Box>
+                  </Box>
+
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      mt: 1.5,
+                      color: "text.secondary",
+                      textAlign: "right",
+                    }}
+                  >
+                    {t("purchaseOrderList.lineTotal", "Line Total")}: $
+                    {((item.quantity || 0) * (item.unitPrice || 0)).toFixed(2)}
+                  </Typography>
+                </Paper>
+              ))}
+
+              <Paper
+                sx={{
+                  p: 2,
+                  border: "1px solid var(--color-gray-200)",
+                  borderRadius: 1,
+                  backgroundColor: "background.default",
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  {t("purchaseOrderList.total", "Total")}
+                </Typography>
+                <Typography variant="h6" sx={{ color: "primary.main" }}>
+                  ${calculateTotal().toFixed(2)}
+                </Typography>
+              </Paper>
             </Box>
           ) : (
             <TableContainer component={Paper}>

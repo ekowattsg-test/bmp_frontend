@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import { TextField, Button, Box } from "@mui/material";
+import { HeaderBar } from "../common";
 
 const VendorEdit = ({ vendor, onCancel }) => {
   const { t } = useTranslation();
@@ -34,7 +35,12 @@ const VendorEdit = ({ vendor, onCancel }) => {
 
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: 20 }}>
-      <h2>{t("vendorList.editTitle")}</h2>
+      <HeaderBar
+        title={t("vendorList.editTitle")}
+        titleVariant="h5"
+        titleSx={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 600 }}
+        sx={{ mb: 1 }}
+      />
       <form onSubmit={handleSubmit}>
         <Box sx={{ mb: 2 }}>
           <TextField

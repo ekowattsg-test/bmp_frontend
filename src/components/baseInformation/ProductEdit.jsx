@@ -12,6 +12,7 @@ import {
 } from "../../helpers/file_helper";
 import FileGallery from "../common/FileGallery";
 import { useTranslation } from "react-i18next";
+import { HeaderBar } from "../common";
 
 const ProductEdit = ({ product, onCancel }) => {
   const { t } = useTranslation();
@@ -171,9 +172,12 @@ const ProductEdit = ({ product, onCancel }) => {
         borderRadius: 2,
       }}
     >
-      <h2 style={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", margin: 0 }}>
-        {t("product.editTitle", "Edit Product")}
-      </h2>
+      <HeaderBar
+        title={t("product.editTitle", "Edit Product")}
+        titleVariant="h5"
+        titleSx={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 600 }}
+        sx={{ mb: 1 }}
+      />
       <TextField
         label={t("product.productCode", "Product Code")}
         name="productCode"
