@@ -15,7 +15,13 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
-import { PageHeader, EmptyState, LoadingState, BlockListItem } from "../common";
+import {
+  PageHeader,
+  EmptyState,
+  LoadingState,
+  BlockListItem,
+  LoadMoreBlockList,
+} from "../common";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import HelpDialog from "../common/HelpDialog";
 import StaffSkillAdd from "./StaffSkillAdd";
@@ -306,8 +312,9 @@ const StaffSkillModern = () => {
           onActionClick={!search ? () => setShowAdd(true) : null}
         />
       ) : shouldUseBlockLayout ? (
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
-          {filteredSkills.map((item, idx) => (
+        <LoadMoreBlockList
+          items={filteredSkills}
+          renderItem={(item, idx) => (
             <BlockListItem
               key={item.staffSkillId || idx}
               columnDefs={blockColumnDefs}
@@ -325,8 +332,8 @@ const StaffSkillModern = () => {
               }}
               t={t}
             />
-          ))}
-        </Box>
+          )}
+        />
       ) : (
         <Box
           sx={{

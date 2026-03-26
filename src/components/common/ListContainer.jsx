@@ -21,6 +21,7 @@ import {
 } from "@mui/icons-material";
 import HeaderBar from "./HeaderBar";
 import BlockListItem from "./BlockListItem";
+import LoadMoreBlockList from "./LoadMoreBlockList";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 
 /**
@@ -222,14 +223,9 @@ const ListContainer = ({
 
           {/* Block Layout - visible on small screens when enabled */}
           {shouldUseBlockLayout && (
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: "1fr",
-                gap: 2,
-              }}
-            >
-              {filtered.map((item, idx) => (
+            <LoadMoreBlockList
+              items={filtered}
+              renderItem={(item, idx) => (
                 <BlockListItem
                   key={idx}
                   columns={columns}
@@ -239,8 +235,8 @@ const ListContainer = ({
                   t={t}
                   enableActions={enableActions}
                 />
-              ))}
-            </Box>
+              )}
+            />
           )}
         </>
       ) : (

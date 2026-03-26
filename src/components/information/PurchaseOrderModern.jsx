@@ -16,7 +16,13 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
-import { PageHeader, EmptyState, LoadingState, BlockListItem } from "../common";
+import {
+  PageHeader,
+  EmptyState,
+  LoadingState,
+  BlockListItem,
+  LoadMoreBlockList,
+} from "../common";
 import HelpDialog from "../common/HelpDialog";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import PurchaseOrderAdd from "./PurchaseOrderAdd";
@@ -367,8 +373,9 @@ const PurchaseOrderModern = () => {
             }
           />
         ) : shouldUseBlockLayout ? (
-          <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
-            {normalizedOrders.map((item, idx) => (
+          <LoadMoreBlockList
+            items={normalizedOrders}
+            renderItem={(item, idx) => (
               <BlockListItem
                 key={item.orderId || idx}
                 columnDefs={blockColumnDefs}
@@ -387,8 +394,8 @@ const PurchaseOrderModern = () => {
                 }}
                 t={t}
               />
-            ))}
-          </Box>
+            )}
+          />
         ) : (
           <Box sx={{ flex: 1, minHeight: 0 }}>
             <DataGrid

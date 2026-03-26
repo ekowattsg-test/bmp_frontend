@@ -24,7 +24,13 @@ import { useTranslation } from "react-i18next";
 import { AuthContext } from "../../context/authContext";
 import { hasRole } from "../../helpers/roles_helper";
 import { request } from "../../helpers/axios_helper";
-import { PageHeader, EmptyState, LoadingState, BlockListItem } from "../common";
+import {
+  PageHeader,
+  EmptyState,
+  LoadingState,
+  BlockListItem,
+  LoadMoreBlockList,
+} from "../common";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import HelpDialog from "../common/HelpDialog";
 import UserAdd from "./UserAdd";
@@ -405,8 +411,9 @@ const UserModern = () => {
           onActionClick={!search ? () => setShowAdd(true) : null}
         />
       ) : shouldUseBlockLayout ? (
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
-          {normalizedUsers.map((item, idx) => (
+        <LoadMoreBlockList
+          items={normalizedUsers}
+          renderItem={(item, idx) => (
             <BlockListItem
               key={item.id || idx}
               columnDefs={blockColumnDefs}
@@ -424,8 +431,8 @@ const UserModern = () => {
               }}
               t={t}
             />
-          ))}
-        </Box>
+          )}
+        />
       ) : (
         <Box
           sx={{

@@ -19,7 +19,7 @@ import {
   DialogContent,
 } from "@mui/material";
 import { Close as CloseIcon } from "@mui/icons-material";
-import { BlockListItem } from "../common";
+import { BlockListItem, LoadMoreBlockList } from "../common";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 
 const PurchaseOrderView = ({ order, onClose }) => {
@@ -281,15 +281,18 @@ const PurchaseOrderView = ({ order, onClose }) => {
               </Box>
             ) : shouldUseBlockLayout ? (
               <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
-                {normalizedItems.map((item, index) => (
-                  <BlockListItem
-                    key={item.itemId || index}
-                    columnDefs={itemColumnDefs}
-                    item={item}
-                    enableActions={false}
-                    t={t}
-                  />
-                ))}
+                <LoadMoreBlockList
+                  items={normalizedItems}
+                  renderItem={(item, index) => (
+                    <BlockListItem
+                      key={item.itemId || index}
+                      columnDefs={itemColumnDefs}
+                      item={item}
+                      enableActions={false}
+                      t={t}
+                    />
+                  )}
+                />
                 <Paper
                   sx={{
                     p: 2,

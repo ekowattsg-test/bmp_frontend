@@ -15,7 +15,13 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
-import { PageHeader, EmptyState, LoadingState, BlockListItem } from "../common";
+import {
+  PageHeader,
+  EmptyState,
+  LoadingState,
+  BlockListItem,
+  LoadMoreBlockList,
+} from "../common";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import HelpDialog from "../common/HelpDialog";
 import CompanyAdd from "./CompanyAdd";
@@ -240,15 +246,24 @@ const CompanyModern = () => {
           title={t("companyList.noCompanies", "No companies found")}
           description={
             search
-              ? t("companyList.noSearchResults", "Try adjusting your search terms")
-              : t("companyList.noCompaniesDescription", "Get started by adding your first company")
+              ? t(
+                  "companyList.noSearchResults",
+                  "Try adjusting your search terms",
+                )
+              : t(
+                  "companyList.noCompaniesDescription",
+                  "Get started by adding your first company",
+                )
           }
-          actionLabel={!search ? t("companyList.addTitle", "Add Company") : null}
+          actionLabel={
+            !search ? t("companyList.addTitle", "Add Company") : null
+          }
           onActionClick={!search ? () => setShowAdd(true) : null}
         />
       ) : shouldUseBlockLayout ? (
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
-          {filteredCompanies.map((item, idx) => (
+        <LoadMoreBlockList
+          items={filteredCompanies}
+          renderItem={(item, idx) => (
             <BlockListItem
               key={item.companyId || idx}
               columnDefs={blockColumnDefs}
@@ -256,14 +271,18 @@ const CompanyModern = () => {
               onEdit={handleEdit}
               onDelete={handleDelete}
               leadingMedia={{
-                placeholder: <BusinessIcon sx={{ color: "text.secondary", fontSize: "1.1rem" }} />,
+                placeholder: (
+                  <BusinessIcon
+                    sx={{ color: "text.secondary", fontSize: "1.1rem" }}
+                  />
+                ),
                 width: 40,
                 height: 40,
               }}
               t={t}
             />
-          ))}
-        </Box>
+          )}
+        />
       ) : (
         <Box
           sx={{

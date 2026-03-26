@@ -15,7 +15,13 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
-import { PageHeader, EmptyState, LoadingState, BlockListItem } from "../common";
+import {
+  PageHeader,
+  EmptyState,
+  LoadingState,
+  BlockListItem,
+  LoadMoreBlockList,
+} from "../common";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import HelpDialog from "../common/HelpDialog";
 import VendorAdd from "./VendorAdd";
@@ -274,8 +280,9 @@ const VendorModern = () => {
           onActionClick={!search ? () => setShowAdd(true) : null}
         />
       ) : shouldUseBlockLayout ? (
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
-          {filteredVendors.map((item, idx) => (
+        <LoadMoreBlockList
+          items={filteredVendors}
+          renderItem={(item, idx) => (
             <BlockListItem
               key={item.vendorId || idx}
               columnDefs={blockColumnDefs}
@@ -294,8 +301,8 @@ const VendorModern = () => {
               }}
               t={t}
             />
-          ))}
-        </Box>
+          )}
+        />
       ) : (
         <Box
           sx={{

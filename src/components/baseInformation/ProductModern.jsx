@@ -14,7 +14,13 @@ import {
   ImageCarousel,
   ThumbnailImg,
 } from "../../helpers/file_helper";
-import { PageHeader, EmptyState, LoadingState, BlockListItem } from "../common";
+import {
+  PageHeader,
+  EmptyState,
+  LoadingState,
+  BlockListItem,
+  LoadMoreBlockList,
+} from "../common";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import HelpDialog from "../common/HelpDialog";
 import ProductAdd from "./ProductAdd";
@@ -388,8 +394,9 @@ const ProductModern = () => {
           onActionClick={!search ? () => setShowAdd(true) : null}
         />
       ) : shouldUseBlockLayout ? (
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
-          {filteredProducts.map((item, idx) => (
+        <LoadMoreBlockList
+          items={filteredProducts}
+          renderItem={(item, idx) => (
             <BlockListItem
               key={item.productId || item.productCode || idx}
               columnDefs={blockColumnDefs}
@@ -410,8 +417,8 @@ const ProductModern = () => {
               }}
               t={t}
             />
-          ))}
-        </Box>
+          )}
+        />
       ) : (
         <Box
           sx={{

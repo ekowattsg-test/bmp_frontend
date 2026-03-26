@@ -9,7 +9,13 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
-import { PageHeader, EmptyState, LoadingState, BlockListItem } from "../common";
+import {
+  PageHeader,
+  EmptyState,
+  LoadingState,
+  BlockListItem,
+  LoadMoreBlockList,
+} from "../common";
 import HelpDialog from "../common/HelpDialog";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import StockMovementCodeAdd from "./StockMovementCodeAdd";
@@ -248,10 +254,10 @@ const StockMovementCode = () => {
             onActionClick={() => setShowAdd(true)}
           />
         ) : shouldUseBlockLayout ? (
-          <Box
-            sx={{ p: 2, display: "grid", gridTemplateColumns: "1fr", gap: 2 }}
-          >
-            {normalizedRows.map((item, idx) => (
+          <LoadMoreBlockList
+            items={normalizedRows}
+            containerSx={{ p: 2 }}
+            renderItem={(item, idx) => (
               <BlockListItem
                 key={item.movementType || idx}
                 columnDefs={blockColumnDefs}
@@ -269,8 +275,8 @@ const StockMovementCode = () => {
                 }}
                 t={t}
               />
-            ))}
-          </Box>
+            )}
+          />
         ) : (
           <DataGrid
             rows={normalizedRows}

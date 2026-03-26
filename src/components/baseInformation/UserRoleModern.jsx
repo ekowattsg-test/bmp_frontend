@@ -10,7 +10,13 @@ import {
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import { AuthContext } from "../../context/authContext";
-import { PageHeader, EmptyState, LoadingState, BlockListItem } from "../common";
+import {
+  PageHeader,
+  EmptyState,
+  LoadingState,
+  BlockListItem,
+  LoadMoreBlockList,
+} from "../common";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import HelpDialog from "../common/HelpDialog";
 import UserRoleAdd from "./UserRoleAdd";
@@ -254,8 +260,9 @@ const UserRoleModern = () => {
           onActionClick={!search ? () => setShowAdd(true) : null}
         />
       ) : shouldUseBlockLayout ? (
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
-          {normalizedUserRoles.map((item, idx) => (
+        <LoadMoreBlockList
+          items={normalizedUserRoles}
+          renderItem={(item, idx) => (
             <BlockListItem
               key={item.userrole_id || item.id || idx}
               columnDefs={blockColumnDefs}
@@ -273,8 +280,8 @@ const UserRoleModern = () => {
               }}
               t={t}
             />
-          ))}
-        </Box>
+          )}
+        />
       ) : (
         <Box
           sx={{

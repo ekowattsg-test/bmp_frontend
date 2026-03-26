@@ -193,6 +193,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               path: "/stocktakeon",
             },
             {
+              key: "stockEnquiry",
+              label: t("menu.stockEnquiry", "Stock Enquiry"),
+              icon: <HistoryIcon fontSize="small" />,
+              path: "/stockenquiry",
+            },
+            {
               key: "products",
               label: t("menu.productList", "Products"),
               icon: <StoreIcon fontSize="small" />,

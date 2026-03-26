@@ -41,7 +41,7 @@ import {
   commit,
   abort,
 } from "../../helpers/file_helper";
-import { ListContainer, BlockListItem } from "../common";
+import { ListContainer, BlockListItem, LoadMoreBlockList } from "../common";
 import StaffSkillAdd from "./StaffSkillAdd";
 import StaffSkillEdit from "./StaffSkillEdit";
 
@@ -479,8 +479,9 @@ const StaffSkillProfile = ({ onBack }) => {
           </Box>
         ) : filteredSkills.length > 0 ? (
           shouldUseBlockLayout ? (
-            <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
-              {blockSkills.map((skill, idx) => (
+            <LoadMoreBlockList
+              items={blockSkills}
+              renderItem={(skill, idx) => (
                 <BlockListItem
                   key={skill.staffSkillProfileId || idx}
                   columnDefs={skillBlockColumnDefs}
@@ -492,8 +493,8 @@ const StaffSkillProfile = ({ onBack }) => {
                   onDelete={(item) => handleDeleteSkillClick(item)}
                   t={t}
                 />
-              ))}
-            </Box>
+              )}
+            />
           ) : (
             <TableContainer component={Paper} sx={{ boxShadow: 1 }}>
               <Table size="small">

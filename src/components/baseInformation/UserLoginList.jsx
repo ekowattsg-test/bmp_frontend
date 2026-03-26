@@ -14,7 +14,13 @@ import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import { AuthContext } from "../../context/authContext";
 import { hasRole } from "../../helpers/roles_helper";
-import { PageHeader, LoadingState, EmptyState, BlockListItem } from "../common";
+import {
+  PageHeader,
+  LoadingState,
+  EmptyState,
+  BlockListItem,
+  LoadMoreBlockList,
+} from "../common";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import HelpDialog from "../common/HelpDialog";
 
@@ -400,8 +406,9 @@ const UserLoginList = () => {
           description={t("userLoginList.emptyDescription")}
         />
       ) : shouldUseBlockLayout ? (
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
-          {filteredRows.map((item, idx) => (
+        <LoadMoreBlockList
+          items={filteredRows}
+          renderItem={(item, idx) => (
             <BlockListItem
               key={item.id || idx}
               columnDefs={blockColumnDefs}
@@ -418,8 +425,8 @@ const UserLoginList = () => {
               }}
               t={t}
             />
-          ))}
-        </Box>
+          )}
+        />
       ) : (
         <Paper
           elevation={1}

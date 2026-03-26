@@ -9,7 +9,13 @@ import {
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
-import { PageHeader, EmptyState, LoadingState, BlockListItem } from "../common";
+import {
+  PageHeader,
+  EmptyState,
+  LoadingState,
+  BlockListItem,
+  LoadMoreBlockList,
+} from "../common";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import HelpDialog from "../common/HelpDialog";
 import RoleAdd from "./RoleAdd";
@@ -234,8 +240,9 @@ const RoleModern = () => {
           onActionClick={!search ? () => setShowAdd(true) : null}
         />
       ) : shouldUseBlockLayout ? (
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
-          {filteredRoles.map((item, idx) => (
+        <LoadMoreBlockList
+          items={filteredRoles}
+          renderItem={(item, idx) => (
             <BlockListItem
               key={item.id || idx}
               columnDefs={blockColumnDefs}
@@ -253,8 +260,8 @@ const RoleModern = () => {
               }}
               t={t}
             />
-          ))}
-        </Box>
+          )}
+        />
       ) : (
         <Box
           sx={{

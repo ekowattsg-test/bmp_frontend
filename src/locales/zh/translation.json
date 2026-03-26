@@ -134,6 +134,7 @@
     "stockMovementCode": "库存变动代码",
     "inventory": "库存",
     "stockTake": "创建库存",
+    "stockEnquiry": "库存查询",
     "languageSettings": "语言设置",
     "customer": "客户",
     "vendor": "供应商",
@@ -512,7 +513,10 @@
     "comingSoon": "即将推出",
     "enabled": "已启用",
     "disabled": "已禁用",
-    "close": "关闭"
+    "close": "关闭",
+    "backToTop": "回到顶部",
+    "loadMore": "加载更多（剩余 {{count}}）",
+    "showingCount": "已显示 {{shown}} / {{total}}"
   },
   "eula": {
     "scrollToEnd": "滚动至底部以启用"
@@ -634,5 +638,51 @@
     "noProducts": "未找到产品",
     "createProduct": "创建产品",
     "lastRecorded": "最近记录的库存"
+  },
+  "stockEnquiry": {
+    "title": "库存查询",
+    "subtitle": "按产品、库存地点与变动查询库存水平",
+    "helpTitle": "库存查询帮助",
+    "helpBody": "可使用服务端筛选（库存编码）与页面筛选（产品、地点、变动）查看汇总或明细。",
+    "loading": "正在加载库存记录...",
+    "errorLoading": "加载库存记录失败。",
+    "emptyTitle": "未找到库存记录",
+    "emptyDescription": "请调整筛选条件或重新查询。",
+    "actions": {
+      "enquire": "查询"
+    },
+    "viewMode": {
+      "label": "显示模式",
+      "summary": "汇总",
+      "detail": "明细"
+    },
+    "rowLabels": {
+      "productTotal": "产品合计",
+      "stockTotal": "库存合计"
+    },
+    "filters": {
+      "stockCode": "库存编码",
+      "productId": "产品 ID",
+      "stockId": "库存 ID",
+      "movementId": "变动 ID",
+      "product": "产品",
+      "location": "库存地点",
+      "movement": "变动"
+    },
+    "columns": {
+      "movementAt": "日期",
+      "stockCode": "库存编码",
+      "product": "产品",
+      "location": "地点",
+      "movement": "变动",
+      "quantity": "变动数量",
+      "baselinedQuantity": "基线数量",
+      "quantityMoved": "累计变动",
+      "quantityHolded": "冻结数量",
+      "currentQuantity": "当前数量",
+      "currentAvailableQuantity": "可用数量",
+      "movementCount": "变动次数",
+      "lastMovement": "最近变动"
+    }
   }
 }

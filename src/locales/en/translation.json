@@ -134,6 +134,7 @@
     "staffSkillList": "Staff Skill List",
     "stockMovementCode": "Stock Movement Codes",
     "stockTake": "Stock Take On",
+    "stockEnquiry": "Stock Enquiry",
     "languageSettings": "Language Settings",
     "customer": "Customer",
     "vendor": "Vendor",
@@ -511,7 +512,10 @@
     "comingSoon": "Coming Soon",
     "enabled": "Enabled",
     "disabled": "Disabled",
-    "close": "Close"
+    "close": "Close",
+    "backToTop": "Back to top",
+    "loadMore": "Load More ({{count}})",
+    "showingCount": "Showing {{shown}} of {{total}}"
   },
   "eula": {
     "scrollToEnd": "Scroll to end to enable"
@@ -633,5 +637,51 @@
     "noProducts": "No products found",
     "createProduct": "Create product",
     "lastRecorded": "Last recorded stock"
+  },
+  "stockEnquiry": {
+    "title": "Stock Enquiry",
+    "subtitle": "Enquire stock level by product, stock location, and movement",
+    "helpTitle": "Stock enquiry help",
+    "helpBody": "Use stock code as a server filter, and use client filters (product, location, movement) to view stock in summary or detail mode.",
+    "loading": "Loading stock records...",
+    "errorLoading": "Failed to load stock records.",
+    "emptyTitle": "No stock records found",
+    "emptyDescription": "Try adjusting your filters or run a new enquiry.",
+    "actions": {
+      "enquire": "Enquire"
+    },
+    "viewMode": {
+      "label": "View mode",
+      "summary": "Summary",
+      "detail": "Detail"
+    },
+    "rowLabels": {
+      "productTotal": "Product Total",
+      "stockTotal": "Stock Total"
+    },
+    "filters": {
+      "stockCode": "Stock Code",
+      "productId": "Product ID",
+      "stockId": "Stock ID",
+      "movementId": "Movement ID",
+      "product": "Product",
+      "location": "Stock Location",
+      "movement": "Movement"
+    },
+    "columns": {
+      "movementAt": "Date",
+      "stockCode": "Stock Code",
+      "product": "Product",
+      "location": "Location",
+      "movement": "Movement",
+      "quantity": "Moved",
+      "baselinedQuantity": "Baseline",
+      "quantityMoved": "Moved",
+      "quantityHolded": "Held",
+      "currentQuantity": "Current",
+      "currentAvailableQuantity": "Available",
+      "movementCount": "Movements",
+      "lastMovement": "Last Movement"
+    }
   }
 }

@@ -21,6 +21,7 @@ import {
   Paper,
 } from "@mui/material";
 import { Add as AddIcon, Delete as DeleteIcon } from "@mui/icons-material";
+import { LoadMoreBlockList } from "../common";
 
 const PurchaseOrderEdit = ({ order, onCancel }) => {
   const { t } = useTranslation();
@@ -380,175 +381,183 @@ const PurchaseOrderEdit = ({ order, onCancel }) => {
             </Box>
           ) : shouldUseBlockLayout ? (
             <Box sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
-              {items.map((item, index) => (
-                <Paper
-                  key={item.tempId}
-                  sx={{
-                    p: 2,
-                    border: "1px solid var(--color-gray-200)",
-                    borderRadius: 1,
-                    backgroundColor: "background.paper",
-                  }}
-                >
-                  <Box
+              <LoadMoreBlockList
+                items={items}
+                renderItem={(item, index) => (
+                  <Paper
+                    key={item.tempId}
                     sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      mb: 1.5,
+                      p: 2,
+                      border: "1px solid var(--color-gray-200)",
+                      borderRadius: 1,
+                      backgroundColor: "background.paper",
                     }}
                   >
-                    <Typography variant="subtitle2" color="text.secondary">
-                      {t("purchaseOrderList.lineNo", "#")} {index + 1}
-                    </Typography>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleRemoveItem(item.tempId)}
-                      sx={{ color: "error.main" }}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 1.5,
+                      }}
                     >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr",
-                      gap: 1.5,
-                    }}
-                  >
-                    <TextField
-                      size="small"
-                      label={t("purchaseOrderList.productCode", "Product Code")}
-                      value={item.productCode}
-                      onChange={(e) =>
-                        handleItemChange(
-                          item.tempId,
-                          "productCode",
-                          e.target.value,
-                        )
-                      }
-                      required
-                      fullWidth
-                    />
-
-                    <FormControl size="small" fullWidth>
-                      <InputLabel>
-                        {t("purchaseOrderList.itemType", "Item Type")}
-                      </InputLabel>
-                      <Select
-                        value={item.itemType || "I"}
-                        onChange={(e) =>
-                          handleItemChange(
-                            item.tempId,
-                            "itemType",
-                            e.target.value,
-                          )
-                        }
-                        label={t("purchaseOrderList.itemType", "Item Type")}
+                      <Typography variant="subtitle2" color="text.secondary">
+                        {t("purchaseOrderList.lineNo", "#")} {index + 1}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleRemoveItem(item.tempId)}
+                        sx={{ color: "error.main" }}
                       >
-                        <MenuItem value="I">
-                          {t(
-                            "purchaseOrderList.itemType.inventory",
-                            "Inventory",
-                          )}
-                        </MenuItem>
-                        <MenuItem value="A">
-                          {t("purchaseOrderList.itemType.assets", "Assets")}
-                        </MenuItem>
-                      </Select>
-                    </FormControl>
-
-                    <TextField
-                      size="small"
-                      label={t(
-                        "purchaseOrderList.internalProductCode",
-                        "Internal Product Code",
-                      )}
-                      value={item.internalProductCode || ""}
-                      onChange={(e) =>
-                        handleItemChange(
-                          item.tempId,
-                          "internalProductCode",
-                          e.target.value,
-                        )
-                      }
-                      fullWidth
-                    />
-
-                    <TextField
-                      size="small"
-                      type="number"
-                      label={t(
-                        "purchaseOrderList.internalOrderId",
-                        "Internal Order ID",
-                      )}
-                      value={item.internalOrderId || ""}
-                      onChange={(e) =>
-                        handleItemChange(
-                          item.tempId,
-                          "internalOrderId",
-                          e.target.value,
-                        )
-                      }
-                      fullWidth
-                    />
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
 
                     <Box
                       sx={{
                         display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
+                        gridTemplateColumns: "1fr",
                         gap: 1.5,
                       }}
                     >
                       <TextField
                         size="small"
-                        type="number"
-                        label={t("purchaseOrderList.quantity", "Quantity")}
-                        value={item.quantity}
+                        label={t(
+                          "purchaseOrderList.productCode",
+                          "Product Code",
+                        )}
+                        value={item.productCode}
                         onChange={(e) =>
                           handleItemChange(
                             item.tempId,
-                            "quantity",
+                            "productCode",
                             e.target.value,
                           )
                         }
                         required
-                        inputProps={{ min: 1 }}
                         fullWidth
                       />
+
+                      <FormControl size="small" fullWidth>
+                        <InputLabel>
+                          {t("purchaseOrderList.itemType", "Item Type")}
+                        </InputLabel>
+                        <Select
+                          value={item.itemType || "I"}
+                          onChange={(e) =>
+                            handleItemChange(
+                              item.tempId,
+                              "itemType",
+                              e.target.value,
+                            )
+                          }
+                          label={t("purchaseOrderList.itemType", "Item Type")}
+                        >
+                          <MenuItem value="I">
+                            {t(
+                              "purchaseOrderList.itemType.inventory",
+                              "Inventory",
+                            )}
+                          </MenuItem>
+                          <MenuItem value="A">
+                            {t("purchaseOrderList.itemType.assets", "Assets")}
+                          </MenuItem>
+                        </Select>
+                      </FormControl>
+
+                      <TextField
+                        size="small"
+                        label={t(
+                          "purchaseOrderList.internalProductCode",
+                          "Internal Product Code",
+                        )}
+                        value={item.internalProductCode || ""}
+                        onChange={(e) =>
+                          handleItemChange(
+                            item.tempId,
+                            "internalProductCode",
+                            e.target.value,
+                          )
+                        }
+                        fullWidth
+                      />
+
                       <TextField
                         size="small"
                         type="number"
-                        label={t("purchaseOrderList.unitPrice", "Unit Price")}
-                        value={item.unitPrice}
+                        label={t(
+                          "purchaseOrderList.internalOrderId",
+                          "Internal Order ID",
+                        )}
+                        value={item.internalOrderId || ""}
                         onChange={(e) =>
                           handleItemChange(
                             item.tempId,
-                            "unitPrice",
+                            "internalOrderId",
                             e.target.value,
                           )
                         }
-                        required
-                        inputProps={{ min: 0, step: 0.01 }}
                         fullWidth
                       />
-                    </Box>
-                  </Box>
 
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      mt: 1.5,
-                      color: "text.secondary",
-                      textAlign: "right",
-                    }}
-                  >
-                    {t("purchaseOrderList.lineTotal", "Line Total")}: $
-                    {((item.quantity || 0) * (item.unitPrice || 0)).toFixed(2)}
-                  </Typography>
-                </Paper>
-              ))}
+                      <Box
+                        sx={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: 1.5,
+                        }}
+                      >
+                        <TextField
+                          size="small"
+                          type="number"
+                          label={t("purchaseOrderList.quantity", "Quantity")}
+                          value={item.quantity}
+                          onChange={(e) =>
+                            handleItemChange(
+                              item.tempId,
+                              "quantity",
+                              e.target.value,
+                            )
+                          }
+                          required
+                          inputProps={{ min: 1 }}
+                          fullWidth
+                        />
+                        <TextField
+                          size="small"
+                          type="number"
+                          label={t("purchaseOrderList.unitPrice", "Unit Price")}
+                          value={item.unitPrice}
+                          onChange={(e) =>
+                            handleItemChange(
+                              item.tempId,
+                              "unitPrice",
+                              e.target.value,
+                            )
+                          }
+                          required
+                          inputProps={{ min: 0, step: 0.01 }}
+                          fullWidth
+                        />
+                      </Box>
+                    </Box>
+
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        mt: 1.5,
+                        color: "text.secondary",
+                        textAlign: "right",
+                      }}
+                    >
+                      {t("purchaseOrderList.lineTotal", "Line Total")}: $
+                      {((item.quantity || 0) * (item.unitPrice || 0)).toFixed(
+                        2,
+                      )}
+                    </Typography>
+                  </Paper>
+                )}
+              />
 
               <Paper
                 sx={{

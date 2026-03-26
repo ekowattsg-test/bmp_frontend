@@ -20,6 +20,7 @@ import {
   AutoStories,
   UploadFile,
   History,
+  Store,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 
@@ -139,6 +140,29 @@ const AppMenu = () => {
             to: "/staffprofile",
             label: t("menu.staffProfile", "Staff Profile"),
             icon: <People />,
+          },
+        ],
+      },
+      {
+        key: "Inventory",
+        menu: "Inventory",
+        label: t("menu.inventory", "Inventory"),
+        icon: <Store />,
+        items: [
+          {
+            to: "/stocktakeon",
+            label: t("menu.stockTake", "Stock Take On"),
+            icon: <Store />,
+          },
+          {
+            to: "/stockenquiry",
+            label: t("menu.stockEnquiry", "Stock Enquiry"),
+            icon: <History />,
+          },
+          {
+            to: "/product",
+            label: t("menu.productList", "Products"),
+            icon: <Store />,
           },
         ],
       },
