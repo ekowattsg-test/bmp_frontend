@@ -667,10 +667,12 @@
       "movementId": "变动 ID",
       "product": "产品",
       "location": "库存地点",
+      "reference": "参考编号",
       "movement": "变动"
     },
     "columns": {
       "movementAt": "日期",
+      "reference": "参考编号",
       "stockCode": "库存编码",
       "product": "产品",
       "location": "地点",

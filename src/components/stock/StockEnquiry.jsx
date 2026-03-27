@@ -209,6 +209,18 @@ const normalizeRow = (item) => {
       ? movementAtDate.toLocaleDateString()
       : String(movementAtRaw || ""),
     movementAtTs: movementAtDate ? movementAtDate.getTime() : 0,
+    reference: String(
+      readFirst(item, [
+        "reference",
+        "ref",
+        "referenceNo",
+        "refNo",
+        "referenceNumber",
+        "docNo",
+        "documentNo",
+        "orderRef",
+      ]) || "",
+    ),
   };
 };
 
@@ -224,6 +236,7 @@ const StockEnquiry = () => {
   const [stockCode, setStockCode] = useState("");
   const [productKeyword, setProductKeyword] = useState("");
   const [locationKeyword, setLocationKeyword] = useState("");
+  const [referenceKeyword, setReferenceKeyword] = useState("");
   const [movementKeyword, setMovementKeyword] = useState("");
   const [viewMode, setViewMode] = useState("summary");
 
@@ -258,6 +271,7 @@ const StockEnquiry = () => {
     const stockFilter = stockCode.trim().toLowerCase();
     const productFilter = productKeyword.trim().toLowerCase();
     const locationFilter = locationKeyword.trim().toLowerCase();
+    const referenceFilter = referenceKeyword.trim().toLowerCase();
     const movementFilter = movementKeyword.trim().toLowerCase();
 
     return rows
@@ -267,6 +281,7 @@ const StockEnquiry = () => {
           `${row.productName} ${row.stockCode} ${row.productId}`.toLowerCase();
         const movementText =
           `${row.movementType} ${row.movementDescription} ${row.movementId}`.toLowerCase();
+        const referenceText = `${row.reference}`.toLowerCase();
 
         const stockMatch = !stockFilter || stockText.includes(stockFilter);
         const productMatch =
@@ -274,10 +289,18 @@ const StockEnquiry = () => {
         const locationMatch =
           !locationFilter ||
           row.stockLocation.toLowerCase().includes(locationFilter);
+        const referenceMatch =
+          !referenceFilter || referenceText.includes(referenceFilter);
         const movementMatch =
           !movementFilter || movementText.includes(movementFilter);
 
-        return stockMatch && productMatch && locationMatch && movementMatch;
+        return (
+          stockMatch &&
+          productMatch &&
+          locationMatch &&
+          referenceMatch &&
+          movementMatch
+        );
       })
       .sort((a, b) => {
         const productA = `${a.productName || ""}|${a.productId || ""}`
@@ -298,7 +321,14 @@ const StockEnquiry = () => {
 
         return b.movementAtTs - a.movementAtTs;
       });
-  }, [locationKeyword, movementKeyword, productKeyword, rows, stockCode]);
+  }, [
+    locationKeyword,
+    movementKeyword,
+    productKeyword,
+    referenceKeyword,
+    rows,
+    stockCode,
+  ]);
 
   const detailRows = useMemo(() => {
     const productMap = new Map();
@@ -373,7 +403,6 @@ const StockEnquiry = () => {
       let productBaselineQuantity = 0;
       let productCurrentQuantity = 0;
       let productAvailableQuantity = 0;
-      let productMovementCount = 0;
 
       const stockAndMovementRows = [];
 
@@ -386,7 +415,6 @@ const StockEnquiry = () => {
         productBaselineQuantity += stockGroup.baselineQuantity;
         productCurrentQuantity += stockCurrentQuantity;
         productAvailableQuantity += stockAvailableQuantity;
-        productMovementCount += stockGroup.movements.length;
 
         stockAndMovementRows.push({
           id: `stock-${productGroup.productId || productGroup.productName}-${stockGroup.stockCode || stockGroup.stockId}`,
@@ -396,7 +424,6 @@ const StockEnquiry = () => {
           stockCode: stockGroup.stockCode,
           stockLocation: stockGroup.stockLocation,
           movementType: t("stockEnquiry.rowLabels.stockTotal"),
-          quantity: "",
           baselinedQuantity: "",
           quantityMoved: stockGroup.stockMovedSum,
           quantityHolded: stockGroup.holdMovedSum,
@@ -413,12 +440,12 @@ const StockEnquiry = () => {
             id: `movement-${movementRow.id}`,
             rowType: "movement",
             movementAt: movementRow.movementAt,
+            reference: movementRow.reference,
             productName: "",
             stockCode: "",
             stockLocation: movementRow.stockLocation,
             movementType:
               movementRow.movementDescription || movementRow.movementType,
-            quantity: movementRow.quantity,
             baselinedQuantity: "",
             quantityMoved: movementRow.stockMoved,
             quantityHolded: movementRow.holdMoved,
@@ -436,13 +463,11 @@ const StockEnquiry = () => {
         stockCode: "",
         stockLocation: "",
         movementType: t("stockEnquiry.rowLabels.productTotal"),
-        quantity: "",
         baselinedQuantity: productBaselineQuantity,
         quantityMoved: "",
         quantityHolded: "",
         currentQuantity: productCurrentQuantity,
         currentAvailableQuantity: productAvailableQuantity,
-        movementCount: productMovementCount,
       });
 
       groupedRows.push(...stockAndMovementRows);
@@ -610,10 +635,14 @@ const StockEnquiry = () => {
         width: 110,
       },
       {
+        field: "reference",
+        headerName: t("stockEnquiry.columns.reference"),
+        width: 120,
+      },
+      {
         field: "movementType",
         headerName: t("stockEnquiry.columns.movement"),
         flex: 1,
-        minWidth: 150,
       },
       {
         field: "baselinedQuantity",
@@ -795,6 +824,20 @@ const StockEnquiry = () => {
             label={t("stockEnquiry.filters.location")}
             value={locationKeyword}
             onChange={(e) => setLocationKeyword(e.target.value)}
+            size="small"
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <TextField
+            label={t("stockEnquiry.filters.reference")}
+            value={referenceKeyword}
+            onChange={(e) => setReferenceKeyword(e.target.value)}
             size="small"
             fullWidth
             InputProps={{

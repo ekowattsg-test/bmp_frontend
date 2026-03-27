@@ -666,10 +666,12 @@
       "movementId": "Movement ID",
       "product": "Product",
       "location": "Stock Location",
+      "reference": "Reference",
       "movement": "Movement"
     },
     "columns": {
       "movementAt": "Date",
+      "reference": "Reference",
       "stockCode": "Stock Code",
       "product": "Product",
       "location": "Location",

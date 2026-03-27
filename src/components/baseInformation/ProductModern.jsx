@@ -198,24 +198,34 @@ const ProductModern = () => {
     }
 
     return (
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-        {thumb || (
-          <Box
-            sx={{
-              width: 40,
-              height: 40,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              borderRadius: 1,
-              backgroundColor: "background.alt",
-            }}
-          >
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 1,
+          height: "100%",
+          py: 0.5,
+        }}
+      >
+        <Box
+          sx={{
+            width: 40,
+            height: 40,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 1,
+            backgroundColor: "background.alt",
+            overflow: "hidden",
+            flexShrink: 0,
+          }}
+        >
+          {thumb || (
             <Box component="span" sx={{ fontSize: "1.1rem" }}>
               📦
             </Box>
-          </Box>
-        )}
+          )}
+        </Box>
         <Box sx={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
           <Box sx={{ fontWeight: 500, color: "text.primary" }}>{name}</Box>
           <Box sx={{ fontSize: "0.75rem", color: "text.secondary" }}>
@@ -236,6 +246,7 @@ const ProductModern = () => {
       minWidth: 260,
       renderCell: renderProductCell,
       sortable: false,
+      cellClassName: "product-name-cell",
     },
     {
       field: "productDescription",
@@ -444,6 +455,9 @@ const ProductModern = () => {
             sx={{
               border: 0,
               "& .MuiDataGrid-cell:focus": { outline: "none" },
+              "& .product-name-cell": {
+                alignItems: "flex-start",
+              },
               "& .MuiDataGrid-row:hover": { bgcolor: "action.hover" },
               "& .MuiDataGrid-columnHeaders": {
                 bgcolor: "grey.50",

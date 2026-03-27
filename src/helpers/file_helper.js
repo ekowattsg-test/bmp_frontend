@@ -715,7 +715,11 @@ export const getDisplayImageInfo = (pic) => {
       "",
   });
 
-  const asDriveMetadata = (value, source = {}, provider = STORAGE_PROVIDER_GOOGLE) => {
+  const asDriveMetadata = (
+    value,
+    source = {},
+    provider = STORAGE_PROVIDER_GOOGLE,
+  ) => {
     const fileId = getFileIdFromLink(value || "") || source.id || null;
     if (!fileId || !value) return null;
 
@@ -764,7 +768,11 @@ export const getDisplayImageInfo = (pic) => {
           c.includes("1drv.ms") ||
           c.includes("sharepoint.com");
         if (!isOneDriveUrl) {
-          const driveMeta = asDriveMetadata(c, parsed, parsed.provider || STORAGE_PROVIDER_GOOGLE);
+          const driveMeta = asDriveMetadata(
+            c,
+            parsed,
+            parsed.provider || STORAGE_PROVIDER_GOOGLE,
+          );
           if (driveMeta) return driveMeta;
         }
 
@@ -779,7 +787,9 @@ export const getDisplayImageInfo = (pic) => {
       const meta = buildMeta(parsed);
       return {
         imageUrl:
-          meta.provider === STORAGE_PROVIDER_ONEDRIVE && meta.viewUrl ? meta.viewUrl : null,
+          meta.provider === STORAGE_PROVIDER_ONEDRIVE && meta.viewUrl
+            ? meta.viewUrl
+            : null,
         meta,
       };
     }
