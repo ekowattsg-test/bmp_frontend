@@ -21,6 +21,7 @@ import {
   UploadFile,
   History,
   Store,
+  CompareArrows,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 
@@ -153,6 +154,11 @@ const AppMenu = () => {
             to: "/stocktakeon",
             label: t("menu.stockTake", "Stock Take On"),
             icon: <Store />,
+          },
+          {
+            to: "/stockadjustment",
+            label: t("menu.stockAdjustment", "Stock Adjustment"),
+            icon: <CompareArrows />,
           },
           {
             to: "/stockenquiry",

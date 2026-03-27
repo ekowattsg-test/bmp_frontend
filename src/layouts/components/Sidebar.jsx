@@ -25,6 +25,7 @@ import {
   AdminPanelSettings as AdminPanelSettingsIcon,
   Dashboard as DashboardIcon,
   History as HistoryIcon,
+  CompareArrows as CompareArrowsIcon,
   PersonAdd as PersonAddIcon,
   AutoStories as AutoStoriesIcon,
   UploadFile as UploadFileIcon,
@@ -191,6 +192,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               label: t("menu.stockTake", "Stock Take On"),
               icon: <AutoStoriesIcon fontSize="small" />,
               path: "/stocktakeon",
+            },
+            {
+              key: "stockAdjustment",
+              label: t("menu.stockAdjustment", "Stock Adjustment"),
+              icon: <CompareArrowsIcon fontSize="small" />,
+              path: "/stockadjustment",
             },
             {
               key: "stockEnquiry",

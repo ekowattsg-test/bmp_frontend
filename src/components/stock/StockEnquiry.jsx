@@ -8,6 +8,7 @@ import {
   Paper,
   Stack,
   TextField,
+  Typography,
   ToggleButton,
   ToggleButtonGroup,
 } from "@mui/material";
@@ -66,6 +67,7 @@ const normalizeRow = (item) => {
   const movementAtRaw = readFirst(item, [
     "movementAt",
     "movementDate",
+    "recordDate",
     "createDate",
     "movedAt",
     "transactionDate",
@@ -307,6 +309,12 @@ const StockEnquiry = () => {
     setMovementKeyword(ALL_MOVEMENTS_VALUE);
   };
 
+  const hasNonProductFilter =
+    stockCode.trim() !== "" ||
+    locationKeyword.trim() !== "" ||
+    referenceKeyword.trim() !== "" ||
+    movementKeyword !== ALL_MOVEMENTS_VALUE;
+
   const movementRows = useMemo(() => {
     const stockFilter = stockCode.trim().toLowerCase();
     const productFilter = productKeyword.trim().toLowerCase();
@@ -460,7 +468,7 @@ const StockEnquiry = () => {
           movementAt: "",
           productName: "",
           stockCode: stockGroup.stockCode,
-          stockLocation: stockGroup.stockLocation,
+          stockLocation: "",
           movementType: t("stockEnquiry.rowLabels.stockTotal"),
           baselinedQuantity: "",
           quantityMoved: stockGroup.stockMovedSum,
@@ -735,11 +743,6 @@ const StockEnquiry = () => {
         width: 140,
       },
       {
-        field: "stockLocation",
-        headerName: t("stockEnquiry.columns.location"),
-        width: 160,
-      },
-      {
         field: "baselinedQuantity",
         headerName: t("stockEnquiry.columns.baselinedQuantity"),
         width: 140,
@@ -771,13 +774,6 @@ const StockEnquiry = () => {
         field: "currentAvailableQuantity",
         headerName: t("stockEnquiry.columns.currentAvailableQuantity"),
         width: 160,
-        headerAlign: "right",
-        align: "right",
-      },
-      {
-        field: "movementCount",
-        headerName: t("stockEnquiry.columns.movementCount"),
-        width: 140,
         headerAlign: "right",
         align: "right",
       },
@@ -960,6 +956,15 @@ const StockEnquiry = () => {
           >
             {t("basic.reset", "Reset")}
           </Button>
+
+          {hasNonProductFilter && (
+            <Typography
+              variant="body2"
+              sx={{ color: "warning.main", fontWeight: 500, alignSelf: "center" }}
+            >
+              {t("stockEnquiry.notes.filteredTotals")}
+            </Typography>
+          )}
         </Stack>
       </Paper>
 

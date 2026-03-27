@@ -134,6 +134,7 @@
     "stockMovementCode": "库存变动代码",
     "inventory": "库存",
     "stockTake": "创建库存",
+    "stockAdjustment": "库存调整",
     "stockEnquiry": "库存查询",
     "languageSettings": "语言设置",
     "customer": "客户",
@@ -639,6 +640,35 @@
     "createProduct": "创建产品",
     "lastRecorded": "最近记录的库存"
   },
+  "stockAdjustment": {
+    "title": "库存调整",
+    "subtitle": "扫描或输入库存编码并记录库存调整",
+    "helpTitle": "库存调整帮助",
+    "helpBody": "先扫描或输入库存编码。找到库存后，选择库存地点行，再填写调入或调出、参考编号和调整数量进行保存。",
+    "scanHint": "扫描条码或输入库存编码开始调整。",
+    "scanPlaceholder": "扫描或输入库存编码...",
+    "findStock": "查找库存",
+    "stockCode": "库存编码",
+    "product": "产品",
+    "adjustmentType": "调整类型",
+    "inAdjustment": "调入",
+    "outAdjustment": "调出",
+    "reference": "参考编号",
+    "adjustment": "调整数量",
+    "selected": "已选",
+    "notFound": "未找到该库存编码，请重新扫描或输入库存编码。",
+    "errorLookup": "加载库存信息失败。",
+    "selectStockLine": "请选择库存行。",
+    "quantityRequired": "请输入大于零的调整数量。",
+    "saveSuccess": "库存调整已保存。",
+    "saveFailed": "保存库存调整失败。",
+    "columns": {
+      "select": "选择",
+      "location": "地点",
+      "current": "当前",
+      "available": "可用"
+    }
+  },
   "stockEnquiry": {
     "title": "库存查询",
     "subtitle": "按产品、库存地点与变动查询库存水平",
@@ -669,6 +699,9 @@
       "location": "库存地点",
       "reference": "参考编号",
       "movement": "变动"
+    },
+    "notes": {
+      "filteredTotals": "当应用筛选条件时，总数量仅代表筛选后的记录。"
     },
     "columns": {
       "movementAt": "日期",

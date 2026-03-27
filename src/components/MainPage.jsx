@@ -15,6 +15,7 @@ import StaffProfile from "./staffprofile/staffProfile";
 import StaffSkillModern from "./baseInformation/StaffSkillModern";
 import StockTakeOn from "./stock/StockTakeOn";
 import StockEnquiry from "./stock/StockEnquiry";
+import StockAdjustment from "./stock/StockAdjustment";
 import LanguageSettings from "./baseInformation/LanguageSettings";
 import UserProfile from "./baseInformation/UserProfile";
 import Settings from "./baseInformation/Settings";
@@ -43,6 +44,7 @@ function MainPage() {
         <Route path="/staff-excel-upload" element={<StaffExcelUpload />} />
         <Route path="/stockmovementcode" element={<StockMovementCode />} />
         <Route path="/stocktakeon" element={<StockTakeOn />} />
+        <Route path="/stockadjustment" element={<StockAdjustment />} />
         <Route path="/stockenquiry" element={<StockEnquiry />} />
         <Route path="/product" element={<ProductModern />} />
         <Route path="/staffprofile" element={<StaffProfile />} />

@@ -134,6 +134,7 @@
     "staffSkillList": "Staff Skill List",
     "stockMovementCode": "Stock Movement Codes",
     "stockTake": "Stock Take On",
+    "stockAdjustment": "Stock Adjustment",
     "stockEnquiry": "Stock Enquiry",
     "languageSettings": "Language Settings",
     "customer": "Customer",
@@ -638,6 +639,35 @@
     "createProduct": "Create product",
     "lastRecorded": "Last recorded stock"
   },
+  "stockAdjustment": {
+    "title": "Stock Adjustment",
+    "subtitle": "Scan or enter stock code and record stock adjustments",
+    "helpTitle": "Stock adjustment help",
+    "helpBody": "Start by scanning or entering stock code. If stock is found, choose a stock line location, then record an in or out adjustment with reference and quantity.",
+    "scanHint": "Scan a barcode or enter stock code to start adjustment.",
+    "scanPlaceholder": "Scan or enter stock code...",
+    "findStock": "Find Stock",
+    "stockCode": "Stock Code",
+    "product": "Product",
+    "adjustmentType": "Adjustment type",
+    "inAdjustment": "In Adjustment",
+    "outAdjustment": "Out Adjustment",
+    "reference": "Reference",
+    "adjustment": "Adjustment",
+    "selected": "Selected",
+    "notFound": "Stock code not found. Please scan or enter stock code again.",
+    "errorLookup": "Failed to load stock information.",
+    "selectStockLine": "Please select a stock line.",
+    "quantityRequired": "Please enter an adjustment quantity greater than zero.",
+    "saveSuccess": "Stock adjustment saved.",
+    "saveFailed": "Failed to save stock adjustment.",
+    "columns": {
+      "select": "Select",
+      "location": "Location",
+      "current": "Current",
+      "available": "Available"
+    }
+  },
   "stockEnquiry": {
     "title": "Stock Enquiry",
     "subtitle": "Enquire stock level by product, stock location, and movement",
@@ -668,6 +698,9 @@
       "location": "Stock Location",
       "reference": "Reference",
       "movement": "Movement"
+    },
+    "notes": {
+      "filteredTotals": "When filters are applied, total quantities represent only the filtered records."
     },
     "columns": {
       "movementAt": "Date",
