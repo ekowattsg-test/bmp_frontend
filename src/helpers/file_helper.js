@@ -45,8 +45,11 @@ const getN8nSecret = () => import.meta.env.VITE_N8N_SECRET || "";
 
 const n8nActionUrl = () => getN8nBaseUrl();
 
+const getN8nHeaderName = () =>
+  (import.meta.env.VITE_N8N_HEADER_NAME || "X-N8N-Token").trim();
+
 const getN8nHeaders = () => ({
-  "X-N8N-Token": getN8nSecret(),
+  [getN8nHeaderName()]: getN8nSecret(),
 });
 
 let activeFileSessionNumber = null;

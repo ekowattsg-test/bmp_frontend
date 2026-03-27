@@ -21,7 +21,9 @@ export const uploadFileToWebhook = async ({
   fields = {},
   headers = {},
   token = getDefaultWebhookToken(),
-  tokenHeaderName = "X-N8N-Token",
+  tokenHeaderName = (
+    import.meta.env.VITE_N8N_HEADER_NAME || "X-N8N-Token"
+  ).trim(),
 }) => {
   if (!file) {
     throw new Error("File is required");

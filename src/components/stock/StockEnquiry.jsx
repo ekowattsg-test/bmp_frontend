@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   InputAdornment,
+  MenuItem,
   Paper,
   Stack,
   TextField,
@@ -35,6 +36,8 @@ const toArray = (value) => {
   if (Array.isArray(value?.data)) return value.data;
   return [];
 };
+
+const ALL_MOVEMENTS_VALUE = "ALL";
 
 const readFirst = (row, keys) => {
   for (const key of keys) {
@@ -237,7 +240,8 @@ const StockEnquiry = () => {
   const [productKeyword, setProductKeyword] = useState("");
   const [locationKeyword, setLocationKeyword] = useState("");
   const [referenceKeyword, setReferenceKeyword] = useState("");
-  const [movementKeyword, setMovementKeyword] = useState("");
+  const [movementKeyword, setMovementKeyword] = useState(ALL_MOVEMENTS_VALUE);
+  const [movementOptions, setMovementOptions] = useState([]);
   const [viewMode, setViewMode] = useState("summary");
 
   const loadRows = async () => {
@@ -263,24 +267,57 @@ const StockEnquiry = () => {
     }
   };
 
+  const loadMovementOptions = async () => {
+    try {
+      const response = await request("GET", "/api/stockmovementcodes");
+      const movementCodes = toArray(response)
+        .map((item) => ({
+          movementType: String(item?.movementType || "").trim(),
+          movementDescription: String(item?.movementDescription || "").trim(),
+        }))
+        .filter((item) => Boolean(item.movementType));
+
+      const uniqueByType = Array.from(
+        movementCodes
+          .reduce((map, item) => {
+            if (!map.has(item.movementType)) {
+              map.set(item.movementType, item);
+            }
+            return map;
+          }, new Map())
+          .values(),
+      ).sort((a, b) => a.movementType.localeCompare(b.movementType));
+
+      setMovementOptions(uniqueByType);
+    } catch {
+      setMovementOptions([]);
+    }
+  };
+
   useEffect(() => {
     loadRows();
+    loadMovementOptions();
   }, []);
+
+  const resetFilters = () => {
+    setProductKeyword("");
+    setStockCode("");
+    setLocationKeyword("");
+    setReferenceKeyword("");
+    setMovementKeyword(ALL_MOVEMENTS_VALUE);
+  };
 
   const movementRows = useMemo(() => {
     const stockFilter = stockCode.trim().toLowerCase();
     const productFilter = productKeyword.trim().toLowerCase();
     const locationFilter = locationKeyword.trim().toLowerCase();
     const referenceFilter = referenceKeyword.trim().toLowerCase();
-    const movementFilter = movementKeyword.trim().toLowerCase();
+    const movementFilter = movementKeyword.trim();
 
     return rows
       .filter((row) => {
-        const stockText = `${row.stockCode} ${row.stockId}`.toLowerCase();
-        const productText =
-          `${row.productName} ${row.stockCode} ${row.productId}`.toLowerCase();
-        const movementText =
-          `${row.movementType} ${row.movementDescription} ${row.movementId}`.toLowerCase();
+        const stockText = `${row.stockCode}`.toLowerCase();
+        const productText = `${row.productName}`.toLowerCase();
         const referenceText = `${row.reference}`.toLowerCase();
 
         const stockMatch = !stockFilter || stockText.includes(stockFilter);
@@ -292,7 +329,8 @@ const StockEnquiry = () => {
         const referenceMatch =
           !referenceFilter || referenceText.includes(referenceFilter);
         const movementMatch =
-          !movementFilter || movementText.includes(movementFilter);
+          movementFilter === ALL_MOVEMENTS_VALUE ||
+          row.movementType === movementFilter;
 
         return (
           stockMatch &&
@@ -419,7 +457,7 @@ const StockEnquiry = () => {
         stockAndMovementRows.push({
           id: `stock-${productGroup.productId || productGroup.productName}-${stockGroup.stockCode || stockGroup.stockId}`,
           rowType: "stock",
-          movementAt: stockGroup.lastMovementAt,
+          movementAt: "",
           productName: "",
           stockCode: stockGroup.stockCode,
           stockLocation: stockGroup.stockLocation,
@@ -850,23 +888,23 @@ const StockEnquiry = () => {
           />
           <TextField
             label={t("stockEnquiry.filters.movement")}
+            select
             value={movementKeyword}
             onChange={(e) => setMovementKeyword(e.target.value)}
             size="small"
             fullWidth
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-          />
+          >
+            <MenuItem value={ALL_MOVEMENTS_VALUE}>All</MenuItem>
+            {movementOptions.map((option) => (
+              <MenuItem key={option.movementType} value={option.movementType}>
+                {option.movementDescription || option.movementType}
+              </MenuItem>
+            ))}
+          </TextField>
         </Stack>
 
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <ToggleButtonGroup
-            color="primary"
             exclusive
             value={viewMode}
             onChange={(_, next) => {
@@ -874,6 +912,29 @@ const StockEnquiry = () => {
             }}
             size="small"
             aria-label={t("stockEnquiry.viewMode.label")}
+            sx={{
+              "& .MuiToggleButton-root": {
+                color: "secondary.main",
+                fontWeight: 500,
+                backgroundColor: "background.paper",
+                borderColor: "divider",
+                transition: "all 0.2s ease",
+              },
+              "& .MuiToggleButton-root .MuiSvgIcon-root": {
+                color: "inherit",
+              },
+              "& .MuiToggleButton-root.Mui-selected, & .MuiToggleButton-root.Mui-selected:hover":
+                {
+                  color: "primary.main",
+                  fontWeight: 700,
+                  backgroundColor: "var(--color-primary-alpha-10)",
+                  borderColor: "primary.main",
+                },
+              "& .MuiToggleButton-root.Mui-selected .MuiSvgIcon-root, & .MuiToggleButton-root.Mui-selected:hover .MuiSvgIcon-root":
+                {
+                  color: "inherit",
+                },
+            }}
           >
             <ToggleButton
               value="summary"
@@ -894,10 +955,10 @@ const StockEnquiry = () => {
           <Button
             variant="contained"
             startIcon={<RefreshIcon />}
-            onClick={loadRows}
+            onClick={resetFilters}
             sx={{ textTransform: "none" }}
           >
-            {t("stockEnquiry.actions.enquire")}
+            {t("basic.reset", "Reset")}
           </Button>
         </Stack>
       </Paper>
