@@ -1,5 +1,5 @@
 const getDefaultWebhookUrl = () =>
-  (import.meta.env.VITE_N8N_BASE_URL || "").replace(/\/$/, "");
+  (import.meta.env.VITE_N8N_IMAGE_URL || "").replace(/\/$/, "");
 
 const getDefaultWebhookToken = () => import.meta.env.VITE_N8N_SECRET || "";
 

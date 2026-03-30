@@ -960,7 +960,11 @@ const StockEnquiry = () => {
           {hasNonProductFilter && (
             <Typography
               variant="body2"
-              sx={{ color: "warning.main", fontWeight: 500, alignSelf: "center" }}
+              sx={{
+                color: "warning.main",
+                fontWeight: 500,
+                alignSelf: "center",
+              }}
             >
               {t("stockEnquiry.notes.filteredTotals")}
             </Typography>

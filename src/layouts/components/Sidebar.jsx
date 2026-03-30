@@ -165,6 +165,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               icon: <PeopleIcon fontSize="small" />,
               path: "/staff",
             },
+            {
+              key: "products",
+              label: t("menu.productList", "Products"),
+              icon: <StoreIcon fontSize="small" />,
+              path: "/product",
+            },
           ],
         },
         {
@@ -194,6 +200,18 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               path: "/stocktakeon",
             },
             {
+              key: "stockIn",
+              label: t("menu.stockIn", "Stock In"),
+              icon: <AutoStoriesIcon fontSize="small" />,
+              path: "/stockin",
+            },
+            {
+              key: "stockOut",
+              label: t("menu.stockOut", "Stock Out"),
+              icon: <AutoStoriesIcon fontSize="small" />,
+              path: "/stockout",
+            },
+            {
               key: "stockAdjustment",
               label: t("menu.stockAdjustment", "Stock Adjustment"),
               icon: <CompareArrowsIcon fontSize="small" />,
@@ -204,12 +222,6 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               label: t("menu.stockEnquiry", "Stock Enquiry"),
               icon: <HistoryIcon fontSize="small" />,
               path: "/stockenquiry",
-            },
-            {
-              key: "products",
-              label: t("menu.productList", "Products"),
-              icon: <StoreIcon fontSize="small" />,
-              path: "/product",
             },
           ],
         },

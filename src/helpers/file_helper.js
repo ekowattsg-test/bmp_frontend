@@ -3,7 +3,7 @@
  * All uploads/deletes/lists/downloads are routed through n8n webhooks.
  * The browser never directly touches Google Drive or OneDrive APIs.
  *
- * Webhook convention (configured via VITE_N8N_BASE_URL + VITE_STORAGE_PROVIDER):
+ * Webhook convention (configured via VITE_N8N_IMAGE_URL + VITE_STORAGE_PROVIDER):
  *   Base URL is called directly (no extra path segments appended by frontend).
  *   Action/provider are sent in request payload for API operations.
  *   sessionNumber is managed internally by this helper and sent on every
@@ -39,7 +39,7 @@ const SUPPORTED_IMAGE_EXTENSIONS = [
 // ─── n8n config ────────────────────────────────────────────────────────────
 
 const getN8nBaseUrl = () =>
-  (import.meta.env.VITE_N8N_BASE_URL || "").replace(/\/$/, "");
+  (import.meta.env.VITE_N8N_IMAGE_URL || "").replace(/\/$/, "");
 
 const getN8nSecret = () => import.meta.env.VITE_N8N_SECRET || "";
 
@@ -389,6 +389,47 @@ export const uploadFileToDrive = async (
     provider,
     uploadedAt: new Date().toISOString(),
   });
+};
+
+/**
+ * Fetch an image from a URL and upload it to Google Drive via n8n.
+ * @param {string} imageUrl - Publicly accessible image URL to fetch
+ * @param {string|null} fileName - Optional filename hint; derived from URL if omitted
+ * @param {string|null} folderId - Optional Drive folder ID to upload into
+ * @returns {Promise<object>} canonical file metadata returned by n8n
+ */
+export const uploadImageFromUrl = async (
+  imageUrl,
+  fileName = null,
+  folderId = null,
+) => {
+  const url = String(imageUrl || "").trim();
+  if (!url) throw new Error("imageUrl is required");
+
+  // Fetch the image as a blob
+  const fetchResp = await fetch(url);
+  if (!fetchResp.ok) {
+    throw new Error(`Failed to fetch image from URL: ${fetchResp.status}`);
+  }
+
+  const blob = await fetchResp.blob();
+  const contentType = blob.type || "image/jpeg";
+
+  // Derive a sensible file name
+  const resolvedName =
+    fileName ||
+    (() => {
+      try {
+        const pathname = new URL(url).pathname;
+        const segment = pathname.split("/").pop();
+        return segment && segment.includes(".") ? segment : `image.jpg`;
+      } catch {
+        return "image.jpg";
+      }
+    })();
+
+  const file = new File([blob], resolvedName, { type: contentType });
+  return uploadFileToDrive(file, null, folderId);
 };
 
 /**

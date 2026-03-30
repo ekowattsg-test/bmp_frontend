@@ -129,6 +129,11 @@ const AppMenu = () => {
             label: t("menu.staff", "Staff"),
             icon: <Business />,
           },
+          {
+            to: "/product",
+            label: t("menu.productList", "Products"),
+            icon: <Store />,
+          },
         ],
       },
       {
@@ -156,6 +161,16 @@ const AppMenu = () => {
             icon: <Store />,
           },
           {
+            to: "/stockin",
+            label: t("menu.stockIn", "Stock In"),
+            icon: <Store />,
+          },
+          {
+            to: "/stockout",
+            label: t("menu.stockOut", "Stock Out"),
+            icon: <Store />,
+          },
+          {
             to: "/stockadjustment",
             label: t("menu.stockAdjustment", "Stock Adjustment"),
             icon: <CompareArrows />,
@@ -164,11 +179,6 @@ const AppMenu = () => {
             to: "/stockenquiry",
             label: t("menu.stockEnquiry", "Stock Enquiry"),
             icon: <History />,
-          },
-          {
-            to: "/product",
-            label: t("menu.productList", "Products"),
-            icon: <Store />,
           },
         ],
       },

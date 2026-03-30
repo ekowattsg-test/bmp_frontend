@@ -13,7 +13,9 @@ import VendorModern from "./information/VendorModern";
 import PurchaseOrderModern from "./information/PurchaseOrderModern";
 import StaffProfile from "./staffprofile/staffProfile";
 import StaffSkillModern from "./baseInformation/StaffSkillModern";
-import StockTakeOn from "./stock/StockTakeOn";
+import StockTakeOnNew from "./stock/StockTakeOnNew";
+import StockIn from "./stock/StockIn";
+import StockOut from "./stock/StockOut";
 import StockEnquiry from "./stock/StockEnquiry";
 import StockAdjustment from "./stock/StockAdjustment";
 import LanguageSettings from "./baseInformation/LanguageSettings";
@@ -43,7 +45,9 @@ function MainPage() {
         <Route path="/staffskill" element={<StaffSkillModern />} />
         <Route path="/staff-excel-upload" element={<StaffExcelUpload />} />
         <Route path="/stockmovementcode" element={<StockMovementCode />} />
-        <Route path="/stocktakeon" element={<StockTakeOn />} />
+        <Route path="/stocktakeon" element={<StockTakeOnNew />} />
+        <Route path="/stockin" element={<StockIn />} />
+        <Route path="/stockout" element={<StockOut />} />
         <Route path="/stockadjustment" element={<StockAdjustment />} />
         <Route path="/stockenquiry" element={<StockEnquiry />} />
         <Route path="/product" element={<ProductModern />} />

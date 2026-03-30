@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Box, Typography, IconButton, Button } from "@mui/material";
+import { Box, Typography, IconButton, Button, Stack } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import CloseIcon from "@mui/icons-material/Close";
+import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import {
   deleteFileFromDrive,
   FileChip,
@@ -70,9 +71,7 @@ const FileGallery = ({
         }
       }
       const arr = Array.isArray(parsed) ? parsed : parsed ? [parsed] : [];
-      const norm = arr
-        .filter(Boolean)
-        .map((p) => normalizeForStorage(p));
+      const norm = arr.filter(Boolean).map((p) => normalizeForStorage(p));
       setFiles(norm);
       // parsed incoming prop -> normalized files
     } catch (err) {
@@ -82,11 +81,19 @@ const FileGallery = ({
 
   // file input for add action
   const fileInputRef = useRef(null);
+  // camera capture input
+  const cameraInputRef = useRef(null);
 
   const handleOpenFileChooser = () => {
     if (!fileInputRef.current) return;
     fileInputRef.current.value = "";
     fileInputRef.current.click();
+  };
+
+  const handleOpenCamera = () => {
+    if (!cameraInputRef.current) return;
+    cameraInputRef.current.value = "";
+    cameraInputRef.current.click();
   };
 
   const handleFileSelected = async (e) => {
@@ -225,18 +232,38 @@ const FileGallery = ({
               style={{ display: "none" }}
               onChange={handleFileSelected}
             />
-            <Button
-              variant="contained"
-              color="primary"
-              size="small"
-              onClick={handleOpenFileChooser}
-              startIcon={<span>＋</span>}
-              disabled={isUploading}
-            >
-              {isUploading
-                ? t("staffManagement.uploading")
-                : t("staffManagement.addFile")}
-            </Button>
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              style={{ display: "none" }}
+              onChange={handleFileSelected}
+            />
+            <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                size="small"
+                onClick={handleOpenFileChooser}
+                startIcon={<span>＋</span>}
+                disabled={isUploading}
+              >
+                {isUploading
+                  ? t("staffManagement.uploading")
+                  : t("staffManagement.addFile")}
+              </Button>
+              <Button
+                variant="outlined"
+                color="primary"
+                size="small"
+                onClick={handleOpenCamera}
+                startIcon={<CameraAltIcon fontSize="small" />}
+                disabled={isUploading}
+              >
+                {t("staffManagement.takePhoto")}
+              </Button>
+            </Stack>
           </>
         )}
       </Box>

@@ -46,9 +46,7 @@ const StaffExcelUpload = () => {
     try {
       const result = await uploadFileToWebhook({
         file,
-        webhookUrl:
-          import.meta.env.VITE_N8N_STAFF_EXCEL_WEBHOOK_URL ||
-          import.meta.env.VITE_N8N_BASE_URL,
+        webhookUrl: import.meta.env.VITE_N8N_STAFF_EXCEL_WEBHOOK_URL,
         fields: {
           action: "staffExcelUpload",
           purpose: "staffExcelProcessing",
