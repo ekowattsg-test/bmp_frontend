@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useContext, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -20,6 +20,7 @@ import {
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
+import { AuthContext } from "../../context/authContext";
 import { PageHeader } from "../common";
 import HelpDialog from "../common/HelpDialog";
 import {
@@ -61,17 +62,29 @@ const getProductDetails = (item = {}) => {
   const nested = item.product || {};
   return {
     productId: String(
-      readFirst(item, ["productId", "product_id"]) || nested.productId || nested.id,
+      readFirst(item, ["productId", "product_id"]) ||
+        nested.productId ||
+        nested.id,
     ),
     productName: String(
-      readFirst(item, ["productName", "name", "productDescription", "productNameEn"]) ||
+      readFirst(item, [
+        "productName",
+        "name",
+        "productDescription",
+        "productNameEn",
+      ]) ||
         nested.productName ||
         nested.name ||
         nested.productNameEn ||
         "",
     ),
     productPicture:
-      readFirst(item, ["productPicture", "productImage", "imageUrl", "productPictureUrl"]) ||
+      readFirst(item, [
+        "productPicture",
+        "productImage",
+        "imageUrl",
+        "productPictureUrl",
+      ]) ||
       nested.productPicture ||
       nested.imageUrl ||
       nested.productImage ||
@@ -84,23 +97,39 @@ const normalizeStock = (item, fallbackCode) => {
   const product = getProductDetails(item);
   const stockId = String(readFirst(item, ["stockId", "id"]));
   const location = String(
-    readFirst(item, ["location", "stockLocation", "warehouse", "bin", "stockBin"]) ||
-      "central",
+    readFirst(item, [
+      "location",
+      "stockLocation",
+      "warehouse",
+      "bin",
+      "stockBin",
+    ]) || "central",
   );
 
   return {
     key: `${stockId || ""}|${location || "central"}`,
     stockId,
-    stockCode: String(readFirst(item, ["stockCode", "code", "stock_code"]) || fallbackCode),
+    stockCode: String(
+      readFirst(item, ["stockCode", "code", "stock_code"]) || fallbackCode,
+    ),
     location,
     productId: product.productId,
     productName: product.productName,
     productPicture: product.productPicture,
     currentQuantity: toNumber(
-      readFirst(item, ["currentQuantity", "quantity", "currentQty", "baselinedQuantity"]),
+      readFirst(item, [
+        "currentQuantity",
+        "quantity",
+        "currentQty",
+        "baselinedQuantity",
+      ]),
     ),
     availableQuantity: toNumber(
-      readFirst(item, ["currentAvailableQuantity", "availableQuantity", "availableQty"]),
+      readFirst(item, [
+        "currentAvailableQuantity",
+        "availableQuantity",
+        "availableQty",
+      ]),
     ),
   };
 };
@@ -134,6 +163,7 @@ const enrichRowsWithProduct = (rows, productData) => {
 
 const StockAdjustment = () => {
   const { t } = useTranslation();
+  const { userInfo } = useContext(AuthContext);
 
   const [helpOpen, setHelpOpen] = useState(false);
   const [stockCode, setStockCode] = useState("");
@@ -162,7 +192,9 @@ const StockAdjustment = () => {
       return [];
     }
 
-    const baseByStockId = new Map(normalized.map((item) => [item.stockId, item]));
+    const baseByStockId = new Map(
+      normalized.map((item) => [item.stockId, item]),
+    );
     const uniqueStocks = Array.from(baseByStockId.values());
 
     let locationRows = [];
@@ -184,63 +216,94 @@ const StockAdjustment = () => {
         }),
       );
 
-      const viewRows = perStockViewRows.flat().map(({ row, fallbackStockId }) => {
-        const stockId = String(readFirst(row, ["stockId", "id"]) || fallbackStockId);
-        const location = String(
-          readFirst(row, ["stockLocation", "location", "warehouse", "bin", "stockBin"]) ||
-            "central",
-        );
-        const movementAtTs =
-          safeParseDate(
+      const viewRows = perStockViewRows
+        .flat()
+        .map(({ row, fallbackStockId }) => {
+          const stockId = String(
+            readFirst(row, ["stockId", "id"]) || fallbackStockId,
+          );
+          const location = String(
             readFirst(row, [
-              "recordDate",
-              "movementAt",
-              "movementDate",
-              "createDate",
-              "createdAt",
-              "updatedAt",
+              "stockLocation",
+              "location",
+              "warehouse",
+              "bin",
+              "stockBin",
+            ]) || "central",
+          );
+          const movementAtTs =
+            safeParseDate(
+              readFirst(row, [
+                "recordDate",
+                "movementAt",
+                "movementDate",
+                "createDate",
+                "createdAt",
+                "updatedAt",
+              ]),
+            )?.getTime() || 0;
+
+          const quantity = toNumber(
+            readFirst(row, [
+              "qty",
+              "quantity",
+              "movementQty",
+              "stockQty",
+              "changeQty",
             ]),
-          )?.getTime() || 0;
+          );
+          const stockModifier = toNumber(
+            readFirst(row, [
+              "stockModifier",
+              "movementModifier",
+              "stockMovementModifier",
+              "movementStockModifier",
+            ]),
+          );
+          const holdModifier = toNumber(
+            readFirst(row, [
+              "holdModifier",
+              "movementHoldModifier",
+              "holdMovementModifier",
+            ]),
+          );
 
-        const quantity = toNumber(
-          readFirst(row, ["qty", "quantity", "movementQty", "stockQty", "changeQty"]),
-        );
-        const stockModifier = toNumber(
-          readFirst(row, [
-            "stockModifier",
-            "movementModifier",
-            "stockMovementModifier",
-            "movementStockModifier",
-          ]),
-        );
-        const holdModifier = toNumber(
-          readFirst(row, [
-            "holdModifier",
-            "movementHoldModifier",
-            "holdMovementModifier",
-          ]),
-        );
+          const stockMoved = (() => {
+            const explicit = readFirst(row, [
+              "stockMoved",
+              "movedStock",
+              "stockMove",
+            ]);
+            return explicit !== ""
+              ? toNumber(explicit)
+              : quantity * stockModifier;
+          })();
+          const holdMoved = (() => {
+            const explicit = readFirst(row, [
+              "holdMoved",
+              "movedHold",
+              "holdMove",
+            ]);
+            return explicit !== ""
+              ? toNumber(explicit)
+              : quantity * holdModifier;
+          })();
 
-        const stockMoved = (() => {
-          const explicit = readFirst(row, ["stockMoved", "movedStock", "stockMove"]);
-          return explicit !== "" ? toNumber(explicit) : quantity * stockModifier;
-        })();
-        const holdMoved = (() => {
-          const explicit = readFirst(row, ["holdMoved", "movedHold", "holdMove"]);
-          return explicit !== "" ? toNumber(explicit) : quantity * holdModifier;
-        })();
-
-        return {
-          stockId,
-          location,
-          movementAtTs,
-          baselinedQuantity: toNumber(
-            readFirst(row, ["baselinedQuantity", "baselineQuantity", "baseQty"]),
-          ),
-          stockMoved,
-          holdMoved,
-        };
-      });
+          return {
+            stockId,
+            location,
+            movementAtTs,
+            baselinedQuantity: toNumber(
+              readFirst(row, [
+                "baselinedQuantity",
+                "baselineQuantity",
+                "baseQty",
+              ]),
+            ),
+            stockMoved,
+            holdMoved,
+          };
+        });
 
       const groupedByLocation = new Map();
       viewRows.forEach((row) => {
@@ -290,8 +353,8 @@ const StockAdjustment = () => {
       // Fall back to stock search data if stock view rows cannot be loaded.
     }
 
-    let finalRows = (locationRows.length > 0 ? locationRows : normalized).sort((a, b) =>
-      (a.location || "").localeCompare(b.location || ""),
+    let finalRows = (locationRows.length > 0 ? locationRows : normalized).sort(
+      (a, b) => (a.location || "").localeCompare(b.location || ""),
     );
 
     const hasProductInfo = finalRows.some(
@@ -299,12 +362,17 @@ const StockAdjustment = () => {
     );
 
     if (!hasProductInfo) {
-      const candidateProductId = finalRows.find((row) => row.productId)?.productId;
+      const candidateProductId = finalRows.find(
+        (row) => row.productId,
+      )?.productId;
       let backendProduct = null;
 
       if (candidateProductId) {
         try {
-          const productRes = await request("GET", `/api/products/${candidateProductId}`);
+          const productRes = await request(
+            "GET",
+            `/api/products/${candidateProductId}`,
+          );
           backendProduct = productRes?.data || null;
         } catch {
           // Fallback to search endpoint below.
@@ -324,7 +392,9 @@ const StockAdjustment = () => {
                 String(readFirst(item, ["productCode", "code", "stockCode"]))
                   .toLowerCase()
                   .trim() === codeToUse.toLowerCase(),
-            ) || candidates[0] || null;
+            ) ||
+            candidates[0] ||
+            null;
         } catch {
           // Keep current rows when product lookup fails.
         }
@@ -345,7 +415,9 @@ const StockAdjustment = () => {
 
   const productInfo = useMemo(() => {
     if (!stocks.length) return null;
-    const first = stocks.find((item) => item.productName || item.productPicture) || stocks[0];
+    const first =
+      stocks.find((item) => item.productName || item.productPicture) ||
+      stocks[0];
     return {
       productName: first.productName,
       stockCode: first.stockCode,
@@ -412,7 +484,11 @@ const StockAdjustment = () => {
         movementType: adjustmentType === "in" ? "M" : "L",
         quantity: qty,
         location: selectedStock.location || "central",
-        reference: String(reference || "").trim(),
+        reference:
+          String(reference || "").trim() +
+          (userInfo?.firstName || userInfo?.lastName
+            ? `/${[userInfo.firstName, userInfo.lastName].filter(Boolean).join(" ")}`
+            : ""),
         recordDate: new Date().toISOString(),
       });
 
@@ -511,7 +587,12 @@ const StockAdjustment = () => {
                 component="img"
                 src={productInfo.thumb.imageUrl}
                 alt={productInfo.productName || "product image"}
-                sx={{ width: 64, height: 64, borderRadius: 1, objectFit: "cover" }}
+                sx={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 1,
+                  objectFit: "cover",
+                }}
                 referrerPolicy="no-referrer"
               />
             ) : (
@@ -540,7 +621,11 @@ const StockAdjustment = () => {
           </Box>
 
           <TableContainer
-            sx={{ border: "1px solid var(--color-gray-200)", borderRadius: 1, mb: 2 }}
+            sx={{
+              border: "1px solid var(--color-gray-200)",
+              borderRadius: 1,
+              mb: 2,
+            }}
           >
             <Table size="small">
               <TableHead>
@@ -548,7 +633,9 @@ const StockAdjustment = () => {
                   <TableCell>{t("stockAdjustment.columns.select")}</TableCell>
                   <TableCell>{t("stockAdjustment.columns.location")}</TableCell>
                   <TableCell>{t("stockAdjustment.columns.current")}</TableCell>
-                  <TableCell>{t("stockAdjustment.columns.available")}</TableCell>
+                  <TableCell>
+                    {t("stockAdjustment.columns.available")}
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -581,7 +668,11 @@ const StockAdjustment = () => {
             </Table>
           </TableContainer>
 
-          <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems="center">
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={2}
+            alignItems="center"
+          >
             <ToggleButtonGroup
               exclusive
               value={adjustmentType}
@@ -591,8 +682,12 @@ const StockAdjustment = () => {
               size="small"
               aria-label={t("stockAdjustment.adjustmentType")}
             >
-              <ToggleButton value="in">{t("stockAdjustment.inAdjustment")}</ToggleButton>
-              <ToggleButton value="out">{t("stockAdjustment.outAdjustment")}</ToggleButton>
+              <ToggleButton value="in">
+                {t("stockAdjustment.inAdjustment")}
+              </ToggleButton>
+              <ToggleButton value="out">
+                {t("stockAdjustment.outAdjustment")}
+              </ToggleButton>
             </ToggleButtonGroup>
 
             <TextField
@@ -613,7 +708,11 @@ const StockAdjustment = () => {
               sx={{ width: 140 }}
             />
 
-            <Button variant="contained" onClick={handleSave} disabled={saveBusy}>
+            <Button
+              variant="contained"
+              onClick={handleSave}
+              disabled={saveBusy}
+            >
               {t("basic.save")}
             </Button>
 

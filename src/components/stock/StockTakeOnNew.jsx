@@ -1245,6 +1245,10 @@ const StockTakeOnNew = () => {
         movementType: "N",
         quantity: qty,
         location: targetLocation,
+        reference:
+          userInfo?.firstName || userInfo?.lastName
+            ? `/${[userInfo.firstName, userInfo.lastName].filter(Boolean).join(" ")}`
+            : "",
         recordDate: new Date().toISOString(),
       });
 

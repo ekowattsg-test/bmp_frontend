@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useContext, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -18,6 +18,7 @@ import {
 import UploadIcon from "@mui/icons-material/Upload";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
+import { AuthContext } from "../../context/authContext";
 import { PageHeader } from "../common";
 import HelpDialog from "../common/HelpDialog";
 import {
@@ -160,6 +161,7 @@ const enrichRowsWithProduct = (rows, productData) => {
 
 const StockOut = () => {
   const { t } = useTranslation();
+  const { userInfo } = useContext(AuthContext);
 
   const [helpOpen, setHelpOpen] = useState(false);
   const [stockCode, setStockCode] = useState("");
@@ -484,7 +486,11 @@ const StockOut = () => {
         movementType: "O",
         quantity: qty,
         location: selectedStock.location || "central",
-        reference: ref,
+        reference:
+          ref +
+          (userInfo?.firstName || userInfo?.lastName
+            ? `/${[userInfo.firstName, userInfo.lastName].filter(Boolean).join(" ")}`
+            : ""),
         recordDate: new Date().toISOString(),
       });
 
