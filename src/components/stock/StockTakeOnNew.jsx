@@ -1,4 +1,4 @@
-﻿import React, { useContext, useEffect, useMemo, useState } from "react";
+﻿import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Autocomplete,
@@ -226,13 +226,14 @@ const parseResponsePayload = async (response) => {
   }
 };
 
-const fetchAndUploadN8nProductImage = async (codeToUse) => {
+const fetchAndUploadN8nProductImage = async (codeToUse, sessionId = null) => {
   const webhookUrl = getN8nBaseWebhookUrl();
   if (!webhookUrl) return null;
 
   const form = new FormData();
   form.append("action", "image");
   form.append("stock", String(codeToUse || ""));
+  if (sessionId) form.append("sessionId", String(sessionId));
 
   const secret = getN8nSecret();
   const headers = secret ? { [getN8nHeaderName()]: secret } : {};
@@ -263,7 +264,7 @@ const fetchAndUploadN8nProductImage = async (codeToUse) => {
   return null;
 };
 
-const postN8nStockAction = async (action, stockCode) => {
+const postN8nStockAction = async (action, stockCode, sessionId = null) => {
   const webhookUrl = getN8nBaseWebhookUrl();
   if (!webhookUrl) {
     throw new Error("N8N stock match webhook URL is not configured.");
@@ -272,6 +273,7 @@ const postN8nStockAction = async (action, stockCode) => {
   const form = new FormData();
   form.append("action", String(action || ""));
   form.append("stock", String(stockCode || ""));
+  if (sessionId) form.append("sessionId", String(sessionId));
 
   const secret = getN8nSecret();
   const headers = secret ? { [getN8nHeaderName()]: secret } : {};
@@ -494,6 +496,7 @@ const StockTakeOnNew = () => {
   };
 
   const [helpOpen, setHelpOpen] = useState(false);
+  const matchSessionIdRef = useRef(null);
   const [stockCode, setStockCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [saveBusy, setSaveBusy] = useState(false);
@@ -541,6 +544,7 @@ const StockTakeOnNew = () => {
   }, []);
 
   const resetStockInSession = () => {
+    matchSessionIdRef.current = null;
     setStocks([]);
     setSelectedStockKey("");
     setStockInQty(1);
@@ -970,6 +974,7 @@ const StockTakeOnNew = () => {
   };
 
   const openMatchDialogForStock = async (codeToUse) => {
+    matchSessionIdRef.current = crypto.randomUUID();
     setMatchDialogOpen(true);
     setCreateProductOpen(false);
     setMatchLoading(true);
@@ -980,7 +985,11 @@ const StockTakeOnNew = () => {
     setCandidateCategory("ALL");
 
     try {
-      const hintPayload = await postN8nStockAction("match", codeToUse);
+      const hintPayload = await postN8nStockAction(
+        "match",
+        codeToUse,
+        matchSessionIdRef.current,
+      );
       const hints = normalizeMatchHints(hintPayload);
       setMatchHints(hints);
 
@@ -1035,6 +1044,7 @@ const StockTakeOnNew = () => {
         const suggestionPayload = await postN8nStockAction(
           "suggest",
           stockCode,
+          matchSessionIdRef.current,
         );
         suggested = extractSuggestedProduct(suggestionPayload);
         suggestionName =
@@ -1056,7 +1066,7 @@ const StockTakeOnNew = () => {
       // Step 2: fetch image by stock code (fire-and-forget, updates FileGallery when ready)
       if (stockCode) {
         setProductImageFetching(true);
-        fetchAndUploadN8nProductImage(stockCode)
+        fetchAndUploadN8nProductImage(stockCode, matchSessionIdRef.current)
           .then((imageMetadata) => {
             if (imageMetadata) {
               setProductFiles([imageMetadata]);
