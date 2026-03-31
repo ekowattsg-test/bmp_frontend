@@ -34,6 +34,7 @@ const PurchaseOrderModern = () => {
   const [action, setAction] = useState("view");
   const [refresh, setRefresh] = useState(false);
   const [purchaseOrderData, setPurchaseOrderData] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState("");
@@ -46,16 +47,22 @@ const PurchaseOrderModern = () => {
   const enableActions = true;
 
   useEffect(() => {
-    setLoading(true);
-    request("GET", "/api/purchaseorderview")
+    // Load vendors for lookup
+    request("GET", "/api/vendors")
       .then((response) => {
-        const rows = response.data || [];
-        // Deduplicate by orderId — keep first row per order for the list
-        const seen = new Map();
-        rows.forEach((row) => {
-          if (!seen.has(row.orderId)) seen.set(row.orderId, row);
-        });
-        setPurchaseOrderData(Array.from(seen.values()));
+        setVendors(response.data || []);
+      })
+      .catch(() => {
+        setVendors([]);
+      });
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    request("GET", "/api/purchaseOrders")
+      .then((response) => {
+        const orders = response.data || [];
+        setPurchaseOrderData(orders);
       })
       .catch(() => {
         setPurchaseOrderData([]);
@@ -92,26 +99,32 @@ const PurchaseOrderModern = () => {
     setViewMode(true);
   }, []);
 
+  const getVendorName = useCallback(
+    (vendorId) => {
+      const vendor = vendors.find((v) => v.vendorId === vendorId);
+      return vendor ? vendor.vendorName : `ID: ${vendorId}`;
+    },
+    [vendors],
+  );
+
   const filteredOrders = useMemo(() => {
     return purchaseOrderData.filter((order) => {
       if (!search) return true;
       const searchLower = search.toLowerCase();
+      const vendorName = getVendorName(order.vendorId);
       return (
         String(order.orderId).toLowerCase().includes(searchLower) ||
-        String(order.vendorId ?? "")
-          .toLowerCase()
-          .includes(searchLower) ||
-        (order.vendorName ?? "").toLowerCase().includes(searchLower) ||
+        String(order.vendorId).toLowerCase().includes(searchLower) ||
+        vendorName.toLowerCase().includes(searchLower) ||
         order.orderStatus?.toLowerCase().includes(searchLower)
       );
     });
-  }, [purchaseOrderData, search]);
+  }, [purchaseOrderData, search, getVendorName]);
 
   const normalizedOrders = useMemo(() => {
     return filteredOrders.map((order) => {
       const status = order.orderStatus || "NEW";
-      const displayVendorName =
-        order.vendorName || String(order.vendorId ?? "");
+      const displayVendorName = getVendorName(order.vendorId);
       const displayOrderDate = order.orderDate
         ? new Date(order.orderDate).toLocaleDateString()
         : "";
@@ -133,7 +146,7 @@ const PurchaseOrderModern = () => {
         orderStatus: status,
       };
     });
-  }, [filteredOrders, t]);
+  }, [filteredOrders, getVendorName, t]);
 
   const columns = useMemo(
     () => [
