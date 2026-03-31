@@ -213,7 +213,8 @@
     "editTitle": "Edit Product",
     "deleteTitle": "Delete Product",
     "confirmDelete": "Are you sure you want to delete this product?",
-    "searchPlaceholder": "Search products..."
+    "searchPlaceholder": "Search products...",
+    "photoRequired": "At least 1 photo is required"
   },
   "list": {
     "product": "Product",

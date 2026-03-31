@@ -214,7 +214,8 @@
     "editTitle": "编辑产品",
     "deleteTitle": "删除产品",
     "confirmDelete": "您确定要删除此产品吗？",
-    "searchPlaceholder": "搜索产品..."
+    "searchPlaceholder": "搜索产品...",
+    "photoRequired": "至少需要1张照片"
   },
   "list": {
     "product": "产品",

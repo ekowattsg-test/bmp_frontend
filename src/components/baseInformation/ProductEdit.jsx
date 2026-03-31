@@ -89,6 +89,12 @@ const ProductEdit = ({ product, onCancel }) => {
     if (!form.productCode || form.productCode.trim() === "") {
       errs.productCode = t("product.productCode") + " is required";
     }
+    if (!productFiles || productFiles.length === 0) {
+      errs.productFiles = t(
+        "product.photoRequired",
+        "At least 1 photo is required",
+      );
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -253,6 +259,11 @@ const ProductEdit = ({ product, onCancel }) => {
           />
         </Box>
       </Box>
+      {errors.productFiles && (
+        <div style={{ color: "var(--color-danger)", marginTop: 8 }}>
+          {errors.productFiles}
+        </div>
+      )}
       {errorMsg && (
         <div style={{ color: "var(--color-danger)", marginTop: 8 }}>
           {errorMsg}
