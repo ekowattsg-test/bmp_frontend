@@ -295,47 +295,77 @@ const postN8nStockAction = async (action, stockCode, sessionId = null) => {
   return payload;
 };
 
-const extractCandidatesPayload = (payload) => {
-  if (!payload) return [];
-  if (Array.isArray(payload)) return payload;
-  if (typeof payload === "object") {
-    return (
-      payload.matched_products ||
-      payload.matches ||
-      payload.products ||
-      payload.candidates ||
-      payload.items ||
-      payload.data ||
-      []
-    );
+// ── Standardised n8n response parsers ─────────────────────────────────────
+// match response: { internetMatch:[{name,description}], databaseMatch:[{productId,productName}], databaseSuggest:[{productId,productName}] }
+// suggest response: { productSuggest:{name,description} }
+// image response: binary blob
+
+const parseMatchResponse = (payload) => {
+  if (!payload || typeof payload !== "object") {
+    return { internetMatch: [], databaseMatch: [], databaseSuggest: [] };
   }
-  return [];
+  const toArr = (v) => (Array.isArray(v) ? v : []);
+  return {
+    internetMatch: toArr(payload.internetMatch),
+    databaseMatch: toArr(payload.databaseMatch),
+    databaseSuggest: toArr(payload.databaseSuggest),
+  };
 };
 
-const normalizeMatchHints = (payload) =>
-  toObjectArray(extractCandidatesPayload(payload))
-    .map((item) => ({
-      productId: String(
-        readFirst(item, ["productId", "id", "product_id"]) || "",
-      ).trim(),
-      productCode: String(
-        readFirst(item, ["productCode", "code", "stockCode", "product_code"]) ||
-          "",
-      )
-        .trim()
-        .toLowerCase(),
-      productName: String(
-        readFirst(item, ["productName", "name", "title", "product_name"]) || "",
-      )
-        .trim()
-        .toLowerCase(),
-      matchConfident: String(
-        readFirst(item, ["match_confident", "matchConfident"]) || "",
-      )
-        .trim()
-        .toLowerCase(),
-    }))
-    .filter((item) => item.productId || item.productCode || item.productName);
+const parseSuggestResponse = (payload) => {
+  if (!payload || typeof payload !== "object")
+    return { name: "", description: "" };
+  // productSuggest may be an array [{name, description}] or an object {name, description}
+  const ps = Array.isArray(payload.productSuggest)
+    ? payload.productSuggest[0]
+    : payload.productSuggest;
+  if (ps && typeof ps === "object") {
+    return {
+      name: String(ps.name || "").trim(),
+      description: String(ps.description || "").trim(),
+    };
+  }
+  return { name: "", description: "" };
+};
+
+// Build hint objects used by getMatchScore / isMatchedByHints from the standardised match payload
+const buildHintsFromMatchResponse = (parsed) => {
+  const hints = [];
+  parsed.databaseMatch.forEach((item) => {
+    if (item.productId)
+      hints.push({
+        productId: String(item.productId),
+        productCode: "",
+        productName: String(item.productName || "")
+          .trim()
+          .toLowerCase(),
+        matchConfident: "high",
+      });
+  });
+  parsed.databaseSuggest.forEach((item) => {
+    if (item.productId)
+      hints.push({
+        productId: String(item.productId),
+        productCode: "",
+        productName: String(item.productName || "")
+          .trim()
+          .toLowerCase(),
+        matchConfident: "medium",
+      });
+  });
+  parsed.internetMatch.forEach((item) => {
+    if (item.name)
+      hints.push({
+        productId: "",
+        productCode: "",
+        productName: String(item.name || "")
+          .trim()
+          .toLowerCase(),
+        matchConfident: "low",
+      });
+  });
+  return hints;
+};
 
 const isMatchedByHints = (candidate, hints) => {
   const candidateCode = String(candidate.productCode || "")
@@ -357,48 +387,11 @@ const isMatchedByHints = (candidate, hints) => {
   });
 };
 
-const extractSuggestionName = (payload) => {
-  if (!payload) return "";
-  if (typeof payload === "string") return payload.trim();
-  if (Array.isArray(payload)) {
-    if (payload.length === 0) return "";
-    return extractSuggestionName(payload[0]);
-  }
-  if (typeof payload === "object") {
-    const direct = readFirst(payload, [
-      "productName",
-      "suggestedProductName",
-      "suggestion",
-      "name",
-      "title",
-    ]);
-    if (direct) return String(direct).trim();
-    const nested = payload.data || payload.result || payload.payload;
-    if (nested) return extractSuggestionName(nested);
-  }
-  return "";
-};
+const extractSuggestionName = (payload) => parseSuggestResponse(payload).name;
 
 const extractSuggestedProduct = (payload) => {
-  if (!payload || typeof payload !== "object") {
-    return { name: "", stockCode: "" };
-  }
-
-  const suggested =
-    payload.suggested_product || payload.suggestedProduct || payload;
-  const name = String(
-    readFirst(suggested, ["name", "productName", "product_name"]) || "",
-  ).trim();
-  const stockCode = String(
-    readFirst(suggested, [
-      "stock_code",
-      "stockCode",
-      "product_code",
-      "productCode",
-    ]) || "",
-  ).trim();
-
-  return { name, stockCode };
+  const parsed = parseSuggestResponse(payload);
+  return { name: parsed.name, description: parsed.description, stockCode: "" };
 };
 
 const uniqueValues = (values) =>
@@ -988,13 +981,14 @@ const StockIn = () => {
     setCandidateCategory("ALL");
 
     try {
-      const hintPayload = await postN8nStockAction(
+      const matchPayload = await postN8nStockAction(
         "match",
         codeToUse,
         matchSessionIdRef.current,
       );
-      const hints = normalizeMatchHints(hintPayload);
-      setMatchHints(hints);
+      const parsed = parseMatchResponse(matchPayload);
+      const hints = buildHintsFromMatchResponse(parsed);
+      setMatchHints(parsed.internetMatch);
 
       const candidates = await loadProductCandidatesForMissingStock(
         codeToUse,
@@ -1002,9 +996,15 @@ const StockIn = () => {
       );
       setProductCandidates(candidates);
 
-      if (candidates.length > 0) {
-        setSelectedCandidateKey(candidates[0].key);
-      }
+      const dbMatchId = parsed.databaseMatch[0]?.productId
+        ? String(parsed.databaseMatch[0].productId)
+        : null;
+      const preSelected = dbMatchId
+        ? candidates.find((c) => String(c.productId) === dbMatchId)
+        : null;
+      setSelectedCandidateKey(
+        preSelected?.key || (candidates.length > 0 ? candidates[0].key : ""),
+      );
     } catch (error) {
       setMatchError(error?.message || t("stockIn.matchError"));
       try {
@@ -1050,8 +1050,7 @@ const StockIn = () => {
           matchSessionIdRef.current,
         );
         suggested = extractSuggestedProduct(suggestionPayload);
-        suggestionName =
-          suggested.name || extractSuggestionName(suggestionPayload);
+        suggestionName = suggested.name;
         suggestedStockCode = suggested.stockCode || stockCode;
       } catch (err) {
         setMatchError(err?.message || t("stockIn.suggestError"));
@@ -1060,7 +1059,7 @@ const StockIn = () => {
       setCreateProductForm({
         productCode: buildPrefilledProductCode(suggestedStockCode),
         productName: suggestionName,
-        productDescription: "",
+        productDescription: suggested.description || "",
         productCategory: "C",
         productClass: "General",
       });
@@ -1619,14 +1618,9 @@ const StockIn = () => {
               </Typography>
               {matchHints.slice(0, 8).map((hint, index) => (
                 <Chip
-                  key={`${hint.productId || ""}-${hint.productCode || ""}-${index}`}
+                  key={`${hint.name || ""}-${index}`}
                   size="small"
-                  label={
-                    hint.productName ||
-                    hint.productCode ||
-                    hint.productId ||
-                    t("stockIn.matchHint")
-                  }
+                  label={hint.name || t("stockIn.matchHint")}
                   color="warning"
                   variant="outlined"
                 />
