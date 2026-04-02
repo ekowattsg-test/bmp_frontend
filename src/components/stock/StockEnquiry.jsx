@@ -209,6 +209,7 @@ const normalizeRow = (item) => {
     quantityHolded,
     currentQuantity,
     currentAvailableQuantity,
+    uom: String(readFirst(item, ["uom", "unit", "unitOfMeasure"]) || ""),
     movementAtRaw,
     movementAt: movementAtDate
       ? movementAtDate.toLocaleDateString()
@@ -535,6 +536,7 @@ const StockEnquiry = () => {
         productGroup = {
           productId: row.productId,
           productName: row.productName,
+          uom: row.uom,
           stocks: new Map(),
         };
         productMap.set(productKey, productGroup);
@@ -629,6 +631,7 @@ const StockEnquiry = () => {
           quantityHolded: stockGroup.holdMovedSum,
           currentQuantity: stockCurrentQuantity,
           currentAvailableQuantity: stockAvailableQuantity,
+          uom: "",
           movementCount: stockGroup.movementCount,
           lastMovementAt: stockGroup.lastMovementAt,
           lastMovementAtTs: stockGroup.lastMovementAtTs,
@@ -646,6 +649,7 @@ const StockEnquiry = () => {
         quantityHolded: "",
         currentQuantity: productCurrentQuantity,
         currentAvailableQuantity: productAvailableQuantity,
+        uom: productGroup.uom,
         movementCount: productMovementCount,
         lastMovementAt: productLastMovementAt,
         lastMovementAtTs: productLastMovementAtTs,
@@ -776,6 +780,11 @@ const StockEnquiry = () => {
         width: 160,
         headerAlign: "right",
         align: "right",
+      },
+      {
+        field: "uom",
+        headerName: t("stockEnquiry.columns.uom"),
+        width: 80,
       },
       {
         field: "lastMovementAt",

@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { TextField, Button, Box, MenuItem } from "@mui/material";
+import { TextField, Button, Box, MenuItem, Autocomplete } from "@mui/material";
 import { request } from "../../helpers/axios_helper";
 import { useTranslation } from "react-i18next";
+import { DEFAULT_UOM_OPTIONS } from "../../helpers/common_options_helper";
 import FileGallery from "../common/FileGallery";
 import { HeaderBar } from "../common";
 import {
@@ -18,6 +19,7 @@ const ProductAdd = ({ onCancel }) => {
     productDescription: "",
     productCategory: "",
     productClass: "",
+    uom: "",
   });
   const [productFiles, setProductFiles] = useState([]);
   const [errors, setErrors] = useState({});
@@ -62,6 +64,7 @@ const ProductAdd = ({ onCancel }) => {
         productDescription: form.productDescription,
         productCategory: form.productCategory,
         productClass: form.productClass,
+        uom: form.uom,
         productPicture:
           normalized.length > 0 ? JSON.stringify(normalized) : null,
       };
@@ -141,6 +144,39 @@ const ProductAdd = ({ onCancel }) => {
         onChange={handleChange}
         fullWidth
         margin="normal"
+      />
+      <Autocomplete
+        freeSolo
+        openOnFocus
+        options={DEFAULT_UOM_OPTIONS}
+        value={DEFAULT_UOM_OPTIONS.find((o) => o.value === form.uom) ?? null}
+        inputValue={form.uom}
+        onInputChange={(_, newInputValue, reason) => {
+          if (reason === "reset") return;
+          setForm((prev) => ({ ...prev, uom: newInputValue }));
+        }}
+        onChange={(_, newValue) => {
+          if (typeof newValue === "string") {
+            setForm((prev) => ({ ...prev, uom: newValue }));
+          } else if (newValue && typeof newValue === "object") {
+            setForm((prev) => ({ ...prev, uom: newValue.value || "" }));
+          } else {
+            setForm((prev) => ({ ...prev, uom: "" }));
+          }
+        }}
+        getOptionLabel={(option) =>
+          typeof option === "string" ? option : option.value
+        }
+        sx={{ mt: 1, mb: 0.5 }}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            label={t("product.uom", "Unit of Measure")}
+            placeholder={t("product.uomPlaceholder", "e.g. pcs, kg, box")}
+            fullWidth
+          />
+        )}
+        fullWidth
       />
 
       <Box sx={{ my: 1 }}>

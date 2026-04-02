@@ -30,13 +30,11 @@ import DownloadIcon from "@mui/icons-material/Download";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import { AuthContext } from "../../context/authContext";
-import { PageHeader } from "../common";
+import { PageHeader, ProductInfoCard } from "../common";
 import HelpDialog from "../common/HelpDialog";
 import Modal from "../common/Modal";
 import {
   getDisplayImageInfo,
-  getFileIcon,
-  ThumbnailImg,
   normalizeFileMetadata,
   uploadFileToDrive,
   commit,
@@ -48,6 +46,7 @@ import {
   resolveStockLocationLimit,
   isLocationCreationDisabled,
   buildLocationSuggestions,
+  DEFAULT_UOM_OPTIONS,
 } from "../../helpers/common_options_helper";
 import FileGallery from "../common/FileGallery";
 import StockCodeScanInput from "./StockCodeScanInput";
@@ -116,6 +115,9 @@ const getProductDetails = (item = {}) => {
       nested.productImage ||
       nested.productPictureUrl ||
       "",
+    uom: String(
+      readFirst(item, ["uom", "unit", "unitOfMeasure"]) || nested.uom || "",
+    ),
   };
 };
 
@@ -142,6 +144,7 @@ const normalizeStock = (item, fallbackCode) => {
     productId: product.productId,
     productName: product.productName,
     productPicture: product.productPicture,
+    uom: product.uom,
     currentQuantity: toNumber(
       readFirst(item, [
         "currentQuantity",
@@ -184,6 +187,7 @@ const enrichRowsWithProduct = (rows, productData) => {
     productId: row.productId || product.productId,
     productName: row.productName || product.productName,
     productPicture: row.productPicture || product.productPicture,
+    uom: row.uom || product.uom,
   }));
 };
 
@@ -421,6 +425,7 @@ const toProductCandidate = (row) => {
         "",
     ),
     productPicture: product.productPicture || "",
+    uom: String(readFirst(row, ["uom", "unit", "unitOfMeasure"]) || ""),
     stockIds: uniqueValues([readFirst(row, ["stockId", "id"])]),
   };
 };
@@ -518,6 +523,7 @@ const StockIn = () => {
     baselinedDate: "",
     productCategory: "C",
     productClass: "General",
+    uom: "",
   });
   const [productFiles, setProductFiles] = useState([]);
   const [productImageFetching, setProductImageFetching] = useState(false);
@@ -730,6 +736,7 @@ const StockIn = () => {
           productId: baseStock?.productId || "",
           productName: baseStock?.productName || "",
           productPicture: baseStock?.productPicture || "",
+          uom: baseStock?.uom || "",
           currentQuantity,
           availableQuantity,
         };
@@ -760,28 +767,7 @@ const StockIn = () => {
           );
           backendProduct = productRes?.data || null;
         } catch {
-          // Fallback to search endpoint below.
-        }
-      }
-
-      if (!backendProduct) {
-        try {
-          const searchRes = await request(
-            "GET",
-            `/api/products?search=${encodeURIComponent(codeToUse)}`,
-          );
-          const candidates = toArray(searchRes?.data);
-          backendProduct =
-            candidates.find(
-              (item) =>
-                String(readFirst(item, ["productCode", "code", "stockCode"]))
-                  .toLowerCase()
-                  .trim() === codeToUse.toLowerCase(),
-            ) ||
-            candidates[0] ||
-            null;
-        } catch {
-          // Keep current rows when product lookup fails.
+          // Product lookup failed; proceed without enrichment.
         }
       }
 
@@ -851,6 +837,18 @@ const StockIn = () => {
     [productCandidates],
   );
 
+  const uomOptions = useMemo(() => {
+    const fromCandidates = buildUniqueOptionObjects(
+      productCandidates,
+      (item) => item.uom,
+    );
+    const seen = new Set(fromCandidates.map((o) => o.value.toLowerCase()));
+    return [
+      ...fromCandidates,
+      ...DEFAULT_UOM_OPTIONS.filter((o) => !seen.has(o.value.toLowerCase())),
+    ];
+  }, [productCandidates]);
+
   const productInfo = useMemo(() => {
     if (!stocks.length) return null;
     const first =
@@ -859,6 +857,7 @@ const StockIn = () => {
     return {
       productName: first.productName,
       stockCode: first.stockCode,
+      uom: first.uom,
       thumb: getProductThumb(first),
     };
   }, [stocks]);
@@ -1062,6 +1061,7 @@ const StockIn = () => {
         productDescription: suggested.description || "",
         productCategory: "C",
         productClass: "General",
+        uom: "",
       });
       setCreateProductOpen(true);
 
@@ -1106,6 +1106,7 @@ const StockIn = () => {
         .toUpperCase(),
       productClass:
         String(createProductForm.productClass || "").trim() || "General",
+      uom: String(createProductForm.uom || "").trim(),
       productPicture:
         productFiles.length > 0
           ? JSON.stringify(productFiles.map((f) => normalizeFileMetadata(f)))
@@ -1328,64 +1329,12 @@ const StockIn = () => {
       )}
 
       {productInfo && (
-        <Paper
-          elevation={1}
-          sx={{
-            p: 2,
-            backgroundColor: "background.paper",
-            border: "1px solid var(--color-gray-200)",
-            borderRadius: 2,
-          }}
+        <ProductInfoCard
+          productInfo={productInfo}
+          productLabel={t("stockIn.product")}
+          stockCodeLabel={t("stockIn.stockCode")}
+          uomLabel={t("stockIn.uom")}
         >
-          <Box sx={{ display: "flex", gap: 2, alignItems: "center", mb: 2 }}>
-            {productInfo.thumb?.meta?.id ? (
-              <ThumbnailImg
-                fileId={productInfo.thumb.meta.id}
-                viewUrl={productInfo.thumb.meta.viewUrl || ""}
-                provider={productInfo.thumb.meta.provider || null}
-                width={64}
-                height={64}
-                alt={productInfo.productName || "product image"}
-                style={{ borderRadius: 4 }}
-              />
-            ) : productInfo.thumb?.imageUrl ? (
-              <Box
-                component="img"
-                src={productInfo.thumb.imageUrl}
-                alt={productInfo.productName || "product image"}
-                sx={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 1,
-                  objectFit: "cover",
-                }}
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <Box
-                sx={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  bgcolor: "background.default",
-                }}
-              >
-                {getFileIcon("", productInfo.productName || "")}
-              </Box>
-            )}
-            <Box>
-              <Typography>
-                {t("stockIn.product")}: {productInfo.productName || "-"}
-              </Typography>
-              <Typography>
-                {t("stockIn.stockCode")}: {productInfo.stockCode || "-"}
-              </Typography>
-            </Box>
-          </Box>
-
           <TableContainer
             sx={{
               border: "1px solid var(--color-gray-200)",
@@ -1534,26 +1483,34 @@ const StockIn = () => {
               required
             />
 
-            <TextField
-              size="small"
-              type="number"
-              inputProps={{ min: 1, step: 1 }}
-              label={t("stockIn.quantity")}
-              value={stockInQty}
-              onChange={(event) => {
-                const nextValue = event.target.value;
-                if (nextValue === "") {
-                  setStockInQty("");
-                  return;
-                }
+            <Stack direction="row" spacing={1} alignItems="center">
+              <TextField
+                size="small"
+                type="number"
+                inputProps={{ min: 1, step: 1 }}
+                label={t("stockIn.quantity")}
+                value={stockInQty}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  if (nextValue === "") {
+                    setStockInQty("");
+                    return;
+                  }
 
-                const numericValue = Number(nextValue);
-                if (Number.isFinite(numericValue) && numericValue > 0) {
-                  setStockInQty(nextValue);
-                }
-              }}
-              sx={{ width: 140 }}
-            />
+                  const numericValue = Number(nextValue);
+                  if (Number.isFinite(numericValue) && numericValue > 0) {
+                    setStockInQty(nextValue);
+                  }
+                }}
+                sx={{ width: 140 }}
+              />
+
+              {productInfo?.uom && (
+                <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                  {productInfo.uom}
+                </Typography>
+              )}
+            </Stack>
 
             <Stack direction="row" spacing={1}>
               <Button
@@ -1585,7 +1542,7 @@ const StockIn = () => {
               {successMsg}
             </Alert>
           )}
-        </Paper>
+        </ProductInfoCard>
       )}
 
       <Modal
@@ -1897,6 +1854,56 @@ const StockIn = () => {
                   fullWidth
                 />
               </Stack>
+
+              <Autocomplete
+                freeSolo
+                openOnFocus
+                options={uomOptions}
+                value={
+                  findOptionByValue(uomOptions, createProductForm.uom) ?? null
+                }
+                inputValue={createProductForm.uom}
+                onInputChange={(_, newInputValue, reason) => {
+                  if (reason === "reset") return;
+                  setCreateProductForm((prev) => ({
+                    ...prev,
+                    uom: newInputValue,
+                  }));
+                }}
+                onChange={(_, newValue) => {
+                  if (typeof newValue === "string") {
+                    setCreateProductForm((prev) => ({
+                      ...prev,
+                      uom: newValue,
+                    }));
+                    return;
+                  }
+                  if (newValue && typeof newValue === "object") {
+                    setCreateProductForm((prev) => ({
+                      ...prev,
+                      uom: newValue.value || "",
+                    }));
+                    return;
+                  }
+                  setCreateProductForm((prev) => ({ ...prev, uom: "" }));
+                }}
+                getOptionLabel={(option) =>
+                  typeof option === "string" ? option : option.value
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    size="small"
+                    label={t("product.uom", "Unit of Measure")}
+                    placeholder={t(
+                      "product.uomPlaceholder",
+                      "e.g. pcs, kg, box",
+                    )}
+                    fullWidth
+                  />
+                )}
+                fullWidth
+              />
 
               <TextField
                 size="small"

@@ -16,8 +16,10 @@ import StaffSkillModern from "./baseInformation/StaffSkillModern";
 import StockTakeOnNew from "./stock/StockTakeOnNew";
 import StockIn from "./stock/StockIn";
 import StockOut from "./stock/StockOut";
+import StockTransfer from "./stock/StockTransfer";
 import StockEnquiry from "./stock/StockEnquiry";
 import StockAdjustment from "./stock/StockAdjustment";
+import UOMHierarchy from "./stock/UOMHierarchy";
 import LanguageSettings from "./baseInformation/LanguageSettings";
 import UserProfile from "./baseInformation/UserProfile";
 import Settings from "./baseInformation/Settings";
@@ -48,8 +50,10 @@ function MainPage() {
         <Route path="/stocktakeon" element={<StockTakeOnNew />} />
         <Route path="/stockin" element={<StockIn />} />
         <Route path="/stockout" element={<StockOut />} />
+        <Route path="/stocktransfer" element={<StockTransfer />} />
         <Route path="/stockadjustment" element={<StockAdjustment />} />
         <Route path="/stockenquiry" element={<StockEnquiry />} />
+        <Route path="/uomhierarchy" element={<UOMHierarchy />} />
         <Route path="/product" element={<ProductModern />} />
         <Route path="/staffprofile" element={<StaffProfile />} />
         <Route path="/language-settings" element={<LanguageSettings />} />

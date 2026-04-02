@@ -30,9 +30,13 @@ export const buildUniqueOptionObjects = (items, resolver) =>
   buildUniqueTextOptions(items, resolver).map((value) => ({ value }));
 
 export const findOptionByValue = (options, rawValue) => {
-  const key = String(rawValue ?? "").trim().toLowerCase();
+  const key = String(rawValue ?? "")
+    .trim()
+    .toLowerCase();
   if (!key) return null;
-  return options.find((item) => String(item?.value ?? "").toLowerCase() === key);
+  return options.find(
+    (item) => String(item?.value ?? "").toLowerCase() === key,
+  );
 };
 
 export const normalizeLocationValue = (rawLocation) => {
@@ -95,7 +99,9 @@ export const upsertLocationSuggestion = (
 ) => {
   const normalized = normalizeLocationValue(rawLocation);
   const key = normalized.toLowerCase();
-  const existing = prevSuggestions.find((item) => item.value.toLowerCase() === key);
+  const existing = prevSuggestions.find(
+    (item) => item.value.toLowerCase() === key,
+  );
 
   if (existing) {
     return prevSuggestions
@@ -115,3 +121,22 @@ export const upsertLocationSuggestion = (
     (a, b) => b.count - a.count || a.value.localeCompare(b.value),
   );
 };
+
+export const DEFAULT_UOM_OPTIONS = [
+  { value: "pcs" },
+  { value: "box" },
+  { value: "kg" },
+  { value: "g" },
+  { value: "l" },
+  { value: "ml" },
+  { value: "m" },
+  { value: "cm" },
+  { value: "set" },
+  { value: "pair" },
+  { value: "roll" },
+  { value: "pack" },
+  { value: "bag" },
+  { value: "bottle" },
+  { value: "can" },
+  { value: "sheet" },
+];

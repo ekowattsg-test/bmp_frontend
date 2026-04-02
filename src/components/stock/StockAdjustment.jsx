@@ -21,13 +21,9 @@ import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import { AuthContext } from "../../context/authContext";
-import { PageHeader } from "../common";
+import { PageHeader, ProductInfoCard } from "../common";
 import HelpDialog from "../common/HelpDialog";
-import {
-  getDisplayImageInfo,
-  getFileIcon,
-  ThumbnailImg,
-} from "../../helpers/file_helper";
+import { getDisplayImageInfo } from "../../helpers/file_helper";
 import StockCodeScanInput from "./StockCodeScanInput";
 
 const toArray = (value) => {
@@ -90,6 +86,9 @@ const getProductDetails = (item = {}) => {
       nested.productImage ||
       nested.productPictureUrl ||
       "",
+    uom: String(
+      readFirst(item, ["uom", "unit", "unitOfMeasure"]) || nested.uom || "",
+    ),
   };
 };
 
@@ -116,6 +115,7 @@ const normalizeStock = (item, fallbackCode) => {
     productId: product.productId,
     productName: product.productName,
     productPicture: product.productPicture,
+    uom: product.uom,
     currentQuantity: toNumber(
       readFirst(item, [
         "currentQuantity",
@@ -158,6 +158,7 @@ const enrichRowsWithProduct = (rows, productData) => {
     productId: row.productId || product.productId,
     productName: row.productName || product.productName,
     productPicture: row.productPicture || product.productPicture,
+    uom: row.uom || product.uom,
   }));
 };
 
@@ -181,7 +182,7 @@ const StockAdjustment = () => {
   const loadStocksForCode = async (codeToUse) => {
     const response = await request(
       "GET",
-      `/api/stocks/search?stockCode=${encodeURIComponent(codeToUse)}`,
+      `/api/stockviews/stockcode/${encodeURIComponent(codeToUse)}`,
     );
 
     const normalized = toArray(response?.data)
@@ -345,6 +346,7 @@ const StockAdjustment = () => {
           productId: baseStock?.productId || "",
           productName: baseStock?.productName || "",
           productPicture: baseStock?.productPicture || "",
+          uom: baseStock?.uom || "",
           currentQuantity,
           availableQuantity,
         };
@@ -375,28 +377,7 @@ const StockAdjustment = () => {
           );
           backendProduct = productRes?.data || null;
         } catch {
-          // Fallback to search endpoint below.
-        }
-      }
-
-      if (!backendProduct) {
-        try {
-          const searchRes = await request(
-            "GET",
-            `/api/products?search=${encodeURIComponent(codeToUse)}`,
-          );
-          const candidates = toArray(searchRes?.data);
-          backendProduct =
-            candidates.find(
-              (item) =>
-                String(readFirst(item, ["productCode", "code", "stockCode"]))
-                  .toLowerCase()
-                  .trim() === codeToUse.toLowerCase(),
-            ) ||
-            candidates[0] ||
-            null;
-        } catch {
-          // Keep current rows when product lookup fails.
+          // Product lookup failed; proceed without enrichment.
         }
       }
 
@@ -421,6 +402,7 @@ const StockAdjustment = () => {
     return {
       productName: first.productName,
       stockCode: first.stockCode,
+      uom: first.uom,
       thumb: getProductThumb(first),
     };
   }, [stocks]);
@@ -548,6 +530,7 @@ const StockAdjustment = () => {
           submitLabel={t("stockAdjustment.findStock")}
           label={t("stockAdjustment.stockCode")}
           placeholder={t("stockAdjustment.scanPlaceholder")}
+          allowProductSearch
         />
       </Paper>
 
@@ -562,64 +545,12 @@ const StockAdjustment = () => {
         </Alert>
       )}
       {selectedStock && productInfo && (
-        <Paper
-          elevation={1}
-          sx={{
-            p: 2,
-            backgroundColor: "background.paper",
-            border: "1px solid var(--color-gray-200)",
-            borderRadius: 2,
-          }}
+        <ProductInfoCard
+          productInfo={productInfo}
+          productLabel={t("stockAdjustment.product")}
+          stockCodeLabel={t("stockAdjustment.stockCode")}
+          uomLabel={t("stockAdjustment.uom")}
         >
-          <Box sx={{ display: "flex", gap: 2, alignItems: "center", mb: 2 }}>
-            {productInfo.thumb?.meta?.id ? (
-              <ThumbnailImg
-                fileId={productInfo.thumb.meta.id}
-                viewUrl={productInfo.thumb.meta.viewUrl || ""}
-                provider={productInfo.thumb.meta.provider || null}
-                width={64}
-                height={64}
-                alt={productInfo.productName || "product image"}
-                style={{ borderRadius: 4 }}
-              />
-            ) : productInfo.thumb?.imageUrl ? (
-              <Box
-                component="img"
-                src={productInfo.thumb.imageUrl}
-                alt={productInfo.productName || "product image"}
-                sx={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 1,
-                  objectFit: "cover",
-                }}
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <Box
-                sx={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  bgcolor: "background.default",
-                }}
-              >
-                {getFileIcon("", productInfo.productName || "")}
-              </Box>
-            )}
-            <Box>
-              <Typography>
-                {t("stockAdjustment.product")}: {productInfo.productName || "-"}
-              </Typography>
-              <Typography>
-                {t("stockAdjustment.stockCode")}: {productInfo.stockCode || "-"}
-              </Typography>
-            </Box>
-          </Box>
-
           <TableContainer
             sx={{
               border: "1px solid var(--color-gray-200)",
@@ -671,7 +602,7 @@ const StockAdjustment = () => {
           <Stack
             direction={{ xs: "column", md: "row" }}
             spacing={2}
-            alignItems="center"
+            alignItems={{ xs: "stretch", md: "center" }}
           >
             <ToggleButtonGroup
               exclusive
@@ -698,15 +629,23 @@ const StockAdjustment = () => {
               sx={{ minWidth: 200 }}
             />
 
-            <TextField
-              size="small"
-              type="number"
-              inputProps={{ min: 1 }}
-              label={t("stockAdjustment.adjustment")}
-              value={adjustmentQty}
-              onChange={(event) => setAdjustmentQty(event.target.value)}
-              sx={{ width: 140 }}
-            />
+            <Stack direction="row" spacing={1} alignItems="center">
+              <TextField
+                size="small"
+                type="number"
+                inputProps={{ min: 1 }}
+                label={t("stockAdjustment.adjustment")}
+                value={adjustmentQty}
+                onChange={(event) => setAdjustmentQty(event.target.value)}
+                sx={{ width: 140 }}
+              />
+
+              {productInfo?.uom && (
+                <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                  {productInfo.uom}
+                </Typography>
+              )}
+            </Stack>
 
             <Button
               variant="contained"
@@ -722,7 +661,7 @@ const StockAdjustment = () => {
               </Typography>
             )}
           </Stack>
-        </Paper>
+        </ProductInfoCard>
       )}
     </Box>
   );

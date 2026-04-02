@@ -171,6 +171,11 @@ const AppMenu = () => {
             icon: <Store />,
           },
           {
+            to: "/stocktransfer",
+            label: t("menu.stockTransfer", "Stock Transfer"),
+            icon: <CompareArrows />,
+          },
+          {
             to: "/stockadjustment",
             label: t("menu.stockAdjustment", "Stock Adjustment"),
             icon: <CompareArrows />,

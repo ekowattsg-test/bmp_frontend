@@ -8,6 +8,7 @@ export { default as BlockListItem } from "./BlockListItem";
 export { default as LoadMoreBlockList } from "./LoadMoreBlockList";
 export { default as Button } from "./Button";
 export { default as Modal, ModalForm } from "./Modal";
+export { default as ProductInfoCard } from "./ProductInfoCard";
 export {
   DeleteConfirmationDialog,
   ErrorDialog,

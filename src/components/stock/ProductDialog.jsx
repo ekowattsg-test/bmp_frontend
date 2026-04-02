@@ -60,7 +60,7 @@ const ProductDialog = ({
     });
     setProductFiles([]);
     setCreateError("");
-    fetchProducts("");
+    fetchProducts();
   }, [open, stockCode]);
 
   const handleCreate = async (e) => {
@@ -102,9 +102,9 @@ const ProductDialog = ({
     new Set(products.map((p) => p.productClass).filter(Boolean)),
   ).slice(0, 20);
 
-  const fetchProducts = (q) => {
+  const fetchProducts = () => {
     setLoading(true);
-    request("GET", `/api/products?search=${encodeURIComponent(q || "")}`)
+    request("GET", "/api/products")
       .then((res) => setProducts(res.data || []))
       .catch(() => setProducts([]))
       .finally(() => setLoading(false));
@@ -133,7 +133,7 @@ const ProductDialog = ({
   const handleSearchChange = (e) => {
     const v = e.target.value;
     setSearch(v);
-    fetchProducts(v);
+    fetchProducts();
   };
 
   const handleSelect = (p) => {
@@ -371,19 +371,30 @@ const ProductDialog = ({
                   title={t("stockTake.productDialogTitle")}
                   facetFields={["productClass"]}
                   fetchItems={async (q, filters) => {
-                    // Build query params including filters
-                    const params = new URLSearchParams();
-                    if (q) params.set("search", q);
-                    if (filters) {
-                      Object.keys(filters).forEach((k) => {
-                        if (filters[k]) params.set(k, filters[k]);
-                      });
+                    const productCategory = filters?.productCategory || "";
+                    const productClass = filters?.productClass || "";
+                    let url = "/api/products";
+                    if (productCategory || productClass) {
+                      const params = new URLSearchParams();
+                      if (productCategory)
+                        params.set("productCategory", productCategory);
+                      if (productClass)
+                        params.set("productClass", productClass);
+                      url = `/api/products/filter?${params.toString()}`;
                     }
-                    const res = await request(
-                      "GET",
-                      `/api/products?${params.toString()}`,
+                    const res = await request("GET", url);
+                    const all = res.data || [];
+                    if (!q) return all;
+                    const lower = q.toLowerCase();
+                    return all.filter(
+                      (p) =>
+                        String(p.productName || "")
+                          .toLowerCase()
+                          .includes(lower) ||
+                        String(p.productCode || "")
+                          .toLowerCase()
+                          .includes(lower),
                     );
-                    return res.data || [];
                   }}
                   onSelect={(p) => handleSelect(p)}
                   onCreate={() => setCreating(true)}
@@ -523,8 +534,7 @@ const ProductDialog = ({
                     const arr = typeof val === "string" ? JSON.parse(val) : val;
                     setProductFiles(arr || []);
                     setNewProduct((prev) => ({ ...prev, productPicture: val }));
-                  } catch (e) {
-                    setProductFiles([]);
+                  } catch {
                     setNewProduct((prev) => ({
                       ...prev,
                       productPicture: null,

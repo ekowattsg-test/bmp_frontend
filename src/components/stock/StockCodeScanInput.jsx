@@ -2,12 +2,20 @@ import React, { useRef, useState } from "react";
 import {
   Box,
   Button,
+  CircularProgress,
   IconButton,
   InputAdornment,
+  List,
+  ListItemButton,
+  ListItemText,
   TextField,
+  Typography,
 } from "@mui/material";
 import QrCodeScannerIcon from "@mui/icons-material/QrCodeScanner";
+import SearchIcon from "@mui/icons-material/Search";
 import { useTranslation } from "react-i18next";
+import Modal from "../common/Modal";
+import { request } from "../../helpers/axios_helper";
 
 const normalizeScannedValue = (raw) => {
   if (!raw) return "";
@@ -38,10 +46,59 @@ const StockCodeScanInput = ({
   label,
   placeholder,
   submitLabel,
+  allowProductSearch = false,
 }) => {
   const { t } = useTranslation();
   const html5QrRef = useRef(null);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState("");
+  const [pickerAllProducts, setPickerAllProducts] = useState([]);
+  const [pickerLoading, setPickerLoading] = useState(false);
+
+  const pickerProducts = (() => {
+    const q = pickerSearch.trim().toLowerCase();
+    if (!q) return pickerAllProducts;
+    return pickerAllProducts.filter((p) =>
+      String(p.productName || "")
+        .toLowerCase()
+        .includes(q),
+    );
+  })();
+
+  const openPicker = () => {
+    setPickerSearch("");
+    setPickerOpen(true);
+    if (pickerAllProducts.length === 0) {
+      setPickerLoading(true);
+      request("GET", "/api/stockviews")
+        .then((res) => {
+          const rows = Array.isArray(res?.data) ? res.data : [];
+          const seen = new Set();
+          const unique = rows.filter((r) => {
+            const code = String(r?.stockCode || "").trim();
+            if (!code || seen.has(code)) return false;
+            seen.add(code);
+            return true;
+          });
+          setPickerAllProducts(unique);
+        })
+        .catch(() => setPickerAllProducts([]))
+        .finally(() => setPickerLoading(false));
+    }
+  };
+
+  const handlePickerSearch = (q) => {
+    setPickerSearch(q);
+  };
+
+  const handlePickerSelect = (product) => {
+    const code = String(product.stockCode || "").trim();
+    if (!code) return;
+    setPickerOpen(false);
+    onChange(code);
+    onSubmit(code);
+  };
 
   const stopScanner = async () => {
     setScannerOpen(false);
@@ -101,7 +158,9 @@ const StockCodeScanInput = ({
 
   return (
     <>
-      <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
+      <Box
+        sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}
+      >
         <TextField
           label={label || t("stockTake.stockCode", "Stock code")}
           value={value}
@@ -112,6 +171,19 @@ const StockCodeScanInput = ({
           InputProps={{
             endAdornment: (
               <InputAdornment position="end">
+                {allowProductSearch && (
+                  <IconButton
+                    size="small"
+                    onClick={openPicker}
+                    aria-label={t(
+                      "stockCodeScan.searchByProduct",
+                      "Search by product",
+                    )}
+                    disabled={busy}
+                  >
+                    <SearchIcon />
+                  </IconButton>
+                )}
                 <IconButton
                   size="small"
                   onClick={openScanner}
@@ -171,6 +243,59 @@ const StockCodeScanInput = ({
             </Box>
           </Box>
         </Box>
+      )}
+
+      {allowProductSearch && (
+        <Modal
+          open={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          title={t("stockCodeScan.searchByProductTitle", "Search Product")}
+          maxWidth="sm"
+        >
+          <TextField
+            autoFocus
+            size="small"
+            fullWidth
+            label={t("stockCodeScan.searchByProductLabel", "Product name")}
+            value={pickerSearch}
+            onChange={(e) => handlePickerSearch(e.target.value)}
+            placeholder={t(
+              "stockCodeScan.searchByProductPlaceholder",
+              "Type product name to search...",
+            )}
+            sx={{ mb: 1 }}
+          />
+          {pickerLoading && (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 1 }}>
+              <CircularProgress size={24} />
+            </Box>
+          )}
+          <List dense disablePadding sx={{ maxHeight: 360, overflowY: "auto" }}>
+            {pickerProducts.map((p) => (
+              <ListItemButton
+                key={p.stockCode}
+                onClick={() => handlePickerSelect(p)}
+                sx={{ gap: 2 }}
+              >
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="body2" noWrap>
+                    {p.productName || "-"}
+                  </Typography>
+                </Box>
+                <Box sx={{ flexShrink: 0 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {p.stockCode || "-"}
+                  </Typography>
+                </Box>
+              </ListItemButton>
+            ))}
+            {!pickerLoading && pickerProducts.length === 0 && (
+              <Typography sx={{ p: 2, color: "text.secondary" }}>
+                {t("stockCodeScan.noProductsFound", "No products found")}
+              </Typography>
+            )}
+          </List>
+        </Modal>
       )}
     </>
   );

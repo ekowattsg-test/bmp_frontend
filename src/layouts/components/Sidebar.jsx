@@ -29,6 +29,7 @@ import {
   PersonAdd as PersonAddIcon,
   AutoStories as AutoStoriesIcon,
   UploadFile as UploadFileIcon,
+  AccountTree as AccountTreeIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -171,6 +172,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               icon: <StoreIcon fontSize="small" />,
               path: "/product",
             },
+            {
+              key: "uomHierarchy",
+              label: t("menu.uomHierarchy", "UOM Hierarchy"),
+              icon: <AccountTreeIcon fontSize="small" />,
+              path: "/uomhierarchy",
+            },
           ],
         },
         {
@@ -210,6 +217,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               label: t("menu.stockOut", "Stock Out"),
               icon: <AutoStoriesIcon fontSize="small" />,
               path: "/stockout",
+            },
+            {
+              key: "stockTransfer",
+              label: t("menu.stockTransfer", "Stock Transfer"),
+              icon: <CompareArrowsIcon fontSize="small" />,
+              path: "/stocktransfer",
             },
             {
               key: "stockAdjustment",

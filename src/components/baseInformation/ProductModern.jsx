@@ -269,6 +269,13 @@ const ProductModern = () => {
       align: "center",
     },
     {
+      field: "uom",
+      headerName: t("product.uom", "UOM"),
+      width: 100,
+      headerAlign: "center",
+      align: "center",
+    },
+    {
       field: "actions",
       headerName: t("basic.actions", "Actions"),
       width: 120,
