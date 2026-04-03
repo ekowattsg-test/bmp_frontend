@@ -13,7 +13,7 @@ import VendorModern from "./information/VendorModern";
 import PurchaseOrderModern from "./information/PurchaseOrderModern";
 import StaffProfile from "./staffprofile/staffProfile";
 import StaffSkillModern from "./baseInformation/StaffSkillModern";
-import StockTakeOnNew from "./stock/StockTakeOnNew";
+import StockTakeOn from "./stock/StockTakeOn";
 import StockIn from "./stock/StockIn";
 import StockOut from "./stock/StockOut";
 import StockTransfer from "./stock/StockTransfer";
@@ -26,6 +26,7 @@ import Settings from "./baseInformation/Settings";
 import EulaPage from "./information/EulaPage";
 import PrivacyPage from "./information/PrivacyPage";
 import ProductModern from "./baseInformation/ProductModern";
+import ProductBundleModern from "./information/ProductBundleModern";
 import StaffExcelUpload from "./baseInformation/StaffExcelUpload";
 import UserLoginList from "./baseInformation/UserLoginList";
 
@@ -47,13 +48,14 @@ function MainPage() {
         <Route path="/staffskill" element={<StaffSkillModern />} />
         <Route path="/staff-excel-upload" element={<StaffExcelUpload />} />
         <Route path="/stockmovementcode" element={<StockMovementCode />} />
-        <Route path="/stocktakeon" element={<StockTakeOnNew />} />
+        <Route path="/stocktakeon" element={<StockTakeOn />} />
         <Route path="/stockin" element={<StockIn />} />
         <Route path="/stockout" element={<StockOut />} />
         <Route path="/stocktransfer" element={<StockTransfer />} />
         <Route path="/stockadjustment" element={<StockAdjustment />} />
         <Route path="/stockenquiry" element={<StockEnquiry />} />
         <Route path="/uomhierarchy" element={<UOMHierarchy />} />
+        <Route path="/productbundle" element={<ProductBundleModern />} />
         <Route path="/product" element={<ProductModern />} />
         <Route path="/staffprofile" element={<StaffProfile />} />
         <Route path="/language-settings" element={<LanguageSettings />} />

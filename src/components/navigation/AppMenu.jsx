@@ -80,7 +80,7 @@ const AppMenu = () => {
           },
           {
             to: "/userlogin",
-            label: t("menu.userLoginList", "User Login Records"),
+            label: t("menu.userLoginList", "Login Enquiry"),
             icon: <History />,
           },
         ],

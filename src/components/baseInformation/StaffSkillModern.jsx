@@ -234,8 +234,10 @@ const StaffSkillModern = () => {
         onClose={() => setHelpOpen(false)}
         title={t("staffSkillList.helpTitle", "Staff skill help")}
         content={t(
-          "staffSkillList.helpBody",
-          "This page manages staff skills and their categories. Use Add to create a skill, Edit to change details, and Delete to remove a skill.",
+          showAddSkillButton
+            ? "staffSkillList.helpBody"
+            : "staffSkillList.helpBodyNoAdd",
+          "This page manages staff skills and their categories.",
         )}
       />
 

@@ -236,8 +236,10 @@ const CustomerModern = () => {
         onClose={() => setHelpOpen(false)}
         title={t("customerList.helpTitle", "Customer help")}
         content={t(
-          "customerList.helpBody",
-          "This page lists customers. Use Add to create a new customer. Use Edit or Delete to modify existing records.",
+          enableActions
+            ? "customerList.helpBody"
+            : "customerList.helpBodyReadOnly",
+          "This page lists customers.",
         )}
       />
 

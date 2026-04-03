@@ -232,8 +232,8 @@ const VendorModern = () => {
         onClose={() => setHelpOpen(false)}
         title={t("vendorList.helpTitle", "Vendor help")}
         content={t(
-          "vendorList.helpBody",
-          "This page lists vendors. Use Add to create a new vendor. Use Edit or Delete to modify existing records.",
+          enableActions ? "vendorList.helpBody" : "vendorList.helpBodyReadOnly",
+          "This page lists vendors.",
         )}
       />
 

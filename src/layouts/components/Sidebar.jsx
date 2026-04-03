@@ -30,6 +30,7 @@ import {
   AutoStories as AutoStoriesIcon,
   UploadFile as UploadFileIcon,
   AccountTree as AccountTreeIcon,
+  Inventory2 as BundleIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -105,7 +106,7 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
             },
             {
               key: "userLogins",
-              label: t("menu.userLoginList", "User Login Records"),
+              label: t("menu.userLoginList", "Login Enquiry"),
               icon: <HistoryIcon fontSize="small" />,
               path: "/userlogin",
             },
@@ -174,9 +175,15 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
             },
             {
               key: "uomHierarchy",
-              label: t("menu.uomHierarchy", "UOM Hierarchy"),
+              label: t("menu.uomHierarchy", "Product Hierarchy"),
               icon: <AccountTreeIcon fontSize="small" />,
               path: "/uomhierarchy",
+            },
+            {
+              key: "productBundle",
+              label: t("menu.productBundle", "Product Bundles"),
+              icon: <BundleIcon fontSize="small" />,
+              path: "/productbundle",
             },
           ],
         },

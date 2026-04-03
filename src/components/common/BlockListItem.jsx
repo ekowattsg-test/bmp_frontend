@@ -31,6 +31,7 @@ const BlockListItem = ({
   t,
   enableActions = true,
   leadingMedia,
+  extraContent,
 }) => {
   const formatValue = (value) => {
     if (typeof value === "boolean") {
@@ -192,6 +193,7 @@ const BlockListItem = ({
             </Box>
           </Box>
         ))}
+        {extraContent}
       </Box>
 
       {/* Actions - right side */}
@@ -257,6 +259,7 @@ BlockListItem.propTypes = {
     PropTypes.shape({ field: PropTypes.string, label: PropTypes.string }),
   ),
   item: PropTypes.object,
+  extraContent: PropTypes.node,
   onView: PropTypes.func,
   onEdit: PropTypes.func,
   onDelete: PropTypes.func,
