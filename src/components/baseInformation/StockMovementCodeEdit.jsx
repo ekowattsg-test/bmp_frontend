@@ -33,8 +33,6 @@ const StockMovementCodeEdit = ({ item, onCancel }) => {
     <div style={{ maxWidth: 600, margin: "0 auto", padding: 20 }}>
       <HeaderBar
         title={t("stockMovementCode.edit")}
-        titleVariant="h5"
-        titleSx={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 600 }}
         sx={{ mb: 1 }}
       />
       <form onSubmit={handleSubmit}>

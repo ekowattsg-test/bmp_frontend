@@ -191,8 +191,6 @@ const ProductEdit = ({ product, onCancel }) => {
     >
       <HeaderBar
         title={t("product.editTitle", "Edit Product")}
-        titleVariant="h5"
-        titleSx={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 600 }}
         sx={{ mb: 1 }}
       />
       <TextField

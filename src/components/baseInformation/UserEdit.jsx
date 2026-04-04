@@ -181,8 +181,6 @@ const UserEdit = ({ user, onCancel }) => {
     >
       <HeaderBar
         title={t("userList.editTitle")}
-        titleVariant="h5"
-        titleSx={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 600 }}
         sx={{ mb: 1 }}
       />
       <TextField

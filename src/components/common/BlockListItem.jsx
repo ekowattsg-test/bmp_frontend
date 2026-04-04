@@ -147,6 +147,8 @@ const BlockListItem = ({
         display: "flex",
         gap: 2,
         alignItems: "flex-start",
+        minWidth: 0,
+        overflow: "hidden",
       }}
     >
       {leadingMedia && renderLeadingMedia()}

@@ -122,8 +122,6 @@ const UserRoleEdit = ({ userRole, onCancel }) => {
     >
       <HeaderBar
         title={t("userRole.editTitle", "Edit UserRole")}
-        titleVariant="h5"
-        titleSx={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 600 }}
         sx={{ mb: 1 }}
       />
       {/* ID field hidden */}

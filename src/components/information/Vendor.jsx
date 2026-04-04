@@ -65,11 +65,6 @@ const Vendor = () => {
               title={t("vendorList.title")}
               subtitle={t("vendorList.subtitle", "Manage vendors")}
               onHelp={() => setHelpOpen(true)}
-              titleVariant="h5"
-              titleSx={{
-                fontSize: { xs: "1.1rem", sm: "1.5rem" },
-                fontWeight: 600,
-              }}
               actions={
                 <>
                   <TextField

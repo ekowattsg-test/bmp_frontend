@@ -72,8 +72,6 @@ const RoleEdit = ({ role, onCancel }) => {
     >
       <HeaderBar
         title={t("roleList.editTitle")}
-        titleVariant="h5"
-        titleSx={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 600 }}
         sx={{ mb: 1 }}
       />
       {/* Remove id field from edit form (do not show) */}

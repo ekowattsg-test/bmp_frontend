@@ -32,18 +32,16 @@ const PageHeader = ({
 
   const iconNode = Icon ? (
     <Box
+      style={{ display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
       sx={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: 48,
-        height: 48,
+        width: { xs: 36, sm: 48 },
+        height: { xs: 36, sm: 48 },
         borderRadius: 2,
         bgcolor: "primary.main",
         color: "primary.contrastText",
       }}
     >
-      <Icon />
+      <Icon sx={{ fontSize: { xs: "1.2rem", sm: "1.5rem" } }} />
     </Box>
   ) : null;
 
@@ -64,11 +62,6 @@ const PageHeader = ({
         subtitle={subtitle}
         onHelp={onHelpClick}
         actions={actionNode}
-        titleVariant="h5"
-        titleSx={{
-          fontWeight: 600,
-          fontSize: { xs: "1.125rem", sm: "1.5rem" },
-        }}
         sx={{ mb: 0 }}
       />
     </Box>

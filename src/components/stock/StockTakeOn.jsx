@@ -150,7 +150,6 @@ const normalizeStock = (item, fallbackCode) => {
         "currentQuantity",
         "quantity",
         "currentQty",
-        "baselinedQuantity",
       ]),
     ),
     availableQuantity: toNumber(
@@ -517,8 +516,6 @@ const StockTakeOnNew = () => {
     productCode: "",
     productName: "",
     productDescription: "",
-    baselinedQuantity: 0,
-    baselinedDate: "",
     productCategory: "C",
     productClass: "General",
     uom: "",
@@ -680,13 +677,6 @@ const StockTakeOnNew = () => {
             stockId,
             location,
             movementAtTs,
-            baselinedQuantity: toNumber(
-              readFirst(row, [
-                "baselinedQuantity",
-                "baselineQuantity",
-                "baseQty",
-              ]),
-            ),
             stockMoved,
             holdMoved,
           };
@@ -702,7 +692,6 @@ const StockTakeOnNew = () => {
             key,
             stockId: row.stockId,
             location: row.location,
-            baselineQuantity: row.baselinedQuantity,
             stockMovedSum: 0,
             holdMovedSum: 0,
             lastMovementAtTs: row.movementAtTs,
@@ -715,13 +704,12 @@ const StockTakeOnNew = () => {
 
         if (row.movementAtTs >= group.lastMovementAtTs) {
           group.lastMovementAtTs = row.movementAtTs;
-          group.baselineQuantity = row.baselinedQuantity;
         }
       });
 
       locationRows = Array.from(groupedByLocation.values()).map((group) => {
         const baseStock = baseByStockId.get(group.stockId) || normalized[0];
-        const currentQuantity = group.baselineQuantity + group.stockMovedSum;
+        const currentQuantity = group.stockMovedSum;
         const availableQuantity = currentQuantity + group.holdMovedSum;
 
         return {
@@ -1089,8 +1077,6 @@ const StockTakeOnNew = () => {
       productDescription: String(
         createProductForm.productDescription || "",
       ).trim(),
-      baselinedQuantity: 0,
-      baselinedDate: todayIsoDate,
       productCategory: String(createProductForm.productCategory || "")
         .trim()
         .toUpperCase(),

@@ -77,11 +77,6 @@ const UserRole = () => {
               title={t("userRole.title", "User-Role Mapping")}
               subtitle={t("userRole.subtitle", "Assign roles to users")}
               onHelp={() => setHelpOpen(true)}
-              titleVariant="h5"
-              titleSx={{
-                fontSize: { xs: "1.1rem", sm: "1.5rem" },
-                fontWeight: 600,
-              }}
               actions={
                 <>
                   <TextField

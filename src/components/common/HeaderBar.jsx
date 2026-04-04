@@ -21,7 +21,7 @@ const HeaderBar = ({
   icon,
   title,
   subtitle,
-  titleVariant = "h6",
+  titleVariant = "h5",
   showBackButton = false,
   onBack,
   onHelp,
@@ -33,177 +33,101 @@ const HeaderBar = ({
 }) => {
   return (
     <Box
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        gap: 2,
-        mb: 2,
-        minWidth: 0,
-        ...sx,
-      }}
+      style={{ display: "flex", flexDirection: "row", flexWrap: "nowrap", alignItems: "flex-start" }}
+      sx={{ gap: 1.5, mb: 2, minWidth: 0, ...sx }}
     >
-      {/* Left section: back/icon button + title + subtitle */}
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 1.5,
-          minWidth: 0,
-          flex: 1,
-        }}
-      >
-        {showBackButton && onBack && (
-          <Button
-            startIcon={<ArrowBackIcon />}
-            onClick={onBack}
-            sx={{
-              textTransform: "none",
-              color: "text.primary",
-              "&:hover": {
-                backgroundColor: "action.hover",
-              },
-              flexShrink: 0,
-              fontSize: "inherit",
-              padding: "inherit",
-            }}
-          >
-            {backLabel}
-          </Button>
-        )}
-
-        {icon && !showBackButton && <Box sx={{ flexShrink: 0 }}>{icon}</Box>}
-
-        {/* Title row + subtitle row */}
-        <Box
+      {/* Back button or icon */}
+      {showBackButton && onBack && (
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={onBack}
           sx={{
-            minWidth: 0,
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            alignItems: "flex-start",
-            gap: 0.25,
-            overflow: "hidden",
+            textTransform: "none",
+            color: "text.primary",
+            flexShrink: 0,
+            "&:hover": { backgroundColor: "action.hover" },
           }}
         >
-          <Box
-            component="h2"
+          {backLabel}
+        </Button>
+      )}
+      {icon && !showBackButton && (
+        <Box style={{ flexShrink: 0 }}>{icon}</Box>
+      )}
+
+      {/* Title + subtitle column — grows to fill space */}
+      <Box
+        style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}
+        sx={{ gap: 0.25 }}
+      >
+        <Typography
+          variant={titleVariant}
+          sx={{
+            fontWeight: 600,
+            fontSize: { xs: "1.125rem", sm: "1.5rem" },
+            lineHeight: 1.2,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            ...titleSx,
+          }}
+        >
+          {title}
+        </Typography>
+
+        {subtitle && (
+          <Typography
+            variant="body2"
+            color="text.secondary"
             sx={{
-              margin: 0,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 0.5,
-              minWidth: 0,
-              width: "fit-content",
-              maxWidth: "100%",
-              flexWrap: "nowrap",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
+              fontSize: "0.875rem",
+              lineHeight: 1.4,
+              wordBreak: "break-word",
+              ...subtitleSx,
             }}
           >
-            <Typography
-              variant={titleVariant}
-              component="span"
-              noWrap
-              sx={{
-                margin: 0,
-                display: "block",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                fontSize: "1.25rem",
-                minWidth: 0,
-                maxWidth: "100%",
-                flex: "0 1 auto",
-                lineHeight: 1.2,
-                ...titleSx,
-              }}
-            >
-              {title}
-            </Typography>
-          </Box>
-
-          {subtitle && (
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                flexWrap: "nowrap",
-                minWidth: 0,
-                width: "auto",
-                maxWidth: "100%",
-                overflow: "hidden",
-                whiteSpace: "nowrap",
-              }}
-            >
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                noWrap
+            {subtitle}
+            {onHelp && (
+              <Box
+                component="span"
+                role="button"
+                tabIndex={0}
+                aria-label="help"
+                onClick={onHelp}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onHelp();
+                  }
+                }}
                 sx={{
-                  display: "inline-block",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  fontSize: "0.875rem",
-                  minWidth: 0,
-                  maxWidth: "100%",
-                  flex: "0 1 auto",
-                  lineHeight: 1.2,
-                  ...subtitleSx,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 16,
+                  height: 16,
+                  border: "1px solid",
+                  borderColor: "text.secondary",
+                  borderRadius: "50%",
+                  ml: 0.5,
+                  fontSize: "0.65rem",
+                  lineHeight: 1,
+                  color: "text.secondary",
+                  cursor: "pointer",
+                  userSelect: "none",
+                  verticalAlign: "text-bottom",
                 }}
               >
-                {subtitle}
-                {onHelp && (
-                  <Box
-                    component="span"
-                    role="button"
-                    tabIndex={0}
-                    aria-label="help"
-                    onClick={onHelp}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        onHelp();
-                      }
-                    }}
-                    sx={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: 16,
-                      height: 16,
-                      border: "1px solid",
-                      borderColor: "text.secondary",
-                      borderRadius: "50%",
-                      ml: 0.5,
-                      fontSize: "0.65rem",
-                      lineHeight: 1,
-                      color: "text.secondary",
-                      cursor: "pointer",
-                      userSelect: "none",
-                      verticalAlign: "text-bottom",
-                    }}
-                  >
-                    ?
-                  </Box>
-                )}
-              </Typography>
-            </Box>
-          )}
-        </Box>
+                ?
+              </Box>
+            )}
+          </Typography>
+        )}
       </Box>
 
       {/* Right section: action buttons */}
       {actions && (
-        <Box
-          sx={{
-            display: "flex",
-            gap: 1,
-            flexShrink: 0,
-            flexWrap: "wrap",
-            justifyContent: "flex-end",
-          }}
-        >
+        <Box style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end" }} sx={{ gap: 1 }}>
           {actions}
         </Box>
       )}

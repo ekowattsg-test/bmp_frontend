@@ -121,9 +121,6 @@ const normalizeRow = (item) => {
     return v !== "" ? toNumber(v) : quantity * holdModifier;
   })();
 
-  const baselinedQuantity = toNumber(
-    readFirst(item, ["baselinedQuantity", "baselineQuantity", "baseQty"]),
-  );
   const quantityMoved = toNumber(
     readFirst(item, [
       "quantityMoved",
@@ -145,7 +142,7 @@ const normalizeRow = (item) => {
   // Use backend-computed values; fall back to formulas described by backend
   const currentQuantity = (() => {
     const v = readFirst(item, ["currentQuantity", "currentQty"]);
-    return v !== "" ? toNumber(v) : baselinedQuantity + quantityMoved;
+    return v !== "" ? toNumber(v) : quantityMoved;
   })();
   const currentAvailableQuantity = (() => {
     const v = readFirst(item, [
@@ -155,7 +152,7 @@ const normalizeRow = (item) => {
     ]);
     return v !== ""
       ? toNumber(v)
-      : baselinedQuantity + quantityMoved + quantityHolded;
+      : quantityMoved + quantityHolded;
   })();
 
   return {
@@ -204,7 +201,6 @@ const normalizeRow = (item) => {
     quantity,
     stockMoved,
     holdMoved,
-    baselinedQuantity,
     quantityMoved,
     quantityHolded,
     currentQuantity,
@@ -400,7 +396,6 @@ const StockEnquiry = () => {
           stockId: row.stockId,
           stockCode: row.stockCode,
           stockLocation: row.stockLocation,
-          baselineQuantity: row.baselinedQuantity,
           stockMovedSum: 0,
           holdMovedSum: 0,
           lastMovementAtTs: row.movementAtTs,
@@ -417,7 +412,6 @@ const StockEnquiry = () => {
       if (row.movementAtTs >= stockGroup.lastMovementAtTs) {
         stockGroup.lastMovementAtTs = row.movementAtTs;
         stockGroup.lastMovementAt = row.movementAt;
-        stockGroup.baselineQuantity = row.baselinedQuantity;
         stockGroup.stockLocation = row.stockLocation;
       }
     });
@@ -447,19 +441,16 @@ const StockEnquiry = () => {
         },
       );
 
-      let productBaselineQuantity = 0;
       let productCurrentQuantity = 0;
       let productAvailableQuantity = 0;
 
       const stockAndMovementRows = [];
 
       sortedStocks.forEach((stockGroup) => {
-        const stockCurrentQuantity =
-          stockGroup.baselineQuantity + stockGroup.stockMovedSum;
+        const stockCurrentQuantity = stockGroup.stockMovedSum;
         const stockAvailableQuantity =
           stockCurrentQuantity + stockGroup.holdMovedSum;
 
-        productBaselineQuantity += stockGroup.baselineQuantity;
         productCurrentQuantity += stockCurrentQuantity;
         productAvailableQuantity += stockAvailableQuantity;
 
@@ -471,7 +462,6 @@ const StockEnquiry = () => {
           stockCode: stockGroup.stockCode,
           stockLocation: "",
           movementType: t("stockEnquiry.rowLabels.stockTotal"),
-          baselinedQuantity: "",
           quantityMoved: stockGroup.stockMovedSum,
           quantityHolded: stockGroup.holdMovedSum,
           currentQuantity: stockCurrentQuantity,
@@ -493,7 +483,6 @@ const StockEnquiry = () => {
             stockLocation: movementRow.stockLocation,
             movementType:
               movementRow.movementDescription || movementRow.movementType,
-            baselinedQuantity: "",
             quantityMoved: movementRow.stockMoved,
             quantityHolded: movementRow.holdMoved,
             currentQuantity: "",
@@ -510,7 +499,6 @@ const StockEnquiry = () => {
         stockCode: "",
         stockLocation: "",
         movementType: t("stockEnquiry.rowLabels.productTotal"),
-        baselinedQuantity: productBaselineQuantity,
         quantityMoved: "",
         quantityHolded: "",
         currentQuantity: productCurrentQuantity,
@@ -548,7 +536,6 @@ const StockEnquiry = () => {
           stockId: row.stockId,
           stockCode: row.stockCode,
           stockLocation: row.stockLocation,
-          baselineQuantity: row.baselinedQuantity,
           stockMovedSum: 0,
           holdMovedSum: 0,
           movementCount: 0,
@@ -565,7 +552,6 @@ const StockEnquiry = () => {
       if (row.movementAtTs >= stockGroup.lastMovementAtTs) {
         stockGroup.lastMovementAtTs = row.movementAtTs;
         stockGroup.lastMovementAt = row.movementAt;
-        stockGroup.baselineQuantity = row.baselinedQuantity;
         stockGroup.stockLocation = row.stockLocation;
       }
     });
@@ -595,7 +581,6 @@ const StockEnquiry = () => {
         },
       );
 
-      let productBaselineQuantity = 0;
       let productCurrentQuantity = 0;
       let productAvailableQuantity = 0;
       let productMovementCount = 0;
@@ -605,12 +590,10 @@ const StockEnquiry = () => {
       const stockRows = [];
 
       sortedStocks.forEach((stockGroup) => {
-        const stockCurrentQuantity =
-          stockGroup.baselineQuantity + stockGroup.stockMovedSum;
+        const stockCurrentQuantity = stockGroup.stockMovedSum;
         const stockAvailableQuantity =
           stockCurrentQuantity + stockGroup.holdMovedSum;
 
-        productBaselineQuantity += stockGroup.baselineQuantity;
         productCurrentQuantity += stockCurrentQuantity;
         productAvailableQuantity += stockAvailableQuantity;
         productMovementCount += stockGroup.movementCount;
@@ -626,7 +609,6 @@ const StockEnquiry = () => {
           productName: "",
           stockCode: stockGroup.stockCode,
           stockLocation: stockGroup.stockLocation,
-          baselinedQuantity: stockGroup.baselineQuantity,
           quantityMoved: stockGroup.stockMovedSum,
           quantityHolded: stockGroup.holdMovedSum,
           currentQuantity: stockCurrentQuantity,
@@ -644,7 +626,6 @@ const StockEnquiry = () => {
         productName: productGroup.productName,
         stockCode: "",
         stockLocation: "",
-        baselinedQuantity: productBaselineQuantity,
         quantityMoved: "",
         quantityHolded: "",
         currentQuantity: productCurrentQuantity,
@@ -695,13 +676,6 @@ const StockEnquiry = () => {
         flex: 1,
       },
       {
-        field: "baselinedQuantity",
-        headerName: t("stockEnquiry.columns.baselinedQuantity"),
-        width: 100,
-        headerAlign: "right",
-        align: "right",
-      },
-      {
         field: "quantityMoved",
         headerName: t("stockEnquiry.columns.quantityMoved"),
         width: 90,
@@ -745,13 +719,6 @@ const StockEnquiry = () => {
         field: "stockCode",
         headerName: t("stockEnquiry.columns.stockCode"),
         width: 140,
-      },
-      {
-        field: "baselinedQuantity",
-        headerName: t("stockEnquiry.columns.baselinedQuantity"),
-        width: 140,
-        headerAlign: "right",
-        align: "right",
       },
       {
         field: "quantityMoved",

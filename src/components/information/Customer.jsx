@@ -65,11 +65,6 @@ const Customer = () => {
               title={t("customerList.title")}
               subtitle={t("customerList.subtitle", "Manage customers")}
               onHelp={() => setHelpOpen(true)}
-              titleVariant="h5"
-              titleSx={{
-                fontSize: { xs: "1.1rem", sm: "1.5rem" },
-                fontWeight: 600,
-              }}
               actions={
                 <>
                   <TextField

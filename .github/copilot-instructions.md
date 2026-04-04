@@ -84,6 +84,40 @@ Standard spacing scale (use for margins, padding):
 
 ---
 
+## Page Header Rules
+
+### Use `HeaderBar` or `PageHeader` — never raw Typography for page titles
+
+- **List / Modern pages** → use `PageHeader` (wraps `HeaderBar`, adds icon support and `mb: 3`)
+- **Add / Edit form pages** → use `HeaderBar` directly
+
+### ❌ Never pass redundant style overrides
+
+`HeaderBar` already defaults to: `titleVariant="h5"`, `fontSize: { xs: "1.125rem", sm: "1.5rem" }`, `fontWeight: 600`
+
+```jsx
+// ❌ Wrong — these are already the defaults, don't repeat them
+<HeaderBar
+  title={t("foo.title")}
+  titleVariant="h5"
+  titleSx={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 600 }}
+/>
+
+// ✅ Correct — only pass what differs from defaults
+<HeaderBar
+  title={t("foo.title")}
+  subtitle={t("foo.subtitle")}
+  onHelp={() => setHelpOpen(true)}
+  actions={<Button>...</Button>}
+  sx={{ mb: 1 }}
+/>
+```
+
+### Allowed `HeaderBar` props
+`title`, `subtitle`, `onHelp`, `actions`, `sx`, `showBackButton`, `onBack`, `backLabel`, `icon`
+
+---
+
 ## Component Architecture
 
 ### 1. **Folder Structure Standards**

@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
-import { TextField, Button, Box, IconButton, Typography } from "@mui/material";
+import { TextField, Button, Box, IconButton, Typography, InputAdornment } from "@mui/material";
 import { Add as AddIcon, Delete as DeleteIcon } from "@mui/icons-material";
 import { HeaderBar } from "../common";
 import SelectionDialog from "../common/SelectionDialog";
@@ -167,8 +167,6 @@ const ProductBundleAdd = ({ onCancel }) => {
     >
       <HeaderBar
         title={t("productBundle.add")}
-        titleVariant="h5"
-        titleSx={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 600 }}
         sx={{ mb: 1 }}
       />
 
@@ -199,7 +197,8 @@ const ProductBundleAdd = ({ onCancel }) => {
           <Box
             key={m.productId}
             sx={{
-              display: "flex",
+              display: "grid",
+              gridTemplateColumns: "1fr 110px 34px",
               alignItems: "center",
               gap: 1,
               mb: 0.5,
@@ -212,7 +211,6 @@ const ProductBundleAdd = ({ onCancel }) => {
             <Typography
               variant="body2"
               sx={{
-                flex: 1,
                 minWidth: 0,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -233,10 +231,12 @@ const ProductBundleAdd = ({ onCancel }) => {
               onChange={(e) => handleQtyChange(m.productId, e.target.value)}
               onBlur={() => handleQtyBlur(m.productId)}
               inputProps={{ min: 1 }}
-              sx={{ width: 90 }}
+              InputProps={m.uom ? { endAdornment: <InputAdornment position="end">{m.uom}</InputAdornment> } : {}}
+              sx={{ width: "100%" }}
             />
             <IconButton
               size="small"
+              sx={{ flexShrink: 0 }}
               onClick={() => handleRemoveMember(m.productId)}
             >
               <DeleteIcon fontSize="small" />

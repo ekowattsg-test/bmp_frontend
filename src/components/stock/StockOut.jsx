@@ -119,7 +119,6 @@ const normalizeStock = (item, fallbackCode) => {
         "currentQuantity",
         "quantity",
         "currentQty",
-        "baselinedQuantity",
       ]),
     ),
     availableQuantity: toNumber(
@@ -291,13 +290,6 @@ const StockOut = () => {
             stockId,
             location,
             movementAtTs,
-            baselinedQuantity: toNumber(
-              readFirst(row, [
-                "baselinedQuantity",
-                "baselineQuantity",
-                "baseQty",
-              ]),
-            ),
             stockMoved,
             holdMoved,
           };
@@ -312,7 +304,6 @@ const StockOut = () => {
             key,
             stockId: row.stockId,
             location: row.location,
-            baselineQuantity: row.baselinedQuantity,
             stockMovedSum: 0,
             holdMovedSum: 0,
             lastMovementAtTs: row.movementAtTs,
@@ -325,13 +316,12 @@ const StockOut = () => {
 
         if (row.movementAtTs >= group.lastMovementAtTs) {
           group.lastMovementAtTs = row.movementAtTs;
-          group.baselineQuantity = row.baselinedQuantity;
         }
       });
 
       locationRows = Array.from(groupedByLocation.values()).map((group) => {
         const baseStock = baseByStockId.get(group.stockId) || normalized[0];
-        const currentQuantity = group.baselineQuantity + group.stockMovedSum;
+        const currentQuantity = group.stockMovedSum;
         const availableQuantity = currentQuantity + group.holdMovedSum;
 
         return {

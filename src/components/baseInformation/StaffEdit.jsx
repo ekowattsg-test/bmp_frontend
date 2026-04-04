@@ -291,8 +291,6 @@ const StaffEdit = ({ staff, onCancel }) => {
     >
       <HeaderBar
         title={t("staffList.editTitle", "Edit Staff")}
-        titleVariant="h5"
-        titleSx={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 600 }}
         sx={{ mb: 1 }}
       />
       <TextField
