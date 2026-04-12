@@ -1,13 +1,13 @@
 /**
- * File Helper - n8n-mediated file storage operations
- * All uploads/deletes/lists/downloads are routed through n8n webhooks.
+ * File Helper - AI assistant mediated file storage operations
+ * All uploads/deletes/lists/downloads are routed through AI assistant webhooks.
  * The browser never directly touches Google Drive or OneDrive APIs.
  *
  * Webhook convention (configured via VITE_N8N_IMAGE_URL + VITE_STORAGE_PROVIDER):
  *   Base URL is called directly (no extra path segments appended by frontend).
  *   Action/provider are sent in request payload for API operations.
  *   sessionNumber is managed internally by this helper and sent on every
- *   n8n action request.
+ *   AI assistant action request.
  *
  * FileMetadata shape:
  *   { id, name, mimeType, uploadedAt, url, viewUrl, provider }
@@ -36,7 +36,7 @@ const SUPPORTED_IMAGE_EXTENSIONS = [
   ".heif",
 ];
 
-// ─── n8n config ────────────────────────────────────────────────────────────
+// ─── AI assistant config ───────────────────────────────────────────────────
 
 const getN8nBaseUrl = () =>
   (import.meta.env.VITE_N8N_IMAGE_URL || "").replace(/\/$/, "");
@@ -296,7 +296,7 @@ export const getActiveStorageProviderConfig = () => {
 // ─── OAuth stubs (kept for API compatibility – callers need not change) ─────
 
 /**
- * @deprecated No-op stub. Auth is now handled server-side by n8n.
+ * @deprecated No-op stub. Auth is now handled server-side by AI assistant.
  */
 export const createGoogleOAuthState = (_flowKey = "default") => "";
 
@@ -313,7 +313,7 @@ export const verifyGoogleOAuthState = (_receivedState, _flowKey = "default") =>
 
 /**
  * @deprecated No-op stub. Resolves immediately with null.
- * Token is no longer needed; n8n handles auth server-side.
+ * Token is no longer needed; AI assistant handles auth server-side.
  */
 export const requestGoogleAccessTokenWithState = (_params) =>
   Promise.resolve(null);
@@ -342,16 +342,16 @@ export const initStorageTokenClient = async (_params = {}) => ({
 
 // ─── URL helpers ────────────────────────────────────────────────────────────
 
-// ─── Core n8n file operations ───────────────────────────────────────────────
+// ─── Core AI assistant file operations ─────────────────────────────────────
 
 /**
- * Upload a file via n8n webhook.
+ * Upload a file via AI assistant webhook.
  * Signature intentionally keeps (file, accessToken, folderId) so existing
  * callers need no changes – accessToken is ignored (auth is in the header).
  * @param {File} file
  * @param {string|null} _accessToken - ignored
- * @param {string|null} folderId - forwarded to n8n as a form field
- * @returns {Promise<object>} canonical file metadata returned by n8n
+ * @param {string|null} folderId - forwarded to AI assistant as a form field
+ * @returns {Promise<object>} canonical file metadata returned by AI assistant
  */
 export const uploadFileToDrive = async (
   file,
@@ -392,11 +392,11 @@ export const uploadFileToDrive = async (
 };
 
 /**
- * Fetch an image from a URL and upload it to Google Drive via n8n.
+ * Fetch an image from a URL and upload it to Google Drive via AI assistant.
  * @param {string} imageUrl - Publicly accessible image URL to fetch
  * @param {string|null} fileName - Optional filename hint; derived from URL if omitted
  * @param {string|null} folderId - Optional Drive folder ID to upload into
- * @returns {Promise<object>} canonical file metadata returned by n8n
+ * @returns {Promise<object>} canonical file metadata returned by AI assistant
  */
 export const uploadImageFromUrl = async (
   imageUrl,
@@ -433,7 +433,7 @@ export const uploadImageFromUrl = async (
 };
 
 /**
- * Delete a file via n8n webhook.
+ * Delete a file via AI assistant webhook.
  * Signature keeps (fileId, accessToken, provider) – accessToken is ignored.
  * @param {string} fileId
  * @param {string|null} _accessToken - ignored
@@ -462,7 +462,7 @@ export const deleteFileFromDrive = async (
 };
 
 /**
- * List files in a folder via n8n webhook.
+ * List files in a folder via AI assistant webhook.
  * @param {string|null} folderId
  * @returns {Promise<Array>} array of FileMetadata objects
  */
@@ -489,7 +489,7 @@ export const listFilesFromStorage = async (folderId = null) => {
 };
 
 /**
- * Download a file via n8n webhook; returns the Response so callers can
+ * Download a file via AI assistant webhook; returns the Response so callers can
  * stream or blob() as needed.
  * @param {string} fileId
  * @returns {Promise<Response>}

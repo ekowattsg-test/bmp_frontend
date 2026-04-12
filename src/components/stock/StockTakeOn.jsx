@@ -142,15 +142,14 @@ const normalizeStock = (item, fallbackCode) => {
     ),
     location,
     productId: product.productId,
+    productCode: String(
+      readFirst(item, ["productCode", "product_code", "code"]),
+    ),
     productName: product.productName,
     productPicture: product.productPicture,
     uom: product.uom,
     currentQuantity: toNumber(
-      readFirst(item, [
-        "currentQuantity",
-        "quantity",
-        "currentQty",
-      ]),
+      readFirst(item, ["currentQuantity", "quantity", "currentQty"]),
     ),
     availableQuantity: toNumber(
       readFirst(item, [
@@ -190,6 +189,149 @@ const enrichRowsWithProduct = (rows, productData) => {
   }));
 };
 
+const buildLinkedFallbackRow = (codeToUse, product, linkedStock) => {
+  const productInfo = getProductDetails(product || {});
+  const stockId = String(linkedStock?.stockId || "");
+  const location = String(linkedStock?.location || "central");
+
+  return {
+    key: `${stockId || ""}|${location}`,
+    stockId,
+    stockCode: String(codeToUse || ""),
+    location,
+    productId: productInfo.productId,
+    productName: productInfo.productName,
+    productPicture: productInfo.productPicture,
+    uom: productInfo.uom,
+    currentQuantity: 0,
+    availableQuantity: 0,
+  };
+};
+
+const getMovementTotals = (row) => {
+  const quantity = toNumber(
+    readFirst(row, ["qty", "quantity", "movementQty", "stockQty", "changeQty"]),
+  );
+  const stockModifier = toNumber(
+    readFirst(row, [
+      "stockModifier",
+      "movementModifier",
+      "stockMovementModifier",
+      "movementStockModifier",
+    ]),
+  );
+  const holdModifier = toNumber(
+    readFirst(row, [
+      "holdModifier",
+      "movementHoldModifier",
+      "holdMovementModifier",
+    ]),
+  );
+  const explicitStockMoved = readFirst(row, [
+    "stockMoved",
+    "movedStock",
+    "stockMove",
+  ]);
+  const explicitHoldMoved = readFirst(row, [
+    "holdMoved",
+    "movedHold",
+    "holdMove",
+  ]);
+
+  return {
+    stockMoved:
+      explicitStockMoved !== ""
+        ? toNumber(explicitStockMoved)
+        : quantity * stockModifier,
+    holdMoved:
+      explicitHoldMoved !== ""
+        ? toNumber(explicitHoldMoved)
+        : quantity * holdModifier,
+  };
+};
+
+const sameProduct = (row, product) => {
+  const rowProduct = getProductDetails(row);
+  const rowProductCode = String(
+    readFirst(row, ["productCode", "product_code", "code"]),
+  )
+    .trim()
+    .toLowerCase();
+  const productId = String(product?.productId || "").trim();
+  const productName = String(product?.productName || "")
+    .trim()
+    .toLowerCase();
+  const productCode = String(product?.productCode || "")
+    .trim()
+    .toLowerCase();
+
+  if (productId && String(rowProduct.productId || "").trim() === productId) {
+    return true;
+  }
+  if (productCode && rowProductCode && rowProductCode === productCode) {
+    return true;
+  }
+  if (
+    productName &&
+    String(rowProduct.productName || "")
+      .trim()
+      .toLowerCase() === productName
+  ) {
+    return true;
+  }
+  return false;
+};
+
+const mergeRowsWithProductTotals = (rows, codeToUse, product, totals) => {
+  if (!Array.isArray(rows) || rows.length === 0) return rows;
+  if (!Array.isArray(totals?.locations) || totals.locations.length === 0)
+    return rows;
+
+  const productInfo = getProductDetails(product || rows[0] || {});
+  const fallbackStockId = String(rows[0]?.stockId || "");
+  const mergedByLocation = new Map(
+    rows.map((row) => [String(row.location || "central").toLowerCase(), row]),
+  );
+
+  totals.locations.forEach((locationRow) => {
+    const location = String(locationRow.location || "central");
+    const locationKey = location.toLowerCase();
+    const existing = mergedByLocation.get(locationKey);
+
+    if (existing) {
+      mergedByLocation.set(locationKey, {
+        ...existing,
+        currentQuantity: toNumber(locationRow.currentQuantity),
+        availableQuantity: toNumber(locationRow.availableQuantity),
+        productId: existing.productId || productInfo.productId,
+        productCode: existing.productCode || product?.productCode || "",
+        productName: existing.productName || productInfo.productName,
+        productPicture: existing.productPicture || productInfo.productPicture,
+        uom: existing.uom || productInfo.uom,
+      });
+      return;
+    }
+
+    mergedByLocation.set(locationKey, {
+      key: `${fallbackStockId}|${location}`,
+      stockId: fallbackStockId,
+      stockCode: String(codeToUse || rows[0]?.stockCode || ""),
+      location,
+      productId: productInfo.productId,
+      productCode: product?.productCode || "",
+      productName: productInfo.productName,
+      productPicture: productInfo.productPicture,
+      uom: productInfo.uom,
+      currentQuantity: toNumber(locationRow.currentQuantity),
+      availableQuantity: toNumber(locationRow.availableQuantity),
+    });
+  });
+
+  return Array.from(mergedByLocation.values()).sort((a, b) =>
+    String(a.location || "").localeCompare(String(b.location || "")),
+  );
+};
+
 const toObjectArray = (value) => {
   if (Array.isArray(value)) return value;
   if (value && typeof value === "object") return [value];
@@ -211,12 +353,13 @@ const sanitizeWebhookUrl = (rawUrl) => {
   }
 };
 
-const getN8nBaseWebhookUrl = () =>
+const getAiAssistantBaseWebhookUrl = () =>
   sanitizeWebhookUrl(import.meta.env.VITE_N8N_STOCK_MATCH_URL || "");
 
-const getN8nSecret = () => String(import.meta.env.VITE_N8N_SECRET || "").trim();
+const getAiAssistantSecret = () =>
+  String(import.meta.env.VITE_N8N_SECRET || "").trim();
 
-const getN8nHeaderName = () =>
+const getAiAssistantHeaderName = () =>
   String(import.meta.env.VITE_N8N_HEADER_NAME || "X-N8N-Token").trim();
 
 const parseResponsePayload = async (response) => {
@@ -229,8 +372,11 @@ const parseResponsePayload = async (response) => {
   }
 };
 
-const fetchAndUploadN8nProductImage = async (codeToUse, sessionId = null) => {
-  const webhookUrl = getN8nBaseWebhookUrl();
+const fetchAndUploadAiAssistantProductImage = async (
+  codeToUse,
+  sessionId = null,
+) => {
+  const webhookUrl = getAiAssistantBaseWebhookUrl();
   if (!webhookUrl) return null;
 
   const form = new FormData();
@@ -238,8 +384,8 @@ const fetchAndUploadN8nProductImage = async (codeToUse, sessionId = null) => {
   form.append("stock", String(codeToUse || ""));
   if (sessionId) form.append("sessionId", String(sessionId));
 
-  const secret = getN8nSecret();
-  const headers = secret ? { [getN8nHeaderName()]: secret } : {};
+  const secret = getAiAssistantSecret();
+  const headers = secret ? { [getAiAssistantHeaderName()]: secret } : {};
 
   let response;
   try {
@@ -250,7 +396,7 @@ const fetchAndUploadN8nProductImage = async (codeToUse, sessionId = null) => {
 
   if (!response.ok) return null;
 
-  // n8n returns the image directly as binary - upload the blob to Drive
+  // AI assistant returns the image directly as binary - upload the blob to Drive
   try {
     const blob = await response.blob();
     if (!blob || blob.size === 0) return null;
@@ -267,10 +413,61 @@ const fetchAndUploadN8nProductImage = async (codeToUse, sessionId = null) => {
   return null;
 };
 
-const postN8nStockAction = async (action, stockCode, sessionId = null) => {
-  const webhookUrl = getN8nBaseWebhookUrl();
+const fetchAndUploadAiAssistantProductImageByDetails = async (
+  stockCode,
+  productName,
+  productDescription,
+  sessionId = null,
+) => {
+  const webhookUrl = getAiAssistantBaseWebhookUrl();
+  const scannedStockCode = String(stockCode || "").trim();
+  const name = String(productName || "").trim();
+  const description = String(productDescription || "").trim();
+  if (!webhookUrl || !name) return null;
+
+  const form = new FormData();
+  form.append("action", "getImage");
+  form.append("stock", scannedStockCode);
+  form.append("name", name);
+  form.append("description", description);
+  if (sessionId) form.append("sessionId", String(sessionId));
+
+  const secret = getAiAssistantSecret();
+  const headers = secret ? { [getAiAssistantHeaderName()]: secret } : {};
+
+  let response;
+  try {
+    response = await fetch(webhookUrl, { method: "POST", headers, body: form });
+  } catch {
+    return null;
+  }
+
+  if (!response.ok) return null;
+
+  try {
+    const blob = await response.blob();
+    if (!blob || blob.size === 0) return null;
+    const contentType = blob.type || "image/jpeg";
+    const ext = contentType.split("/")[1]?.split("+")[0] || "jpg";
+    const fileName = `product_${name.replace(/\s+/g, "_") || "image"}.${ext}`;
+    const file = new File([blob], fileName, { type: contentType });
+    const uploaded = await uploadFileToDrive(file, null, null);
+    return normalizeFileMetadata(uploaded);
+  } catch {
+    // upload failed - return null
+  }
+
+  return null;
+};
+
+const postAiAssistantStockAction = async (
+  action,
+  stockCode,
+  sessionId = null,
+) => {
+  const webhookUrl = getAiAssistantBaseWebhookUrl();
   if (!webhookUrl) {
-    throw new Error("N8N stock match webhook URL is not configured.");
+    throw new Error("AI assistant stock match webhook URL is not configured.");
   }
 
   const form = new FormData();
@@ -278,8 +475,8 @@ const postN8nStockAction = async (action, stockCode, sessionId = null) => {
   form.append("stock", String(stockCode || ""));
   if (sessionId) form.append("sessionId", String(sessionId));
 
-  const secret = getN8nSecret();
-  const headers = secret ? { [getN8nHeaderName()]: secret } : {};
+  const secret = getAiAssistantSecret();
+  const headers = secret ? { [getAiAssistantHeaderName()]: secret } : {};
 
   const response = await fetch(webhookUrl, {
     method: "POST",
@@ -292,13 +489,13 @@ const postN8nStockAction = async (action, stockCode, sessionId = null) => {
     const message =
       (payload && typeof payload === "object" && payload.message) ||
       (typeof payload === "string" ? payload : "");
-    throw new Error(message || "Failed to contact n8n");
+    throw new Error(message || "Failed to contact AI assistant");
   }
 
   return payload;
 };
 
-// ── Standardised n8n response parsers ─────────────────────────────────
+// ── Standardised AI assistant response parsers ─────────────────────────
 // match response: { internetMatch:[{name,description}], databaseMatch:[{productId,productName}], databaseSuggest:[{productId,productName}] }
 // suggest response: { productSuggest:{name,description} }
 // image response: binary blob
@@ -512,6 +709,8 @@ const StockTakeOnNew = () => {
   const [selectedCandidateKey, setSelectedCandidateKey] = useState("");
   const [createProductOpen, setCreateProductOpen] = useState(false);
   const [createProductBusy, setCreateProductBusy] = useState(false);
+  const [showAiSearchButton, setShowAiSearchButton] = useState(false);
+  const [showAiImageButton, setShowAiImageButton] = useState(false);
   const [createProductForm, setCreateProductForm] = useState({
     productCode: "",
     productName: "",
@@ -545,6 +744,8 @@ const StockTakeOnNew = () => {
     setStockInQty(1);
     setMatchDialogOpen(false);
     setCreateProductOpen(false);
+    setShowAiSearchButton(false);
+    setShowAiImageButton(false);
     setProductFiles([]);
     setProductImageFetching(false);
     setNewLocation("");
@@ -555,11 +756,67 @@ const StockTakeOnNew = () => {
     setStockInQty(1);
     setNewLocation("");
     try {
-      const refreshed = await loadStocksForCode(codeToUse);
+      let refreshed = await loadStocksForCode(codeToUse);
+      const productContext = refreshed[0] || stocks[0] || null;
+      if (productContext) {
+        const totals = await loadProductTotalsForProduct(productContext);
+        refreshed = mergeRowsWithProductTotals(
+          refreshed,
+          codeToUse,
+          productContext,
+          totals,
+        );
+      }
       setStocks(refreshed);
     } catch {
       // silent — table keeps old rows
     }
+  };
+
+  const loadProductTotalsForProduct = async (product) => {
+    if (!product || !product.productId) return { locations: [] };
+
+    const response = await request(
+      "GET",
+      `/api/stockviews/product/${encodeURIComponent(product.productId)}`,
+    );
+    const matchedRows = toArray(response?.data);
+
+    if (matchedRows.length === 0) {
+      return { locations: [] };
+    }
+
+    const byLocation = new Map();
+    matchedRows.forEach((row) => {
+      const location = String(
+        readFirst(row, [
+          "location",
+          "stockLocation",
+          "warehouse",
+          "bin",
+          "stockBin",
+        ]) || "central",
+      );
+      const movement = getMovementTotals(row);
+      const existing = byLocation.get(location) || {
+        currentQuantity: 0,
+        availableQuantity: 0,
+      };
+
+      byLocation.set(location, {
+        currentQuantity: existing.currentQuantity + movement.stockMoved,
+        availableQuantity:
+          existing.availableQuantity + movement.stockMoved + movement.holdMoved,
+      });
+    });
+
+    return {
+      locations: Array.from(byLocation.entries()).map(([location, value]) => ({
+        location,
+        currentQuantity: value.currentQuantity,
+        availableQuantity: value.availableQuantity,
+      })),
+    };
   };
 
   const loadStocksForCode = async (codeToUse) => {
@@ -881,49 +1138,18 @@ const StockTakeOnNew = () => {
     return Array.from(grouped.values())
       .map((candidate) => ({
         ...candidate,
-        n8nMatched: isMatchedByHints(candidate, hints),
+        aiAssistantMatched: isMatchedByHints(candidate, hints),
         matchScore: getMatchScore(candidate, hints, codeToUse),
       }))
       .sort((a, b) => {
-        if (a.n8nMatched !== b.n8nMatched) {
-          return a.n8nMatched ? -1 : 1;
+        if (a.aiAssistantMatched !== b.aiAssistantMatched) {
+          return a.aiAssistantMatched ? -1 : 1;
         }
         if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
         return String(a.productName || "").localeCompare(
           String(b.productName || ""),
         );
       });
-  };
-
-  const ensureStockForProduct = async (codeToUse, product) => {
-    if (!product?.productId) {
-      throw new Error(t("stockTakeOn.productSelectionRequired"));
-    }
-
-    try {
-      const stockRes = await request("POST", "/api/stocks", {
-        productId: Number(product.productId),
-        stockCode: codeToUse,
-        createDate: new Date().toISOString(),
-      });
-
-      return String(readFirst(stockRes?.data || {}, ["stockId", "id"]) || "");
-    } catch {
-      // If stock already exists for this scanned code, fall back to search and reuse it.
-      const existingRes = await request(
-        "GET",
-        `/api/stockviews/stock/code/${encodeURIComponent(codeToUse)}`,
-      );
-
-      const existingRows = toArray(existingRes?.data);
-      const sameProductRow = existingRows.find(
-        (item) =>
-          String(readFirst(item, ["productId", "product_id"]) || "") ===
-          String(product.productId),
-      );
-      const fallbackRow = sameProductRow || existingRows[0];
-      return String(readFirst(fallbackRow || {}, ["stockId", "id"]) || "");
-    }
   };
 
   const continueWithSelectedProduct = async (codeToUse, product) => {
@@ -933,12 +1159,25 @@ const StockTakeOnNew = () => {
     setSuccessMsg("");
 
     try {
-      await ensureStockForProduct(codeToUse, product);
-
-      const finalRows = await loadStocksForCode(codeToUse);
+      let finalRows = await loadStocksForCode(codeToUse);
       if (finalRows.length === 0) {
-        throw new Error(t("stockTakeOn.notFoundAfterCreate"));
+        const fallbackRow = buildLinkedFallbackRow(codeToUse, product, {
+          stockId: "",
+          location: "central",
+        });
+        if (!fallbackRow) {
+          throw new Error(t("stockTakeOn.notFoundAfterCreate"));
+        }
+        finalRows = [fallbackRow];
       }
+
+      const totals = await loadProductTotalsForProduct(product || finalRows[0]);
+      finalRows = mergeRowsWithProductTotals(
+        finalRows,
+        codeToUse,
+        product,
+        totals,
+      );
 
       setStocks(finalRows);
       setSelectedStockKey(finalRows[0].key);
@@ -953,18 +1192,48 @@ const StockTakeOnNew = () => {
   };
 
   const openMatchDialogForStock = async (codeToUse) => {
+    const normalizedCode = String(codeToUse || "").trim();
     matchSessionIdRef.current = crypto.randomUUID();
+    setStockCode(normalizedCode);
     setMatchDialogOpen(true);
     setCreateProductOpen(false);
     setMatchLoading(true);
     setMatchError("");
+    setMatchHints([]);
     setProductCandidates([]);
     setSelectedCandidateKey("");
     setCandidateSearch("");
     setCandidateCategory("ALL");
+    setShowAiSearchButton(true);
 
     try {
-      const matchPayload = await postN8nStockAction(
+      const candidates = await loadProductCandidatesForMissingStock(
+        normalizedCode,
+        [],
+      );
+      setProductCandidates(candidates);
+
+      if (candidates.length > 0) {
+        setSelectedCandidateKey(candidates[0].key);
+      }
+    } catch (error) {
+      setMatchError(error?.message || t("stockTakeOn.matchError"));
+    } finally {
+      setMatchLoading(false);
+    }
+  };
+
+  const runMatchActionForCurrentStock = async () => {
+    const codeToUse = String(stockCode || "").trim();
+    if (!codeToUse) return;
+
+    setShowAiSearchButton(false);
+    setMatchLoading(true);
+    setMatchError("");
+    setMatchHints([]);
+
+    try {
+      const matchPayload = await postAiAssistantStockAction(
         "match",
         codeToUse,
         matchSessionIdRef.current,
@@ -978,24 +1247,11 @@ const StockTakeOnNew = () => {
         hints,
       );
       setProductCandidates(candidates);
-
       if (candidates.length > 0) {
         setSelectedCandidateKey(candidates[0].key);
       }
     } catch (error) {
       setMatchError(error?.message || t("stockTakeOn.matchError"));
-      try {
-        const candidates = await loadProductCandidatesForMissingStock(
-          codeToUse,
-          [],
-        );
-        setProductCandidates(candidates);
-        if (candidates.length > 0) {
-          setSelectedCandidateKey(candidates[0].key);
-        }
-      } catch (candidateError) {
-        setMatchError(candidateError?.message || t("stockTakeOn.matchError"));
-      }
     } finally {
       setMatchLoading(false);
     }
@@ -1010,58 +1266,103 @@ const StockTakeOnNew = () => {
     await continueWithSelectedProduct(stockCode, selectedCandidate);
   };
 
+  const toPrefilledProductFiles = (rawProductPicture) => {
+    if (!rawProductPicture) return [];
+
+    let parsed = rawProductPicture;
+    if (typeof parsed === "string") {
+      try {
+        parsed = JSON.parse(parsed);
+      } catch {
+        const rawUrl = parsed.trim();
+        if (!rawUrl) return [];
+        return [
+          normalizeFileMetadata({
+            url: rawUrl,
+            viewUrl: rawUrl,
+            name: "image",
+          }),
+        ];
+      }
+    }
+
+    const items = Array.isArray(parsed)
+      ? parsed
+      : parsed && typeof parsed === "object"
+        ? [parsed]
+        : [];
+
+    return items
+      .map((item) => normalizeFileMetadata(item))
+      .filter((item) => Boolean(item?.url || item?.viewUrl || item?.id));
+  };
+
+  const handleSelectCandidate = (candidate) => {
+    setSelectedCandidateKey(candidate.key);
+  };
+
   const handleNoMatchAndSuggest = async () => {
     setMatchError("");
-    setCreateProductBusy(true);
+    setShowAiImageButton(false);
     setProductFiles([]);
-    try {
-      // Step 1: get suggestion (name required before image request)
-      let suggested = {};
-      let suggestionName = "";
-      let suggestedStockCode = stockCode;
+    setProductImageFetching(false);
+    setCreateProductForm({
+      productCode: buildPrefilledProductCode(stockCode),
+      productName: "",
+      productDescription: "",
+      productCategory: "C",
+      productClass: "General",
+      uom: "",
+    });
+    setCreateProductOpen(true);
+  };
 
-      try {
-        const suggestionPayload = await postN8nStockAction(
-          "suggest",
+  const handleAiHintClick = (hint) => {
+    const name = String(hint?.name || "").trim();
+    const description = String(hint?.description || "").trim();
+
+    setMatchError("");
+    setShowAiImageButton(true);
+    setProductFiles([]);
+    setProductImageFetching(false);
+    setCreateProductForm({
+      productCode: buildPrefilledProductCode(stockCode),
+      productName: name,
+      productDescription: description,
+      productCategory: "C",
+      productClass: "General",
+      uom: "",
+    });
+    setCreateProductOpen(true);
+  };
+
+  const handleGetAiImage = async () => {
+    const name = String(createProductForm.productName || "").trim();
+    const description = String(
+      createProductForm.productDescription || "",
+    ).trim();
+    if (!name) return;
+
+    setProductImageFetching(true);
+    try {
+      const imageMetadata =
+        await fetchAndUploadAiAssistantProductImageByDetails(
           stockCode,
+          name,
+          description,
           matchSessionIdRef.current,
         );
-        suggested = extractSuggestedProduct(suggestionPayload);
-        suggestionName = suggested.name;
-        suggestedStockCode = suggested.stockCode || stockCode;
-      } catch (err) {
-        setMatchError(err?.message || t("stockTakeOn.suggestError"));
-      }
-
-      setCreateProductForm({
-        productCode: buildPrefilledProductCode(suggestedStockCode),
-        productName: suggestionName,
-        productDescription: suggested.description || "",
-        productCategory: "C",
-        productClass: "General",
-        uom: "",
-      });
-      setCreateProductOpen(true);
-
-      // Step 2: fetch image by stock code (fire-and-forget, updates FileGallery when ready)
-      if (stockCode) {
-        setProductImageFetching(true);
-        fetchAndUploadN8nProductImage(stockCode, matchSessionIdRef.current)
-          .then((imageMetadata) => {
-            if (imageMetadata) {
-              setProductFiles([imageMetadata]);
-            }
-          })
-          .catch(() => {})
-          .finally(() => setProductImageFetching(false));
+      if (imageMetadata) {
+        setProductFiles([imageMetadata]);
       }
     } finally {
-      setCreateProductBusy(false);
+      setProductImageFetching(false);
     }
   };
 
   const handleBackToProductSelection = () => {
     setCreateProductOpen(false);
+    setShowAiImageButton(false);
     setMatchError("");
     setProductFiles([]);
     setProductImageFetching(false);
@@ -1129,7 +1430,7 @@ const StockTakeOnNew = () => {
     setSuccessMsg("");
 
     try {
-      const finalRows = await loadStocksForCode(codeToUse);
+      let finalRows = await loadStocksForCode(codeToUse);
 
       if (finalRows.length === 0) {
         setStocks([]);
@@ -1149,6 +1450,14 @@ const StockTakeOnNew = () => {
         await openMatchDialogForStock(codeToUse);
         return;
       }
+
+      const totals = await loadProductTotalsForProduct(finalRows[0]);
+      finalRows = mergeRowsWithProductTotals(
+        finalRows,
+        codeToUse,
+        finalRows[0],
+        totals,
+      );
 
       setStocks(finalRows);
       setSelectedStockKey(finalRows[0].key);
@@ -1222,6 +1531,21 @@ const StockTakeOnNew = () => {
           );
         }
         targetLocation = trimmedLocation;
+      } else if (!selectedStock.stockId) {
+        const productId = selectedStock.productId || stocks[0]?.productId;
+        const codeToUse =
+          selectedStock.stockCode || stocks[0]?.stockCode || stockCode;
+        const newStockRes = await request("POST", "/api/stocks", {
+          productId: Number(productId),
+          stockCode: codeToUse,
+          location: selectedStock.location || "central",
+          createDate: new Date().toISOString(),
+        });
+        targetStockId = Number(
+          readFirst(newStockRes?.data || {}, ["stockId", "id"]),
+        );
+        if (!targetStockId) throw new Error(t("stockTakeOn.createStockFailed"));
+        targetLocation = selectedStock.location || "central";
       } else {
         targetStockId = Number(selectedStock.stockId);
         targetLocation = selectedStock.location || "central";
@@ -1531,25 +1855,37 @@ const StockTakeOnNew = () => {
             </Alert>
           )}
 
-          {matchHints.length > 0 && (
-            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+            {showAiSearchButton && (
+              <Button
+                variant="contained"
+                color="primary"
+                disabled={matchLoading}
+                onClick={runMatchActionForCurrentStock}
+              >
+                {t("stockTakeOn.aiProductSearch")}
+              </Button>
+            )}
+            {!showAiSearchButton && matchHints.length > 0 && (
               <Typography
                 variant="caption"
-                sx={{ color: "text.secondary", mr: 1 }}
+                sx={{ color: "text.secondary", mr: 1, alignSelf: "center" }}
               >
                 {t("stockTakeOn.possibleMatches")}
               </Typography>
-              {matchHints.slice(0, 8).map((hint, index) => (
-                <Chip
-                  key={`${hint.name || ""}-${index}`}
-                  size="small"
-                  label={hint.name || t("stockTakeOn.matchHint")}
-                  color="warning"
-                  variant="outlined"
-                />
-              ))}
-            </Box>
-          )}
+            )}
+            {matchHints.slice(0, 8).map((hint, index) => (
+              <Chip
+                key={`${hint.name || ""}-${index}`}
+                size="small"
+                label={hint.name || t("stockTakeOn.matchHint")}
+                color="warning"
+                variant="outlined"
+                clickable
+                onClick={() => handleAiHintClick(hint)}
+              />
+            ))}
+          </Box>
 
           {matchError && <Alert severity="warning">{matchError}</Alert>}
 
@@ -1618,7 +1954,7 @@ const StockTakeOnNew = () => {
                       <ListItemButton
                         key={item.key}
                         selected={selected}
-                        onClick={() => setSelectedCandidateKey(item.key)}
+                        onClick={() => handleSelectCandidate(item)}
                         sx={{
                           borderBottom: "1px solid var(--color-gray-200)",
                           alignItems: "flex-start",
@@ -1661,7 +1997,7 @@ const StockTakeOnNew = () => {
                                   label={t("stockTakeOn.selected")}
                                 />
                               )}
-                              {item.n8nMatched && (
+                              {item.aiAssistantMatched && (
                                 <Chip
                                   size="small"
                                   color="warning"
@@ -1899,6 +2235,22 @@ const StockTakeOnNew = () => {
                 allowRemove={true}
                 allowAdd={true}
                 repoConfig={null}
+                extraActions={
+                  showAiImageButton ? (
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      size="small"
+                      onClick={handleGetAiImage}
+                      disabled={
+                        productImageFetching ||
+                        !createProductForm.productName?.trim()
+                      }
+                    >
+                      {t("stockTakeOn.getAiImage", "Get Image")}
+                    </Button>
+                  ) : null
+                }
                 onChange={(json) => {
                   try {
                     const parsed = json ? JSON.parse(json) : [];

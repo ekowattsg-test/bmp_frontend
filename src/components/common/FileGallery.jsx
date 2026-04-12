@@ -30,6 +30,7 @@ const FileGallery = ({
   allowRemove = true,
   allowAdd = true,
   repoConfig = null,
+  extraActions = null,
   onChange = () => {},
 }) => {
   const [files, setFiles] = useState([]);
@@ -165,7 +166,7 @@ const FileGallery = ({
       return next;
     });
 
-    // attempt background deletion via n8n
+    // attempt background deletion via AI assistant
     (async () => {
       try {
         const fileId = removed?.id || getFileIdFromLink(removed?.url);
@@ -263,6 +264,7 @@ const FileGallery = ({
               >
                 {t("staffManagement.takePhoto")}
               </Button>
+              {extraActions}
             </Stack>
           </>
         )}
