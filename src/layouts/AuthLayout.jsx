@@ -3,6 +3,9 @@ import { Box, Paper, useTheme, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 
+const loginLogoSrc =
+  import.meta.env.VITE_LOGIN_LOGO_SRC || "/logo-ekowattsg.svg";
+
 const AuthLayout = ({ children }) => {
   const theme = useTheme();
   const { t } = useTranslation();
@@ -47,31 +50,17 @@ const AuthLayout = ({ children }) => {
         {/* Small header / hero inside the card (also removable) */}
         <Box sx={{ textAlign: "center", mb: 2 }}>
           <Box sx={{ display: "inline-block", mb: 1 }}>
-            {/* simple SVG logo placeholder */}
-            <svg
-              width="56"
-              height="56"
-              viewBox="0 0 64 64"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <rect
-                x="6"
-                y="6"
-                width="52"
-                height="52"
-                rx="10"
-                fill="var(--color-primary)"
-              />
-              <path
-                d="M20 36 L28 28 L36 36 L44 28"
-                stroke="#fff"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-            </svg>
+            <Box
+              component="img"
+              src={loginLogoSrc}
+              alt={t("auth.appTitle")}
+              sx={{
+                width: 56,
+                height: 56,
+                objectFit: "contain",
+                display: "block",
+              }}
+            />
           </Box>
           <Typography variant="h6" sx={{ fontWeight: 700 }}>
             {t("auth.appTitle")}

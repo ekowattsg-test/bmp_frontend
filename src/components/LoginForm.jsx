@@ -1,14 +1,7 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
-import {
-  Alert,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-} from "@mui/material";
+import { Alert, Button } from "@mui/material";
 
 export default function LoginForm({
   onLogin,
@@ -54,150 +47,22 @@ export default function LoginForm({
     onRegister(e, firstName, lastName, login, password);
   };
 
-  const [eulaOpen, setEulaOpen] = useState(false);
-  const eulaRef = useRef(null);
-  const scrollListenerRef = useRef(null);
-  const [eulaScrolled, setEulaScrolled] = useState(false);
-  const privacyRef = useRef(null);
-  const privacyScrollRef = useRef(null);
-  const [privacyScrolled, setPrivacyScrolled] = useState(false);
+  const openPolicyPopup = (event, url, windowName) => {
+    event.preventDefault();
+    setActive("login");
 
-  const openEula = (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    setEulaScrolled(false);
-    setEulaOpen(true);
-  };
-  const openPrivacy = (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    setPrivacyScrolled(false);
-    setPrivacyOpen(true);
-  };
+    const popup = window.open(
+      url,
+      windowName,
+      "popup=yes,width=960,height=720,noopener,noreferrer,resizable=yes,scrollbars=yes",
+    );
 
-  const closeEula = () => {
-    // clear any attached polling interval
-    try {
-      if (scrollListenerRef.current) {
-        clearInterval(scrollListenerRef.current);
-        scrollListenerRef.current = null;
-      }
-    } catch (err) {
-      // ignore
+    if (!popup) {
+      return;
     }
-    setEulaOpen(false);
-    setEulaScrolled(false);
+
+    popup.focus();
   };
-
-  const closePrivacy = () => {
-    try {
-      if (privacyScrollRef.current) {
-        clearInterval(privacyScrollRef.current);
-        privacyScrollRef.current = null;
-      }
-    } catch (err) {
-      // ignore
-    }
-    setPrivacyOpen(false);
-    setPrivacyScrolled(false);
-  };
-
-  const onIframeLoad = () => {
-    try {
-      const iframe = eulaRef.current;
-      const doc =
-        iframe && (iframe.contentDocument || iframe.contentWindow.document);
-      if (!doc) {
-        setEulaScrolled(true);
-        return;
-      }
-      const el = doc.documentElement || doc.body;
-
-      const checkScrolledToEnd = () => {
-        const scrollTop =
-          (el && el.scrollTop) ||
-          (doc.documentElement && doc.documentElement.scrollTop) ||
-          (doc.body && doc.body.scrollTop) ||
-          0;
-        const scrollHeight =
-          (el && el.scrollHeight) ||
-          (doc.documentElement && doc.documentElement.scrollHeight) ||
-          (doc.body && doc.body.scrollHeight) ||
-          0;
-        const clientHeight =
-          (el && el.clientHeight) ||
-          (doc.documentElement && doc.documentElement.clientHeight) ||
-          (doc.body && doc.body.clientHeight) ||
-          0;
-        if (scrollHeight - scrollTop - clientHeight <= 2) {
-          setEulaScrolled(true);
-          if (scrollListenerRef.current) {
-            clearInterval(scrollListenerRef.current);
-            scrollListenerRef.current = null;
-          }
-        }
-      };
-
-      // initial check
-      checkScrolledToEnd();
-
-      if (!eulaScrolled) {
-        // use polling to reliably detect scrolling end inside iframe
-        const id = setInterval(checkScrolledToEnd, 250);
-        scrollListenerRef.current = id;
-      }
-    } catch (err) {
-      // if any error (e.g., cross-origin), enable the button so user isn't blocked
-      setEulaScrolled(true);
-    }
-  };
-
-  const onPrivacyIframeLoad = () => {
-    try {
-      const iframe = privacyRef.current;
-      const doc =
-        iframe && (iframe.contentDocument || iframe.contentWindow.document);
-      if (!doc) {
-        setPrivacyScrolled(true);
-        return;
-      }
-      const el = doc.documentElement || doc.body;
-
-      const checkScrolledToEnd = () => {
-        const scrollTop =
-          (el && el.scrollTop) ||
-          (doc.documentElement && doc.documentElement.scrollTop) ||
-          (doc.body && doc.body.scrollTop) ||
-          0;
-        const scrollHeight =
-          (el && el.scrollHeight) ||
-          (doc.documentElement && doc.documentElement.scrollHeight) ||
-          (doc.body && doc.body.scrollHeight) ||
-          0;
-        const clientHeight =
-          (el && el.clientHeight) ||
-          (doc.documentElement && doc.documentElement.clientHeight) ||
-          (doc.body && doc.body.clientHeight) ||
-          0;
-        if (scrollHeight - scrollTop - clientHeight <= 2) {
-          setPrivacyScrolled(true);
-          if (privacyScrollRef.current) {
-            clearInterval(privacyScrollRef.current);
-            privacyScrollRef.current = null;
-          }
-        }
-      };
-
-      // initial check
-      checkScrolledToEnd();
-      if (!privacyScrolled) {
-        const id = setInterval(checkScrolledToEnd, 250);
-        privacyScrollRef.current = id;
-      }
-    } catch (err) {
-      setPrivacyScrolled(true);
-    }
-  };
-
-  const [privacyOpen, setPrivacyOpen] = useState(false);
 
   return (
     <div className="row justify-content-center">
@@ -249,7 +114,9 @@ export default function LoginForm({
                 {t("auth.legalPrefix")}{" "}
                 <a
                   href={`/eula_${lang}.html`}
-                  onClick={openEula}
+                  onClick={(event) =>
+                    openPolicyPopup(event, `/eula_${lang}.html`, "bmp-eula")
+                  }
                   rel="noopener noreferrer"
                 >
                   {t("auth.eula")}
@@ -257,63 +124,19 @@ export default function LoginForm({
                 {t("auth.and")}{" "}
                 <a
                   href={`/privacy_${lang}.html`}
-                  onClick={openPrivacy}
+                  onClick={(event) =>
+                    openPolicyPopup(
+                      event,
+                      `/privacy_${lang}.html`,
+                      "bmp-privacy-policy",
+                    )
+                  }
                   rel="noopener noreferrer"
                 >
                   {t("auth.privacy")}
                 </a>
                 .
               </div>
-
-              <Dialog
-                open={eulaOpen}
-                onClose={closeEula}
-                fullWidth
-                maxWidth="md"
-              >
-                <DialogTitle>{t("auth.eula")}</DialogTitle>
-                <DialogContent dividers>
-                  <iframe
-                    ref={eulaRef}
-                    onLoad={onIframeLoad}
-                    src={`/eula_${lang}.html`}
-                    title="EULA"
-                    style={{ width: "100%", height: "60vh", border: "none" }}
-                  />
-                </DialogContent>
-                <DialogActions>
-                  <Button onClick={closeEula} disabled={!eulaScrolled}>
-                    {eulaScrolled
-                      ? t("common.close", "Close")
-                      : t("eula.scrollToEnd", "Scroll to end to enable")}
-                  </Button>
-                </DialogActions>
-              </Dialog>
-
-              <Dialog
-                open={privacyOpen}
-                onClose={closePrivacy}
-                fullWidth
-                maxWidth="md"
-              >
-                <DialogTitle>{t("auth.privacy")}</DialogTitle>
-                <DialogContent dividers>
-                  <iframe
-                    ref={privacyRef}
-                    onLoad={onPrivacyIframeLoad}
-                    src={`/privacy_${lang}.html`}
-                    title="Privacy Policy"
-                    style={{ width: "100%", height: "60vh", border: "none" }}
-                  />
-                </DialogContent>
-                <DialogActions>
-                  <Button onClick={closePrivacy} disabled={!privacyScrolled}>
-                    {privacyScrolled
-                      ? t("common.close", "Close")
-                      : t("privacy.scrollToEnd", "Scroll to end to enable")}
-                  </Button>
-                </DialogActions>
-              </Dialog>
 
               <Button
                 type="submit"
