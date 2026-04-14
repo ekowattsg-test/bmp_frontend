@@ -76,6 +76,16 @@ api.interceptors.response.use(
     const originalRequest = error.config;
     if (!originalRequest) return Promise.reject(error);
 
+    // Some endpoints use 401 for business validation (e.g. invalid admin password).
+    // Allow callers to opt out of global auth refresh/redirect handling.
+    if (
+      error.response &&
+      error.response.status === 401 &&
+      originalRequest.skipAuthRedirect
+    ) {
+      return Promise.reject(error);
+    }
+
     // If we already tried a retry, avoid infinite loops
     if (
       error.response &&
@@ -138,8 +148,12 @@ api.interceptors.response.use(
 );
 
 // Backwards-compatible request helper used across the app
-export const request = (method, url, data) => {
-  return api({ method, url, data }).catch((error) => {
+export const request = (method, url, data, config = {}) => {
+  return api({ method, url, data, ...config }).catch((error) => {
+    if (config.skipAuthRedirect || error?.config?.skipAuthRedirect) {
+      throw error;
+    }
+
     // If 401 not handled by interceptor, clear token and redirect
     if (error.response && error.response.status === 401) {
       setAuthHeader(null);

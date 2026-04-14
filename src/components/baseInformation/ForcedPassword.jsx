@@ -13,11 +13,14 @@ import { AuthContext } from "../../context/authContext";
 import { hasRole } from "../../helpers/roles_helper";
 import { request } from "../../helpers/axios_helper";
 import { LoadingState, PageHeader } from "../common";
+import HelpDialog from "../common/HelpDialog";
 
 const toLevelNumber = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 };
+
+const normalizeBackendMessage = (message) => String(message || "").trim();
 
 const ForcedPassword = () => {
   const { t } = useTranslation();
@@ -28,6 +31,7 @@ const ForcedPassword = () => {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [helpOpen, setHelpOpen] = useState(false);
   const [form, setForm] = useState({
     targetUserId: "",
     newPassword: "",
@@ -83,6 +87,10 @@ const ForcedPassword = () => {
   };
 
   const validate = () => {
+    if (!Number.isFinite(Number(currentUserId))) {
+      setErrorMsg(t("forcedPassword.errors.invalidRequestingUser"));
+      return false;
+    }
     if (!form.targetUserId) {
       setErrorMsg(t("forcedPassword.validation.userRequired"));
       return false;
@@ -102,6 +110,50 @@ const ForcedPassword = () => {
     return true;
   };
 
+  const getFriendlyErrorMessage = (error) => {
+    const status = error?.response?.status;
+    const backendRawMessage =
+      error?.response?.data?.message || error?.response?.data?.error;
+    const backendMessage = normalizeBackendMessage(backendRawMessage);
+
+    const backendMessageMap = {
+      "Requesting user not found": t(
+        "forcedPassword.errors.requestingUserNotFound",
+      ),
+      "Invalid password": t("forcedPassword.errors.invalidPassword"),
+      "Requesting user account is inactive": t(
+        "forcedPassword.errors.requestingUserInactive",
+      ),
+      "Target user not found": t("forcedPassword.errors.targetUserNotFound"),
+    };
+
+    if (backendMessage && backendMessageMap[backendMessage]) {
+      return backendMessageMap[backendMessage];
+    }
+
+    if (!error?.response) {
+      return t("forcedPassword.errors.network");
+    }
+
+    if (status === 400) {
+      return backendMessage || t("forcedPassword.errors.badRequest");
+    }
+
+    if (status === 401 || status === 403) {
+      return backendMessage || t("forcedPassword.errors.unauthorized");
+    }
+
+    if (status === 404) {
+      return backendMessage || t("forcedPassword.errors.notFound");
+    }
+
+    if (status >= 500) {
+      return t("forcedPassword.errors.server");
+    }
+
+    return backendMessage || t("forcedPassword.error");
+  };
+
   const submitForcedPassword = async () => {
     const payload = {
       requestingUserId: Number(currentUserId),
@@ -110,7 +162,9 @@ const ForcedPassword = () => {
       newPassword: form.newPassword,
     };
 
-    return request("POST", "/api/admin/password/force-change", payload);
+    return request("POST", "/api/admin/password/force-change", payload, {
+      skipAuthRedirect: true,
+    });
   };
 
   const handleSubmit = async (event) => {
@@ -131,9 +185,7 @@ const ForcedPassword = () => {
         ownPassword: "",
       }));
     } catch (error) {
-      const apiMessage =
-        error?.response?.data?.message || error?.response?.data?.error;
-      setErrorMsg(apiMessage || t("forcedPassword.error"));
+      setErrorMsg(getFriendlyErrorMessage(error));
     } finally {
       setSubmitting(false);
     }
@@ -157,6 +209,14 @@ const ForcedPassword = () => {
         title={t("forcedPassword.title")}
         subtitle={t("forcedPassword.subtitle")}
         icon={LockResetIcon}
+        onHelpClick={() => setHelpOpen(true)}
+      />
+
+      <HelpDialog
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title={t("forcedPassword.helpTitle")}
+        content={t("forcedPassword.helpBody")}
       />
 
       <Box
