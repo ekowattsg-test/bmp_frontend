@@ -31,6 +31,7 @@ import {
   UploadFile as UploadFileIcon,
   AccountTree as AccountTreeIcon,
   Inventory2 as BundleIcon,
+  LockReset as LockResetIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -109,6 +110,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               label: t("menu.userLoginList", "Login Enquiry"),
               icon: <HistoryIcon fontSize="small" />,
               path: "/userlogin",
+            },
+            {
+              key: "forcedPassword",
+              label: t("menu.forcedPassword", "Forced Password"),
+              icon: <LockResetIcon fontSize="small" />,
+              path: "/forced-password",
             },
           ],
         },

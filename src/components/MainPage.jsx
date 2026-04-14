@@ -29,6 +29,7 @@ import ProductModern from "./baseInformation/ProductModern";
 import ProductBundleModern from "./information/ProductBundleModern";
 import StaffExcelUpload from "./baseInformation/StaffExcelUpload";
 import UserLoginList from "./baseInformation/UserLoginList";
+import ForcedPassword from "./baseInformation/ForcedPassword";
 
 function MainPage() {
   return (
@@ -42,6 +43,7 @@ function MainPage() {
         <Route path="/user" element={<UserModern />} />
         <Route path="/userRole" element={<UserRoleModern />} />
         <Route path="/userlogin" element={<UserLoginList />} />
+        <Route path="/forced-password" element={<ForcedPassword />} />
         <Route path="/customer" element={<CustomerModern />} />
         <Route path="/vendor" element={<VendorModern />} />
         <Route path="/purchaseorder" element={<PurchaseOrderModern />} />

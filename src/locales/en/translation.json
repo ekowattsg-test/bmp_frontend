@@ -151,7 +151,8 @@
     "staffProfile": "Staff Profile",
     "productList": "Products",
     "staffExcelUpload": "Staff Excel Upload",
-    "userLoginList": "Login Enquiry"
+    "userLoginList": "Login Enquiry",
+    "forcedPassword": "Forced Password"
   },
   "staffExcelUpload": {
     "title": "Staff Excel Upload",
@@ -357,6 +358,29 @@
     "role_id": "Role",
     "searchPlaceholder": "Search...",
     "noUserRoles": "No user roles found."
+  },
+  "forcedPassword": {
+    "title": "Forced Password",
+    "subtitle": "Force a password change for users at or below your level",
+    "targetUser": "Target User",
+    "targetUserHint": "Only users at lower or equal level are listed",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm New Password",
+    "ownPassword": "Your Current Password",
+    "ownPasswordHint": "Required to confirm your authority before submission",
+    "submit": "Force Password Change",
+    "submitting": "Submitting...",
+    "success": "Password changed successfully.",
+    "error": "Failed to change password.",
+    "loading": "Loading available users...",
+    "noAvailableUsers": "No eligible users available for forced password change.",
+    "level": "Level {{level}}",
+    "validation": {
+      "userRequired": "Please select a user.",
+      "required": "All fields are required.",
+      "mismatch": "New passwords do not match.",
+      "length": "New password must be at least 8 characters."
+    }
   },
   "customerList": {
     "title": "Customer List",

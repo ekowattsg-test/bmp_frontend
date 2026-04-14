@@ -151,7 +151,8 @@
     "staffProfile": "员工档案",
     "productList": "产品",
     "staffExcelUpload": "员工 Excel 上传",
-    "userLoginList": "登录查询"
+    "userLoginList": "登录查询",
+    "forcedPassword": "强制改密"
   },
   "staffExcelUpload": {
     "title": "员工 Excel 上传",
@@ -357,6 +358,29 @@
     "role_id": "角色",
     "searchPlaceholder": "搜索...",
     "noUserRoles": "未找到用户角色。"
+  },
+  "forcedPassword": {
+    "title": "强制改密",
+    "subtitle": "为级别小于或等于您的用户强制修改密码",
+    "targetUser": "目标用户",
+    "targetUserHint": "仅显示级别小于或等于您的用户",
+    "newPassword": "新密码",
+    "confirmPassword": "确认新密码",
+    "ownPassword": "您的当前密码",
+    "ownPasswordHint": "提交前必须输入以确认您的权限",
+    "submit": "提交强制改密",
+    "submitting": "提交中...",
+    "success": "密码修改成功。",
+    "error": "密码修改失败。",
+    "loading": "正在加载可用用户...",
+    "noAvailableUsers": "没有可用于强制改密的合规用户。",
+    "level": "级别 {{level}}",
+    "validation": {
+      "userRequired": "请选择用户。",
+      "required": "所有字段均为必填。",
+      "mismatch": "两次输入的新密码不一致。",
+      "length": "新密码至少需要 8 个字符。"
+    }
   },
   "customerList": {
     "title": "客户列表",
