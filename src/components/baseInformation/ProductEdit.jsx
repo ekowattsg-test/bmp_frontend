@@ -49,12 +49,21 @@ const ProductEdit = ({ product, onCancel }) => {
     }));
 
     try {
-      const meta = Array.isArray(product.productPicture)
-        ? product.productPicture.map((p) => normalizeFileMetadata(p))
-        : [];
+      const pic = product.productPicture;
+      let parsed = pic;
+      if (typeof pic === "string") {
+        try {
+          parsed = JSON.parse(pic);
+        } catch (e) {
+          // leave as string (may be a URL or data URI)
+          parsed = pic;
+        }
+      }
+      const arr = Array.isArray(parsed) ? parsed : parsed ? [parsed] : [];
+      const meta = arr.map((p) => normalizeFileMetadata(p));
       setProductFiles(meta);
     } catch (e) {
-      // ignore
+      setProductFiles([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product]);
@@ -81,7 +90,10 @@ const ProductEdit = ({ product, onCancel }) => {
         productBrand: form.productBrand,
         commonName: form.commonName,
         specification: form.specification,
-        productPicture: productFiles,
+        productPicture:
+          productFiles && productFiles.length > 0
+            ? JSON.stringify(productFiles)
+            : null,
       };
       await request("PUT", `/api/products/${id}`, payload);
       await commit();
