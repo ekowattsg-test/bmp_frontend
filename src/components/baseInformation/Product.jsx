@@ -135,7 +135,7 @@ const Product = () => {
         searchPlaceholder={t("product.searchPlaceholder", "Search products...")}
         data={(data || []).map((p) => {
           const raw = p;
-          const productName = p.productName || p.name || p.productNameEn || "";
+          const productName = p.productName || "";
           const cat =
             p.productCategory === "A"
               ? t("product.categoryA")

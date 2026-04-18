@@ -4,6 +4,7 @@ import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import react from "eslint-plugin-react";
+import localRules from "./eslint-rules/index.js";
 
 export default [
   { ignores: ["dist"] },
@@ -29,6 +30,8 @@ export default [
       react,
       "react-hooks": reactHooks,
       "react-refresh": reactRefresh,
+      // local custom rules
+      "local-rules": localRules,
     },
     rules: {
       ...js.configs.recommended.rules,
@@ -40,6 +43,8 @@ export default [
         "warn",
         { allowConstantExport: true },
       ],
+      // Enforce no-fallback patterns
+      "local-rules/no-fallbacks": "error",
     },
   },
 ];

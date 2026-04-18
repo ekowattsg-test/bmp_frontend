@@ -40,10 +40,10 @@ const toArray = (value) => {
 };
 
 const readFirst = (row, keys) => {
+  if (!row || !Array.isArray(keys) || keys.length === 0) return "";
   for (const key of keys) {
-    if (row?.[key] !== undefined && row?.[key] !== null && row?.[key] !== "") {
-      return row[key];
-    }
+    const val = row?.[key];
+    if (val !== undefined && val !== null && val !== "") return val;
   }
   return "";
 };
@@ -64,38 +64,13 @@ const safeParseDate = (raw) => {
 const getProductDetails = (item = {}) => {
   const nested = item.product || {};
   return {
-    productId: String(
-      readFirst(item, ["productId", "product_id"]) ||
-        nested.productId ||
-        nested.id,
-    ),
+    productId: String(readFirst(item, ["productId"]) || nested.productId || ""),
     productName: String(
-      readFirst(item, [
-        "productName",
-        "name",
-        "productDescription",
-        "productNameEn",
-      ]) ||
-        nested.productName ||
-        nested.name ||
-        nested.productNameEn ||
-        "",
+      readFirst(item, ["productName"]) || nested.productName || "",
     ),
     productPicture:
-      readFirst(item, [
-        "productPicture",
-        "productImage",
-        "imageUrl",
-        "productPictureUrl",
-      ]) ||
-      nested.productPicture ||
-      nested.imageUrl ||
-      nested.productImage ||
-      nested.productPictureUrl ||
-      "",
-    uom: String(
-      readFirst(item, ["uom", "unit", "unitOfMeasure"]) || nested.uom || "",
-    ),
+      readFirst(item, ["productPicture"]) || nested.productPicture || "",
+    uom: String(readFirst(item, ["uom"]) || nested.uom || ""),
   };
 };
 
@@ -124,11 +99,7 @@ const normalizeStock = (item, fallbackCode) => {
     productPicture: product.productPicture,
     uom: product.uom,
     currentQuantity: toNumber(
-      readFirst(item, [
-        "currentQuantity",
-        "quantity",
-        "currentQty",
-      ]),
+      readFirst(item, ["currentQuantity", "quantity", "currentQty"]),
     ),
     availableQuantity: toNumber(
       readFirst(item, [

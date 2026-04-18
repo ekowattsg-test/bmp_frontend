@@ -47,7 +47,7 @@ const UOMHierarchyAdd = ({ onCancel }) => {
 
   const getOptionLabel = (option) => {
     if (!option) return "";
-    const name = option.productName || option.productCode || "";
+    const name = option.productName || "";
     const code = option.productCode ? " (" + option.productCode + ")" : "";
     return name + code;
   };

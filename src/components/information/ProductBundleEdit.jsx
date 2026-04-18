@@ -132,9 +132,7 @@ const ProductBundleEdit = ({ item, onCancel }) => {
     );
   };
 
-  const getProductLabel = (p) =>
-    (p.productName || p.productCode || "") +
-    (p.productCode ? ` (${p.productCode})` : "");
+  const getProductLabel = (p) => (p.productName || "");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -311,7 +309,7 @@ const ProductBundleEdit = ({ item, onCancel }) => {
         onSelect={handlePickerSelect}
         facetFields={["productCategory", "productClass"]}
         renderItem={(p) => ({
-          primary: p.productName || p.productCode || "",
+          primary: p.productName || "",
           secondary: [p.productCode, p.productClass]
             .filter(Boolean)
             .join(" · "),

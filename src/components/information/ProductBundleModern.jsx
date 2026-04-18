@@ -90,7 +90,7 @@ const ProductBundleModern = () => {
           bm && typeof bm === "object" ? String(bm.productId) : String(bm);
         const qty = bm && typeof bm === "object" ? Number(bm.quantity) || 1 : 1;
         const p = productMap[id];
-        const name = p ? p.productName || p.productCode || id : id;
+        const name = p ? p.productName || id : id;
         return qty > 1 ? `${name} ×${qty}` : name;
       });
     },

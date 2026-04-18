@@ -120,8 +120,7 @@ const ProductModern = () => {
   const rows = (productData || []).map((p) => ({
     ...p,
     _raw: p,
-    displayProductName:
-      p.productName || p.name || p.productNameEn || p.productCode || "-",
+    displayProductName: p.productName || "-",
     displayProductCategory: mapCategory(p.productCategory),
   }));
 
@@ -132,18 +131,13 @@ const ProductModern = () => {
       product.productCode?.toLowerCase().includes(searchLower) ||
       product.productDescription?.toLowerCase().includes(searchLower) ||
       product.productClass?.toLowerCase().includes(searchLower) ||
-      product.displayProductName?.toLowerCase().includes(searchLower) ||
+      (product.productName || "").toLowerCase().includes(searchLower) ||
       product.displayProductCategory?.toLowerCase().includes(searchLower)
     );
   });
 
   const renderProductContent = (row) => {
-    const name =
-      row.displayProductName ||
-      row.productName ||
-      row.name ||
-      row.productNameEn ||
-      "";
+    const name = row.productName || "";
 
     let thumb = null;
     if (row.productPicture) {
@@ -167,7 +161,7 @@ const ProductModern = () => {
             provider={firstImage.meta.provider || null}
             width={40}
             height={40}
-            alt={row.productDescription || row.productCode}
+            alt={row.productDescription || ""}
             style={{ borderRadius: 4, cursor: "pointer" }}
             onClick={(e) => {
               e.stopPropagation();
@@ -179,7 +173,7 @@ const ProductModern = () => {
         thumb = (
           <img
             src={src}
-            alt={row.productDescription || row.productCode}
+            alt={row.productDescription || ""}
             style={{
               width: 40,
               height: 40,

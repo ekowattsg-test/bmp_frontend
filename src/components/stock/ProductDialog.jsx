@@ -168,12 +168,7 @@ const ProductDialog = ({
             <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
               {(() => {
                 try {
-                  const pic =
-                    presetProduct.productPicture ||
-                    presetProduct.imageUrl ||
-                    presetProduct.productImage ||
-                    presetProduct.productPictureUrl ||
-                    null;
+                  const pic = presetProduct.productPicture || null;
                   let parsed = null;
                   if (!pic) {
                     return (
@@ -335,7 +330,7 @@ const ProductDialog = ({
               <Box>
                 <Typography variant="subtitle1">
                   {t("stockTake.productName", "Product name")}:{" "}
-                  {presetProduct.productName || presetProduct.productCode}
+                  {presetProduct.productName || ""}
                 </Typography>
                 <Typography variant="body2" sx={{ color: "text.secondary" }}>
                   {t("stockTake.stockCode", "Stock code")}:{" "}
@@ -399,7 +394,7 @@ const ProductDialog = ({
                   onSelect={(p) => handleSelect(p)}
                   onCreate={() => setCreating(true)}
                   renderItem={(p) => ({
-                    primary: `${t("stockTake.productName", "Product name")}: ${p.productName || p.productCode}`,
+                    primary: `${t("stockTake.productName", "Product name")}: ${p.productName || ""}`,
                     secondary: `${t("stockTake.stockCode", "Stock code")}: ${p.productCode}`,
                   })}
                 />
@@ -420,9 +415,7 @@ const ProductDialog = ({
               label={t("product.productCode", "Product Code")}
               placeholder={t("product.productCodePlaceholder", "Stock code")}
               value={newProduct.productCode}
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, productCode: e.target.value })
-              }
+              inputProps={{ readOnly: true }}
               sx={{ mb: 1 }}
               required
             />

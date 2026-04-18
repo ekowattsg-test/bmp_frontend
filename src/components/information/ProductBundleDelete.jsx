@@ -11,7 +11,7 @@ const ProductBundleDelete = ({ item, productMap, onClose, onSuccess }) => {
 
   const memberNames = (item.bundleMembers || []).map((id) => {
     const p = productMap?.[String(id)];
-    return p ? p.productName || p.productCode || String(id) : String(id);
+    return p ? p.productName || String(id) : String(id);
   });
 
   const handleDelete = () => {

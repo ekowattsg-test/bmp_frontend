@@ -65,22 +65,10 @@ const SelectionDialog = ({
         // apply free-text search against common fields
         if (q && q.trim()) {
           const s = q.toLowerCase();
-          const name = (
-            it.productName ||
-            it.name ||
-            it.skillName ||
-            it.code ||
-            it.productCode ||
-            ""
-          )
+          const name = (it.productName || "")
             .toString()
             .toLowerCase();
-          const desc = (
-            it.productDescription ||
-            it.description ||
-            it.skillDescription ||
-            ""
-          )
+          const desc = (it.productDescription || "")
             .toString()
             .toLowerCase();
           if (!name.includes(s) && !desc.includes(s)) return false;
@@ -200,23 +188,11 @@ const SelectionDialog = ({
             const r = renderItem
               ? renderItem(it)
               : {
-                  primary:
-                    it.skillName || it.productName || it.name || it.code || "-",
-                  secondary:
-                    it.skillDescription ||
-                    it.productDescription ||
-                    it.description ||
-                    it.code ||
-                    "",
+                  primary: it.productName || "-",
+                  secondary: it.productDescription || "",
                 };
             // normalize potential productPicture JSON/objects into an image URL
-            const rawPic =
-              it.productPicture ||
-              it.imageUrl ||
-              it.productImage ||
-              it.productPictureUrl ||
-              it.picture ||
-              null;
+            const rawPic = it.productPicture || null;
             let imgUrl = null;
             let imgMeta = null;
             try {

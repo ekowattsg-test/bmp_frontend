@@ -39,3 +39,6 @@ coverage/
 
 # OS generated files
 Thumbs.db
+
+# Project references folder (canonical API/field docs)
+src/references/

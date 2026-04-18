@@ -1,6 +1,7 @@
 import React from "react";
 import PropTypes from "prop-types";
 import { Box, Paper, Typography } from "@mui/material";
+import useResponsiveLayout from "../../hooks/useResponsiveLayout";
 import { getFileIcon, ThumbnailImg } from "../../helpers/file_helper";
 
 /**
@@ -25,6 +26,7 @@ const ProductInfoCard = ({
   children,
 }) => {
   if (!productInfo) return null;
+  const { isSmallScreen } = useResponsiveLayout();
 
   return (
     <Paper
@@ -90,6 +92,51 @@ const ProductInfoCard = ({
           )}
         </Box>
       </Box>
+
+      {isSmallScreen && (
+        <Box sx={{ mt: 1 }}>
+          {productInfo.productDescription && (
+            <Typography variant="body2">
+              {productInfo.productDescription}
+            </Typography>
+          )}
+          {productInfo.productBrand && (
+            <Typography variant="caption" sx={{ display: "block" }}>
+              {"Brand: "}
+              {productInfo.productBrand}
+            </Typography>
+          )}
+          {productInfo.productCategory && (
+            <Typography variant="caption" sx={{ display: "block" }}>
+              {"Category: "}
+              {productInfo.productCategory}
+            </Typography>
+          )}
+          {productInfo.productClass && (
+            <Typography variant="caption" sx={{ display: "block" }}>
+              {"Class: "}
+              {productInfo.productClass}
+            </Typography>
+          )}
+          {productInfo.uom && (
+            <Typography variant="caption" sx={{ display: "block" }}>
+              {uomLabel || "UOM"}: {productInfo.uom}
+            </Typography>
+          )}
+          {productInfo.specification && (
+            <Typography variant="caption" sx={{ display: "block" }}>
+              {"Specification: "}
+              {productInfo.specification}
+            </Typography>
+          )}
+          {productInfo.commonName && (
+            <Typography variant="caption" sx={{ display: "block" }}>
+              {"Common Name: "}
+              {productInfo.commonName}
+            </Typography>
+          )}
+        </Box>
+      )}
 
       {children}
     </Paper>

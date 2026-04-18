@@ -40,6 +40,7 @@ import {
   commit,
   abort,
 } from "../../helpers/file_helper";
+import { generateProductCode } from "../../helpers/itemcode_helper";
 import {
   buildUniqueOptionObjects,
   findOptionByValue,
@@ -62,10 +63,11 @@ const toArray = (value) => {
 };
 
 const readFirst = (row, keys) => {
+  // Return the first present non-empty value among the provided keys.
+  if (!row || !Array.isArray(keys) || keys.length === 0) return "";
   for (const key of keys) {
-    if (row?.[key] !== undefined && row?.[key] !== null && row?.[key] !== "") {
-      return row[key];
-    }
+    const val = row?.[key];
+    if (val !== undefined && val !== null && val !== "") return val;
   }
   return "";
 };
@@ -86,38 +88,13 @@ const safeParseDate = (raw) => {
 const getProductDetails = (item = {}) => {
   const nested = item.product || {};
   return {
-    productId: String(
-      readFirst(item, ["productId", "product_id"]) ||
-        nested.productId ||
-        nested.id,
-    ),
-    productName: String(
-      readFirst(item, [
-        "productName",
-        "name",
-        "productDescription",
-        "productNameEn",
-      ]) ||
-        nested.productName ||
-        nested.name ||
-        nested.productNameEn ||
-        "",
-    ),
-    productPicture:
-      readFirst(item, [
-        "productPicture",
-        "productImage",
-        "imageUrl",
-        "productPictureUrl",
-      ]) ||
-      nested.productPicture ||
-      nested.imageUrl ||
-      nested.productImage ||
-      nested.productPictureUrl ||
-      "",
-    uom: String(
-      readFirst(item, ["uom", "unit", "unitOfMeasure"]) || nested.uom || "",
-    ),
+    productId: String(item.productId || nested.productId || ""),
+    productName: String(item.productName || nested.productName || ""),
+    productPicture: item.productPicture || nested.productPicture || "",
+    uom: String(item.uom || nested.uom || ""),
+    productBrand: item.productBrand || nested.productBrand || "",
+    commonName: item.commonName || nested.commonName || "",
+    specification: item.specification || nested.specification || "",
   };
 };
 
@@ -189,24 +166,8 @@ const enrichRowsWithProduct = (rows, productData) => {
   }));
 };
 
-const buildLinkedFallbackRow = (codeToUse, product, linkedStock) => {
-  const productInfo = getProductDetails(product || {});
-  const stockId = String(linkedStock?.stockId || "");
-  const location = String(linkedStock?.location || "central");
-
-  return {
-    key: `${stockId || ""}|${location}`,
-    stockId,
-    stockCode: String(codeToUse || ""),
-    location,
-    productId: productInfo.productId,
-    productName: productInfo.productName,
-    productPicture: productInfo.productPicture,
-    uom: productInfo.uom,
-    currentQuantity: 0,
-    availableQuantity: 0,
-  };
-};
+// Removed buildLinkedFallbackRow helper to avoid creating UI fallbacks
+// when backend product/stock totals are missing. Use backend totals directly.
 
 const getMovementTotals = (row) => {
   const quantity = toNumber(
@@ -681,12 +642,7 @@ const StockTakeOnNew = () => {
 
   const companyCodePrefix = String(userInfo?.companyId || "").trim();
 
-  const buildPrefilledProductCode = (rawStockCode) => {
-    const stockSuffix = String(rawStockCode || "").trim();
-    if (!companyCodePrefix) return stockSuffix;
-    if (!stockSuffix) return `${companyCodePrefix}-`;
-    return `${companyCodePrefix}-${stockSuffix}`;
-  };
+  // Use centralized generator
 
   const [helpOpen, setHelpOpen] = useState(false);
   const matchSessionIdRef = useRef(null);
@@ -718,6 +674,9 @@ const StockTakeOnNew = () => {
     productCategory: "C",
     productClass: "General",
     uom: "",
+    productBrand: "",
+    commonName: "",
+    specification: "",
   });
   const [productFiles, setProductFiles] = useState([]);
   const [productImageFetching, setProductImageFetching] = useState(false);
@@ -774,11 +733,18 @@ const StockTakeOnNew = () => {
   };
 
   const loadProductTotalsForProduct = async (product) => {
-    if (!product || !product.productId) return { locations: [] };
+    if (!product) return { locations: [] };
+
+    // Require a canonical productId. Do NOT fall back to listing all products
+    // and matching by productCode — this is an error condition.
+    const pid = product.productId || product.id || product.product_id || "";
+    if (!pid) return { locations: [] };
 
     const response = await request(
       "GET",
-      `/api/stockviews/product/${encodeURIComponent(product.productId)}`,
+      `/api/stockviews/product/${encodeURIComponent(pid)}`,
+      null,
+      { skipAuthRedirect: true },
     );
     const matchedRows = toArray(response?.data);
 
@@ -823,6 +789,8 @@ const StockTakeOnNew = () => {
     const response = await request(
       "GET",
       `/api/stockviews/stockcode/${encodeURIComponent(codeToUse)}`,
+      null,
+      { skipAuthRedirect: true },
     );
 
     const normalized = toArray(response?.data)
@@ -846,6 +814,8 @@ const StockTakeOnNew = () => {
             const responseByStock = await request(
               "GET",
               `/api/stockviews/stock/${encodeURIComponent(baseStock.stockId)}`,
+              null,
+              { skipAuthRedirect: true },
             );
             return toArray(responseByStock?.data).map((row) => ({
               row,
@@ -1005,6 +975,8 @@ const StockTakeOnNew = () => {
           const productRes = await request(
             "GET",
             `/api/products/${candidateProductId}`,
+            null,
+            { skipAuthRedirect: true },
           );
           backendProduct = productRes?.data || null;
         } catch {
@@ -1104,38 +1076,30 @@ const StockTakeOnNew = () => {
   }, [stocks]);
 
   const loadProductCandidatesForMissingStock = async (codeToUse, hints) => {
-    const response = await request("GET", "/api/stockviews");
-    const allRows = toArray(response?.data);
-
-    const grouped = new Map();
-
-    allRows.forEach((row) => {
-      const candidate = toProductCandidate(row);
-      if (!candidate.key) return;
-
-      const existing = grouped.get(candidate.key);
-      if (!existing) {
-        grouped.set(candidate.key, candidate);
-        return;
-      }
-
-      grouped.set(candidate.key, {
-        ...existing,
-        productCode: existing.productCode || candidate.productCode,
-        productName: existing.productName || candidate.productName,
-        productCategory: existing.productCategory || candidate.productCategory,
-        productClass: existing.productClass || candidate.productClass,
-        productDescription:
-          existing.productDescription || candidate.productDescription,
-        productPicture: existing.productPicture || candidate.productPicture,
-        stockIds: uniqueValues([
-          ...(existing.stockIds || []),
-          ...(candidate.stockIds || []),
-        ]),
-      });
+    // Retrieve product list from product endpoint and map to candidates
+    const res = await request("GET", "/api/products", null, {
+      skipAuthRedirect: true,
     });
+    const products = toArray(res?.data || []);
 
-    return Array.from(grouped.values())
+    const candidates = products
+      .map((p) => ({
+        key:
+          p.productId ||
+          p.id ||
+          p.product_code ||
+          p.productCode ||
+          p.productName,
+        productId: p.productId || p.id || p.product_id || "",
+        productCode: p.productCode || p.product_code || "",
+        productName: p.productName || p.name || "",
+        productCategory: String(p.productCategory || "").toUpperCase(),
+        productClass: p.productClass || "",
+        productDescription: p.productDescription || p.description || "",
+        productPicture: p.productPicture || p.product_picture || "",
+        uom: p.uom || "",
+        stockIds: [],
+      }))
       .map((candidate) => ({
         ...candidate,
         aiAssistantMatched: isMatchedByHints(candidate, hints),
@@ -1150,6 +1114,8 @@ const StockTakeOnNew = () => {
           String(b.productName || ""),
         );
       });
+
+    return candidates;
   };
 
   const continueWithSelectedProduct = async (codeToUse, product) => {
@@ -1159,25 +1125,29 @@ const StockTakeOnNew = () => {
     setSuccessMsg("");
 
     try {
-      let finalRows = await loadStocksForCode(codeToUse);
-      if (finalRows.length === 0) {
-        const fallbackRow = buildLinkedFallbackRow(codeToUse, product, {
-          stockId: "",
-          location: "central",
-        });
-        if (!fallbackRow) {
-          throw new Error(t("stockTakeOn.notFoundAfterCreate"));
-        }
-        finalRows = [fallbackRow];
-      }
+      // After creating/choosing a product, do not create UI fallbacks. Use
+      // backend totals to build display rows; if there are no totals, show
+      // a warning and leave the list empty so the user can perform linking.
+      const productContext = product || null;
+      const totals = await loadProductTotalsForProduct(productContext);
 
-      const totals = await loadProductTotalsForProduct(product || finalRows[0]);
-      finalRows = mergeRowsWithProductTotals(
-        finalRows,
-        codeToUse,
-        product,
-        totals,
-      );
+      let finalRows = [];
+      if (Array.isArray(totals?.locations) && totals.locations.length > 0) {
+        const prod = getProductDetails(product || {});
+        finalRows = totals.locations.map((loc) => ({
+          key: `${""}|${loc.location || "central"}`,
+          stockId: "",
+          stockCode: codeToUse,
+          location: loc.location || "central",
+          productId: prod.productId,
+          productCode: product?.productCode || "",
+          productName: prod.productName,
+          productPicture: prod.productPicture,
+          uom: prod.uom,
+          currentQuantity: Number(loc.currentQuantity) || 0,
+          availableQuantity: Number(loc.availableQuantity) || 0,
+        }));
+      }
 
       setStocks(finalRows);
       setSelectedStockKey(finalRows[0].key);
@@ -1193,6 +1163,10 @@ const StockTakeOnNew = () => {
 
   const openMatchDialogForStock = async (codeToUse) => {
     const normalizedCode = String(codeToUse || "").trim();
+    console.debug("StockTakeOn: openMatchDialogForStock called", {
+      codeToUse: normalizedCode,
+      sessionId: matchSessionIdRef.current,
+    });
     matchSessionIdRef.current = crypto.randomUUID();
     setStockCode(normalizedCode);
     setMatchDialogOpen(true);
@@ -1227,6 +1201,10 @@ const StockTakeOnNew = () => {
     const codeToUse = String(stockCode || "").trim();
     if (!codeToUse) return;
 
+    console.debug("StockTakeOn: runMatchActionForCurrentStock start", {
+      codeToUse,
+      sessionId: matchSessionIdRef.current,
+    });
     setShowAiSearchButton(false);
     setMatchLoading(true);
     setMatchError("");
@@ -1251,6 +1229,7 @@ const StockTakeOnNew = () => {
         setSelectedCandidateKey(candidates[0].key);
       }
     } catch (error) {
+      console.error("StockTakeOn: runMatchActionForCurrentStock error", error);
       setMatchError(error?.message || t("stockTakeOn.matchError"));
     } finally {
       setMatchLoading(false);
@@ -1266,53 +1245,26 @@ const StockTakeOnNew = () => {
     await continueWithSelectedProduct(stockCode, selectedCandidate);
   };
 
-  const toPrefilledProductFiles = (rawProductPicture) => {
-    if (!rawProductPicture) return [];
-
-    let parsed = rawProductPicture;
-    if (typeof parsed === "string") {
-      try {
-        parsed = JSON.parse(parsed);
-      } catch {
-        const rawUrl = parsed.trim();
-        if (!rawUrl) return [];
-        return [
-          normalizeFileMetadata({
-            url: rawUrl,
-            viewUrl: rawUrl,
-            name: "image",
-          }),
-        ];
-      }
-    }
-
-    const items = Array.isArray(parsed)
-      ? parsed
-      : parsed && typeof parsed === "object"
-        ? [parsed]
-        : [];
-
-    return items
-      .map((item) => normalizeFileMetadata(item))
-      .filter((item) => Boolean(item?.url || item?.viewUrl || item?.id));
-  };
-
   const handleSelectCandidate = (candidate) => {
     setSelectedCandidateKey(candidate.key);
   };
 
   const handleNoMatchAndSuggest = async () => {
+    console.debug("StockTakeOn: handleNoMatchAndSuggest called", { stockCode });
     setMatchError("");
     setShowAiImageButton(false);
     setProductFiles([]);
     setProductImageFetching(false);
     setCreateProductForm({
-      productCode: buildPrefilledProductCode(stockCode),
+      productCode: generateProductCode(companyCodePrefix),
       productName: "",
       productDescription: "",
       productCategory: "C",
       productClass: "General",
       uom: "",
+      productBrand: "",
+      commonName: "",
+      specification: "",
     });
     setCreateProductOpen(true);
   };
@@ -1326,12 +1278,15 @@ const StockTakeOnNew = () => {
     setProductFiles([]);
     setProductImageFetching(false);
     setCreateProductForm({
-      productCode: buildPrefilledProductCode(stockCode),
+      productCode: generateProductCode(companyCodePrefix),
       productName: name,
       productDescription: description,
       productCategory: "C",
       productClass: "General",
       uom: "",
+      productBrand: "",
+      commonName: "",
+      specification: "",
     });
     setCreateProductOpen(true);
   };
@@ -1370,14 +1325,15 @@ const StockTakeOnNew = () => {
   };
 
   const handleCreateProductAndUse = async () => {
-    const todayIsoDate = new Date().toISOString().slice(0, 10);
-
     const payload = {
       productCode: String(createProductForm.productCode || "").trim(),
       productName: String(createProductForm.productName || "").trim(),
       productDescription: String(
         createProductForm.productDescription || "",
       ).trim(),
+      productBrand: String(createProductForm.productBrand || "").trim(),
+      commonName: String(createProductForm.commonName || "").trim(),
+      specification: String(createProductForm.specification || "").trim(),
       productCategory: String(createProductForm.productCategory || "")
         .trim()
         .toUpperCase(),
@@ -1464,7 +1420,10 @@ const StockTakeOnNew = () => {
     } catch (error) {
       setStocks([]);
       setSelectedStockKey("");
-      if (error?.response?.status === 404) {
+      const status = error?.response?.status || error?.status || null;
+      // Treat 404 (not found) and 401 (unauthorised during lookup) as "not found"
+      // so the user can proceed to the product selection dialog to link the stock.
+      if (status === 404 || status === 401) {
         setWarnMsg(t("stockTakeOn.notFound"));
         await openMatchDialogForStock(codeToUse);
       } else {
@@ -1988,7 +1947,7 @@ const StockTakeOnNew = () => {
                               <Typography
                                 sx={{ fontWeight: selected ? 700 : 600 }}
                               >
-                                {item.productName || item.productCode || "-"}
+                                {item.productName || "-"}
                               </Typography>
                               {selected && (
                                 <Chip
@@ -2053,12 +2012,7 @@ const StockTakeOnNew = () => {
                   size="small"
                   label={t("product.productCode", "Product Code")}
                   value={createProductForm.productCode}
-                  onChange={(event) =>
-                    setCreateProductForm((prev) => ({
-                      ...prev,
-                      productCode: event.target.value,
-                    }))
-                  }
+                  InputProps={{ readOnly: true }}
                   fullWidth
                   required
                 />
@@ -2077,7 +2031,34 @@ const StockTakeOnNew = () => {
                 />
               </Stack>
 
+              <TextField
+                size="small"
+                label={t("product.productDescription", "Description")}
+                value={createProductForm.productDescription}
+                onChange={(event) =>
+                  setCreateProductForm((prev) => ({
+                    ...prev,
+                    productDescription: event.target.value,
+                  }))
+                }
+                fullWidth
+                multiline
+                minRows={2}
+              />
+
               <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField
+                  size="small"
+                  label={t("product.productBrand", "Brand")}
+                  value={createProductForm.productBrand}
+                  onChange={(event) =>
+                    setCreateProductForm((prev) => ({
+                      ...prev,
+                      productBrand: event.target.value,
+                    }))
+                  }
+                  fullWidth
+                />
                 <FormControl size="small" sx={{ minWidth: 180 }}>
                   <InputLabel>{t("product.category", "Category")}</InputLabel>
                   <Select
@@ -2098,6 +2079,9 @@ const StockTakeOnNew = () => {
                     </MenuItem>
                   </Select>
                 </FormControl>
+              </Stack>
+
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
                 <Autocomplete
                   freeSolo
                   openOnFocus
@@ -2151,71 +2135,84 @@ const StockTakeOnNew = () => {
                   )}
                   fullWidth
                 />
-              </Stack>
 
-              <Autocomplete
-                freeSolo
-                openOnFocus
-                options={uomOptions}
-                value={
-                  findOptionByValue(uomOptions, createProductForm.uom) ?? null
-                }
-                inputValue={createProductForm.uom}
-                onInputChange={(_, newInputValue, reason) => {
-                  if (reason === "reset") return;
-                  setCreateProductForm((prev) => ({
-                    ...prev,
-                    uom: newInputValue,
-                  }));
-                }}
-                onChange={(_, newValue) => {
-                  if (typeof newValue === "string") {
+                <Autocomplete
+                  freeSolo
+                  openOnFocus
+                  options={uomOptions}
+                  value={
+                    findOptionByValue(uomOptions, createProductForm.uom) ?? null
+                  }
+                  inputValue={createProductForm.uom}
+                  onInputChange={(_, newInputValue, reason) => {
+                    if (reason === "reset") return;
                     setCreateProductForm((prev) => ({
                       ...prev,
-                      uom: newValue,
+                      uom: newInputValue,
                     }));
-                    return;
+                  }}
+                  onChange={(_, newValue) => {
+                    if (typeof newValue === "string") {
+                      setCreateProductForm((prev) => ({
+                        ...prev,
+                        uom: newValue,
+                      }));
+                      return;
+                    }
+                    if (newValue && typeof newValue === "object") {
+                      setCreateProductForm((prev) => ({
+                        ...prev,
+                        uom: newValue.value || "",
+                      }));
+                      return;
+                    }
+                    setCreateProductForm((prev) => ({ ...prev, uom: "" }));
+                  }}
+                  getOptionLabel={(option) =>
+                    typeof option === "string" ? option : option.value
                   }
-                  if (newValue && typeof newValue === "object") {
-                    setCreateProductForm((prev) => ({
-                      ...prev,
-                      uom: newValue.value || "",
-                    }));
-                    return;
-                  }
-                  setCreateProductForm((prev) => ({ ...prev, uom: "" }));
-                }}
-                getOptionLabel={(option) =>
-                  typeof option === "string" ? option : option.value
-                }
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    size="small"
-                    label={t("product.uom", "Unit of Measure")}
-                    placeholder={t(
-                      "product.uomPlaceholder",
-                      "e.g. pcs, kg, box",
-                    )}
-                    fullWidth
-                  />
-                )}
-                fullWidth
-              />
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      size="small"
+                      label={t("product.uom", "Unit of Measure")}
+                      placeholder={t(
+                        "product.uomPlaceholder",
+                        "e.g. pcs, kg, box",
+                      )}
+                      fullWidth
+                    />
+                  )}
+                  fullWidth
+                />
+              </Stack>
 
               <TextField
                 size="small"
-                label={t("product.productDescription", "Description")}
-                value={createProductForm.productDescription}
+                label={t("product.specification", "Specification")}
+                value={createProductForm.specification}
                 onChange={(event) =>
                   setCreateProductForm((prev) => ({
                     ...prev,
-                    productDescription: event.target.value,
+                    specification: event.target.value,
                   }))
                 }
                 fullWidth
                 multiline
                 minRows={2}
+              />
+
+              <TextField
+                size="small"
+                label={t("product.commonName", "Common Name")}
+                value={createProductForm.commonName}
+                onChange={(event) =>
+                  setCreateProductForm((prev) => ({
+                    ...prev,
+                    commonName: event.target.value,
+                  }))
+                }
+                fullWidth
               />
 
               {productImageFetching && (

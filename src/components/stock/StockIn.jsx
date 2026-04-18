@@ -40,6 +40,7 @@ import {
   commit,
   abort,
 } from "../../helpers/file_helper";
+import { generateProductCode } from "../../helpers/itemcode_helper";
 import {
   buildUniqueOptionObjects,
   findOptionByValue,
@@ -61,14 +62,8 @@ const toArray = (value) => {
   return [];
 };
 
-const readFirst = (row, keys) => {
-  for (const key of keys) {
-    if (row?.[key] !== undefined && row?.[key] !== null && row?.[key] !== "") {
-      return row[key];
-    }
-  }
-  return "";
-};
+// NOTE: `readFirst` fallback probing removed to enforce canonical backend field names.
+// Use explicit property access (e.g. `row.stockId`, `row.stockCode`, `row.productCode`).
 
 const toNumber = (value) => {
   if (value === null || value === undefined || value === "") return 0;
@@ -86,78 +81,33 @@ const safeParseDate = (raw) => {
 const getProductDetails = (item = {}) => {
   const nested = item.product || {};
   return {
-    productId: String(
-      readFirst(item, ["productId", "product_id"]) ||
-        nested.productId ||
-        nested.id,
-    ),
-    productName: String(
-      readFirst(item, [
-        "productName",
-        "name",
-        "productDescription",
-        "productNameEn",
-      ]) ||
-        nested.productName ||
-        nested.name ||
-        nested.productNameEn ||
-        "",
-    ),
-    productPicture:
-      readFirst(item, [
-        "productPicture",
-        "productImage",
-        "imageUrl",
-        "productPictureUrl",
-      ]) ||
-      nested.productPicture ||
-      nested.imageUrl ||
-      nested.productImage ||
-      nested.productPictureUrl ||
-      "",
-    uom: String(
-      readFirst(item, ["uom", "unit", "unitOfMeasure"]) || nested.uom || "",
-    ),
+    productId: String(item.productId || nested.productId || ""),
+    productName: String(item.productName || nested.productName || ""),
+    productPicture: item.productPicture || nested.productPicture || "",
+    uom: String(item.uom || nested.uom || ""),
+    productBrand: item.productBrand || nested.productBrand || "",
+    commonName: item.commonName || nested.commonName || "",
+    specification: item.specification || nested.specification || "",
   };
 };
 
 const normalizeStock = (item, fallbackCode) => {
   const product = getProductDetails(item);
-  const stockId = String(readFirst(item, ["stockId", "id"]));
-  const location = String(
-    readFirst(item, [
-      "location",
-      "stockLocation",
-      "warehouse",
-      "bin",
-      "stockBin",
-    ]) || "central",
-  );
+  const stockId = String(item.stockId || "");
+  const location = String(item.location || "central");
 
   return {
     key: `${stockId || ""}|${location || "central"}`,
     stockId,
-    stockCode: String(
-      readFirst(item, ["stockCode", "code", "stock_code"]) || fallbackCode,
-    ),
+    stockCode: String(item.stockCode || fallbackCode || ""),
     location,
     productId: product.productId,
-    productCode: String(
-      readFirst(item, ["productCode", "product_code", "code"]),
-    ),
+    productCode: String(item.productCode || ""),
     productName: product.productName,
     productPicture: product.productPicture,
     uom: product.uom,
-    currentQuantity: toNumber(
-      readFirst(item, ["currentQuantity", "quantity", "currentQty"]),
-    ),
-    availableQuantity: toNumber(
-      readFirst(item, [
-        "currentAvailableQuantity",
-        "availableQuantity",
-        "availableQty",
-      ]),
-    ),
+    currentQuantity: toNumber(item.currentQuantity || 0),
+    availableQuantity: toNumber(item.currentAvailableQuantity || 0),
   };
 };
 
@@ -189,54 +139,15 @@ const enrichRowsWithProduct = (rows, productData) => {
   }));
 };
 
-const buildLinkedFallbackRow = (codeToUse, product, linkedStock) => {
-  const productInfo = getProductDetails(product || {});
-  const stockId = String(linkedStock?.stockId || "");
-  const location = String(linkedStock?.location || "central");
-
-  return {
-    key: `${stockId || ""}|${location}`,
-    stockId,
-    stockCode: String(codeToUse || ""),
-    location,
-    productId: productInfo.productId,
-    productName: productInfo.productName,
-    productPicture: productInfo.productPicture,
-    uom: productInfo.uom,
-    currentQuantity: 0,
-    availableQuantity: 0,
-  };
-};
+// Removed buildLinkedFallbackRow helper to avoid creating UI fallbacks
+// when backend product/stock totals are missing. Use backend totals directly.
 
 const getMovementTotals = (row) => {
-  const quantity = toNumber(
-    readFirst(row, ["qty", "quantity", "movementQty", "stockQty", "changeQty"]),
-  );
-  const stockModifier = toNumber(
-    readFirst(row, [
-      "stockModifier",
-      "movementModifier",
-      "stockMovementModifier",
-      "movementStockModifier",
-    ]),
-  );
-  const holdModifier = toNumber(
-    readFirst(row, [
-      "holdModifier",
-      "movementHoldModifier",
-      "holdMovementModifier",
-    ]),
-  );
-  const explicitStockMoved = readFirst(row, [
-    "stockMoved",
-    "movedStock",
-    "stockMove",
-  ]);
-  const explicitHoldMoved = readFirst(row, [
-    "holdMoved",
-    "movedHold",
-    "holdMove",
-  ]);
+  const quantity = toNumber(row.qty || row.quantity || 0);
+  const stockModifier = toNumber(row.stockModifier || 0);
+  const holdModifier = toNumber(row.holdModifier || 0);
+  const explicitStockMoved = row.stockMoved;
+  const explicitHoldMoved = row.holdMoved;
 
   return {
     stockMoved:
@@ -252,9 +163,7 @@ const getMovementTotals = (row) => {
 
 const sameProduct = (row, product) => {
   const rowProduct = getProductDetails(row);
-  const rowProductCode = String(
-    readFirst(row, ["productCode", "product_code", "code"]),
-  )
+  const rowProductCode = String(row.productCode || "")
     .trim()
     .toLowerCase();
   const productId = String(product?.productId || "").trim();
@@ -601,28 +510,19 @@ const uniqueValues = (values) =>
 
 const toProductCandidate = (row) => {
   const product = getProductDetails(row);
-  const stockCode = String(
-    readFirst(row, ["stockCode", "code", "stock_code", "productCode"]) || "",
-  );
+  const stockCode = String(row.stockCode || "");
 
   return {
     key: product.productId || stockCode || product.productName,
     productId: product.productId,
     productCode: stockCode,
     productName: product.productName || stockCode,
-    productCategory: String(
-      readFirst(row, ["productCategory", "category", "productCat"]) || "",
-    ).toUpperCase(),
-    productClass: String(
-      readFirst(row, ["productClass", "class", "productType"]) || "",
-    ),
-    productDescription: String(
-      readFirst(row, ["productDescription", "description", "productDesc"]) ||
-        "",
-    ),
+    productCategory: String(row.productCategory || "").toUpperCase(),
+    productClass: String(row.productClass || ""),
+    productDescription: String(row.productDescription || ""),
     productPicture: product.productPicture || "",
-    uom: String(readFirst(row, ["uom", "unit", "unitOfMeasure"]) || ""),
-    stockIds: uniqueValues([readFirst(row, ["stockId", "id"])]),
+    uom: String(row.uom || ""),
+    stockIds: uniqueValues([row.stockId || ""]),
   };
 };
 
@@ -682,12 +582,7 @@ const StockIn = () => {
 
   const companyCodePrefix = String(userInfo?.companyId || "").trim();
 
-  const buildPrefilledProductCode = (rawStockCode) => {
-    const stockSuffix = String(rawStockCode || "").trim();
-    if (!companyCodePrefix) return stockSuffix;
-    if (!stockSuffix) return `${companyCodePrefix}-`;
-    return `${companyCodePrefix}-${stockSuffix}`;
-  };
+  // use centralized generator
 
   const [helpOpen, setHelpOpen] = useState(false);
   const matchSessionIdRef = useRef(null);
@@ -720,6 +615,9 @@ const StockIn = () => {
     productCategory: "C",
     productClass: "General",
     uom: "",
+    productBrand: "",
+    commonName: "",
+    specification: "",
   });
   const [productFiles, setProductFiles] = useState([]);
   const [productImageFetching, setProductImageFetching] = useState(false);
@@ -778,13 +676,25 @@ const StockIn = () => {
   };
 
   const loadProductTotalsForProduct = async (product) => {
-    if (!product || !product.productId) return { locations: [] };
+    if (!product) return { locations: [] };
+
+    // Require a canonical productId. Do NOT fall back to listing all products
+    // and matching by productCode — this is an error condition.
+    const pid = product.productId || product.id || product.product_id || "";
+    if (!pid) return { locations: [] };
 
     const response = await request(
       "GET",
-      `/api/stockviews/product/${encodeURIComponent(product.productId)}`,
+      `/api/stockviews/product/${encodeURIComponent(pid)}`,
+      null,
+      { skipAuthRedirect: true },
     );
     const matchedRows = toArray(response?.data);
+    console.log("StockIn: loadProductTotalsForProduct response", {
+      product,
+      pid,
+      matchedRows,
+    });
 
     if (matchedRows.length === 0) {
       return { locations: [] };
@@ -792,15 +702,7 @@ const StockIn = () => {
 
     const byLocation = new Map();
     matchedRows.forEach((row) => {
-      const location = String(
-        readFirst(row, [
-          "location",
-          "stockLocation",
-          "warehouse",
-          "bin",
-          "stockBin",
-        ]) || "central",
-      );
+      const location = String(row.location || "central");
       const movement = getMovementTotals(row);
       const existing = byLocation.get(location) || {
         currentQuantity: 0,
@@ -827,7 +729,14 @@ const StockIn = () => {
     const response = await request(
       "GET",
       `/api/stockviews/stockcode/${encodeURIComponent(codeToUse)}`,
+      null,
+      { skipAuthRedirect: true },
     );
+
+    console.log("StockIn: loadStocksForCode response", {
+      codeToUse,
+      raw: response?.data,
+    });
 
     const normalized = toArray(response?.data)
       .map((item) => normalizeStock(item, codeToUse))
@@ -850,6 +759,8 @@ const StockIn = () => {
             const responseByStock = await request(
               "GET",
               `/api/stockviews/stock/${encodeURIComponent(baseStock.stockId)}`,
+              null,
+              { skipAuthRedirect: true },
             );
             return toArray(responseByStock?.data).map((row) => ({
               row,
@@ -864,71 +775,23 @@ const StockIn = () => {
       const viewRows = perStockViewRows
         .flat()
         .map(({ row, fallbackStockId }) => {
-          const stockId = String(
-            readFirst(row, ["stockId", "id"]) || fallbackStockId,
-          );
-          const location = String(
-            readFirst(row, [
-              "stockLocation",
-              "location",
-              "warehouse",
-              "bin",
-              "stockBin",
-            ]) || "central",
-          );
+          const stockId = String(row.stockId || fallbackStockId);
+          const location = String(row.location || "central");
           const movementAtTs =
-            safeParseDate(
-              readFirst(row, [
-                "recordDate",
-                "movementAt",
-                "movementDate",
-                "createDate",
-                "createdAt",
-                "updatedAt",
-              ]),
-            )?.getTime() || 0;
+            safeParseDate(row.recordDate || row.createDate)?.getTime() || 0;
 
-          const quantity = toNumber(
-            readFirst(row, [
-              "qty",
-              "quantity",
-              "movementQty",
-              "stockQty",
-              "changeQty",
-            ]),
-          );
-          const stockModifier = toNumber(
-            readFirst(row, [
-              "stockModifier",
-              "movementModifier",
-              "stockMovementModifier",
-              "movementStockModifier",
-            ]),
-          );
-          const holdModifier = toNumber(
-            readFirst(row, [
-              "holdModifier",
-              "movementHoldModifier",
-              "holdMovementModifier",
-            ]),
-          );
+          const quantity = toNumber(row.qty || row.quantity || 0);
+          const stockModifier = toNumber(row.stockModifier || 0);
+          const holdModifier = toNumber(row.holdModifier || 0);
 
           const stockMoved = (() => {
-            const explicit = readFirst(row, [
-              "stockMoved",
-              "movedStock",
-              "stockMove",
-            ]);
+            const explicit = row.stockMoved;
             return explicit !== ""
               ? toNumber(explicit)
               : quantity * stockModifier;
           })();
           const holdMoved = (() => {
-            const explicit = readFirst(row, [
-              "holdMoved",
-              "movedHold",
-              "holdMove",
-            ]);
+            const explicit = row.holdMoved;
             return explicit !== ""
               ? toNumber(explicit)
               : quantity * holdModifier;
@@ -1009,6 +872,8 @@ const StockIn = () => {
           const productRes = await request(
             "GET",
             `/api/products/${candidateProductId}`,
+            null,
+            { skipAuthRedirect: true },
           );
           backendProduct = productRes?.data || null;
         } catch {
@@ -1019,6 +884,10 @@ const StockIn = () => {
       if (backendProduct) {
         finalRows = enrichRowsWithProduct(finalRows, backendProduct);
       }
+      console.log("StockIn: loadStocksForCode finalRows after enrichment", {
+        codeToUse,
+        finalRows,
+      });
     }
 
     return finalRows;
@@ -1108,38 +977,30 @@ const StockIn = () => {
   }, [stocks]);
 
   const loadProductCandidatesForMissingStock = async (codeToUse, hints) => {
-    const response = await request("GET", "/api/stockviews");
-    const allRows = toArray(response?.data);
-
-    const grouped = new Map();
-
-    allRows.forEach((row) => {
-      const candidate = toProductCandidate(row);
-      if (!candidate.key) return;
-
-      const existing = grouped.get(candidate.key);
-      if (!existing) {
-        grouped.set(candidate.key, candidate);
-        return;
-      }
-
-      grouped.set(candidate.key, {
-        ...existing,
-        productCode: existing.productCode || candidate.productCode,
-        productName: existing.productName || candidate.productName,
-        productCategory: existing.productCategory || candidate.productCategory,
-        productClass: existing.productClass || candidate.productClass,
-        productDescription:
-          existing.productDescription || candidate.productDescription,
-        productPicture: existing.productPicture || candidate.productPicture,
-        stockIds: uniqueValues([
-          ...(existing.stockIds || []),
-          ...(candidate.stockIds || []),
-        ]),
-      });
+    // Retrieve product list from product endpoint and map to candidates
+    const res = await request("GET", "/api/products", null, {
+      skipAuthRedirect: true,
     });
+    const products = toArray(res?.data || []);
 
-    return Array.from(grouped.values())
+    const candidates = products
+      .map((p) => ({
+        key:
+          p.productId ||
+          p.id ||
+          p.product_code ||
+          p.productCode ||
+          p.productName,
+        productId: p.productId || p.id || p.product_id || "",
+        productCode: p.productCode || p.product_code || "",
+        productName: p.productName || p.name || "",
+        productCategory: String(p.productCategory || "").toUpperCase(),
+        productClass: p.productClass || "",
+        productDescription: p.productDescription || p.description || "",
+        productPicture: p.productPicture || p.product_picture || "",
+        uom: p.uom || "",
+        stockIds: [],
+      }))
       .map((candidate) => ({
         ...candidate,
         aiAssistantMatched: isMatchedByHints(candidate, hints),
@@ -1154,6 +1015,8 @@ const StockIn = () => {
           String(b.productName || ""),
         );
       });
+
+    return candidates;
   };
 
   const continueWithSelectedProduct = async (codeToUse, product) => {
@@ -1163,25 +1026,29 @@ const StockIn = () => {
     setSuccessMsg("");
 
     try {
-      let finalRows = await loadStocksForCode(codeToUse);
-      if (finalRows.length === 0) {
-        const fallbackRow = buildLinkedFallbackRow(codeToUse, product, {
-          stockId: "",
-          location: "central",
-        });
-        if (!fallbackRow) {
-          throw new Error(t("stockIn.notFoundAfterCreate"));
-        }
-        finalRows = [fallbackRow];
-      }
+      // After creating a product, rely only on backend totals. Construct
+      // display rows from `totals.locations` and do not invent a fallback
+      // row when the backend has no data.
+      const productContext = product || null;
+      const totals = await loadProductTotalsForProduct(productContext);
 
-      const totals = await loadProductTotalsForProduct(product || finalRows[0]);
-      finalRows = mergeRowsWithProductTotals(
-        finalRows,
-        codeToUse,
-        product,
-        totals,
-      );
+      let finalRows = [];
+      if (Array.isArray(totals?.locations) && totals.locations.length > 0) {
+        const prod = getProductDetails(product || {});
+        finalRows = totals.locations.map((loc) => ({
+          key: `${""}|${loc.location || "central"}`,
+          stockId: "",
+          stockCode: codeToUse,
+          location: loc.location || "central",
+          productId: prod.productId,
+          productCode: product?.productCode || "",
+          productName: prod.productName,
+          productPicture: prod.productPicture,
+          uom: prod.uom,
+          currentQuantity: Number(loc.currentQuantity) || 0,
+          availableQuantity: Number(loc.availableQuantity) || 0,
+        }));
+      }
 
       setStocks(finalRows);
       setSelectedStockKey(finalRows[0].key);
@@ -1197,6 +1064,10 @@ const StockIn = () => {
 
   const openMatchDialogForStock = async (codeToUse) => {
     const normalizedCode = String(codeToUse || "").trim();
+    console.debug("StockIn: openMatchDialogForStock called", {
+      codeToUse: normalizedCode,
+      sessionId: matchSessionIdRef.current,
+    });
     matchSessionIdRef.current = crypto.randomUUID();
     setStockCode(normalizedCode);
     setMatchDialogOpen(true);
@@ -1230,6 +1101,10 @@ const StockIn = () => {
     const codeToUse = String(stockCode || "").trim();
     if (!codeToUse) return;
 
+    console.debug("StockIn: runMatchActionForCurrentStock start", {
+      codeToUse,
+      sessionId: matchSessionIdRef.current,
+    });
     setShowAiSearchButton(false);
     setMatchLoading(true);
     setMatchError("");
@@ -1263,6 +1138,7 @@ const StockIn = () => {
         preSelected?.key || (candidates.length > 0 ? candidates[0].key : ""),
       );
     } catch (error) {
+      console.error("StockIn: runMatchActionForCurrentStock error", error);
       setMatchError(error?.message || t("stockIn.matchError"));
     } finally {
       setMatchLoading(false);
@@ -1278,53 +1154,26 @@ const StockIn = () => {
     await continueWithSelectedProduct(stockCode, selectedCandidate);
   };
 
-  const toPrefilledProductFiles = (rawProductPicture) => {
-    if (!rawProductPicture) return [];
-
-    let parsed = rawProductPicture;
-    if (typeof parsed === "string") {
-      try {
-        parsed = JSON.parse(parsed);
-      } catch {
-        const rawUrl = parsed.trim();
-        if (!rawUrl) return [];
-        return [
-          normalizeFileMetadata({
-            url: rawUrl,
-            viewUrl: rawUrl,
-            name: "image",
-          }),
-        ];
-      }
-    }
-
-    const items = Array.isArray(parsed)
-      ? parsed
-      : parsed && typeof parsed === "object"
-        ? [parsed]
-        : [];
-
-    return items
-      .map((item) => normalizeFileMetadata(item))
-      .filter((item) => Boolean(item?.url || item?.viewUrl || item?.id));
-  };
-
   const handleSelectCandidate = (candidate) => {
     setSelectedCandidateKey(candidate.key);
   };
 
   const handleNoMatchAndSuggest = async () => {
+    console.debug("StockIn: handleNoMatchAndSuggest called", { stockCode });
     setMatchError("");
     setShowAiImageButton(false);
     setProductFiles([]);
     setProductImageFetching(false);
     setCreateProductForm({
-      productCode: buildPrefilledProductCode(stockCode),
+      productCode: generateProductCode(companyCodePrefix),
       productName: "",
       productDescription: "",
       productCategory: "C",
       productClass: "General",
       uom: "",
+      productBrand: "",
+      commonName: "",
+      specification: "",
     });
     setCreateProductOpen(true);
   };
@@ -1338,12 +1187,15 @@ const StockIn = () => {
     setProductFiles([]);
     setProductImageFetching(false);
     setCreateProductForm({
-      productCode: buildPrefilledProductCode(stockCode),
+      productCode: generateProductCode(companyCodePrefix),
       productName: name,
       productDescription: description,
       productCategory: "C",
       productClass: "General",
       uom: "",
+      productBrand: "",
+      commonName: "",
+      specification: "",
     });
     setCreateProductOpen(true);
   };
@@ -1382,14 +1234,15 @@ const StockIn = () => {
   };
 
   const handleCreateProductAndUse = async () => {
-    const todayIsoDate = new Date().toISOString().slice(0, 10);
-
     const payload = {
       productCode: String(createProductForm.productCode || "").trim(),
       productName: String(createProductForm.productName || "").trim(),
       productDescription: String(
         createProductForm.productDescription || "",
       ).trim(),
+      productBrand: String(createProductForm.productBrand || "").trim(),
+      commonName: String(createProductForm.commonName || "").trim(),
+      specification: String(createProductForm.specification || "").trim(),
       productCategory: String(createProductForm.productCategory || "")
         .trim()
         .toUpperCase(),
@@ -1540,9 +1393,8 @@ const StockIn = () => {
             location: trimmedLocation,
             createDate: new Date().toISOString(),
           });
-          targetStockId = Number(
-            readFirst(newStockRes?.data || {}, ["stockId", "id"]),
-          );
+          // Expect canonical `stockId` from the created resource.
+          targetStockId = Number(newStockRes?.data?.stockId || 0);
         } catch (stockErr) {
           throw new Error(stockErr?.message || t("stockIn.createStockFailed"));
         }
@@ -1557,9 +1409,8 @@ const StockIn = () => {
           location: selectedStock.location || "central",
           createDate: new Date().toISOString(),
         });
-        targetStockId = Number(
-          readFirst(newStockRes?.data || {}, ["stockId", "id"]),
-        );
+        // Expect canonical `stockId` from the created resource.
+        targetStockId = Number(newStockRes?.data?.stockId || 0);
         if (!targetStockId) throw new Error(t("stockIn.createStockFailed"));
         targetLocation = selectedStock.location || "central";
       } else {
@@ -2014,7 +1865,7 @@ const StockIn = () => {
                               <Typography
                                 sx={{ fontWeight: selected ? 700 : 600 }}
                               >
-                                {item.productName || item.productCode || "-"}
+                                {item.productName || "-"}
                               </Typography>
                               {selected && (
                                 <Chip
@@ -2079,12 +1930,7 @@ const StockIn = () => {
                   size="small"
                   label={t("product.productCode", "Product Code")}
                   value={createProductForm.productCode}
-                  onChange={(event) =>
-                    setCreateProductForm((prev) => ({
-                      ...prev,
-                      productCode: event.target.value,
-                    }))
-                  }
+                  InputProps={{ readOnly: true }}
                   fullWidth
                   required
                 />
@@ -2102,8 +1948,34 @@ const StockIn = () => {
                   required
                 />
               </Stack>
+              <TextField
+                size="small"
+                label={t("product.productDescription", "Description")}
+                value={createProductForm.productDescription}
+                onChange={(event) =>
+                  setCreateProductForm((prev) => ({
+                    ...prev,
+                    productDescription: event.target.value,
+                  }))
+                }
+                fullWidth
+                multiline
+                minRows={2}
+              />
 
               <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField
+                  size="small"
+                  label={t("product.productBrand", "Brand")}
+                  value={createProductForm.productBrand}
+                  onChange={(event) =>
+                    setCreateProductForm((prev) => ({
+                      ...prev,
+                      productBrand: event.target.value,
+                    }))
+                  }
+                  fullWidth
+                />
                 <FormControl size="small" sx={{ minWidth: 180 }}>
                   <InputLabel>{t("product.category", "Category")}</InputLabel>
                   <Select
@@ -2124,6 +1996,9 @@ const StockIn = () => {
                     </MenuItem>
                   </Select>
                 </FormControl>
+              </Stack>
+
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
                 <Autocomplete
                   freeSolo
                   openOnFocus
@@ -2177,71 +2052,84 @@ const StockIn = () => {
                   )}
                   fullWidth
                 />
-              </Stack>
 
-              <Autocomplete
-                freeSolo
-                openOnFocus
-                options={uomOptions}
-                value={
-                  findOptionByValue(uomOptions, createProductForm.uom) ?? null
-                }
-                inputValue={createProductForm.uom}
-                onInputChange={(_, newInputValue, reason) => {
-                  if (reason === "reset") return;
-                  setCreateProductForm((prev) => ({
-                    ...prev,
-                    uom: newInputValue,
-                  }));
-                }}
-                onChange={(_, newValue) => {
-                  if (typeof newValue === "string") {
+                <Autocomplete
+                  freeSolo
+                  openOnFocus
+                  options={uomOptions}
+                  value={
+                    findOptionByValue(uomOptions, createProductForm.uom) ?? null
+                  }
+                  inputValue={createProductForm.uom}
+                  onInputChange={(_, newInputValue, reason) => {
+                    if (reason === "reset") return;
                     setCreateProductForm((prev) => ({
                       ...prev,
-                      uom: newValue,
+                      uom: newInputValue,
                     }));
-                    return;
+                  }}
+                  onChange={(_, newValue) => {
+                    if (typeof newValue === "string") {
+                      setCreateProductForm((prev) => ({
+                        ...prev,
+                        uom: newValue,
+                      }));
+                      return;
+                    }
+                    if (newValue && typeof newValue === "object") {
+                      setCreateProductForm((prev) => ({
+                        ...prev,
+                        uom: newValue.value || "",
+                      }));
+                      return;
+                    }
+                    setCreateProductForm((prev) => ({ ...prev, uom: "" }));
+                  }}
+                  getOptionLabel={(option) =>
+                    typeof option === "string" ? option : option.value
                   }
-                  if (newValue && typeof newValue === "object") {
-                    setCreateProductForm((prev) => ({
-                      ...prev,
-                      uom: newValue.value || "",
-                    }));
-                    return;
-                  }
-                  setCreateProductForm((prev) => ({ ...prev, uom: "" }));
-                }}
-                getOptionLabel={(option) =>
-                  typeof option === "string" ? option : option.value
-                }
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    size="small"
-                    label={t("product.uom", "Unit of Measure")}
-                    placeholder={t(
-                      "product.uomPlaceholder",
-                      "e.g. pcs, kg, box",
-                    )}
-                    fullWidth
-                  />
-                )}
-                fullWidth
-              />
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      size="small"
+                      label={t("product.uom", "Unit of Measure")}
+                      placeholder={t(
+                        "product.uomPlaceholder",
+                        "e.g. pcs, kg, box",
+                      )}
+                      fullWidth
+                    />
+                  )}
+                  fullWidth
+                />
+              </Stack>
 
               <TextField
                 size="small"
-                label={t("product.productDescription", "Description")}
-                value={createProductForm.productDescription}
+                label={t("product.specification", "Specification")}
+                value={createProductForm.specification}
                 onChange={(event) =>
                   setCreateProductForm((prev) => ({
                     ...prev,
-                    productDescription: event.target.value,
+                    specification: event.target.value,
                   }))
                 }
                 fullWidth
                 multiline
                 minRows={2}
+              />
+
+              <TextField
+                size="small"
+                label={t("product.commonName", "Common Name")}
+                value={createProductForm.commonName}
+                onChange={(event) =>
+                  setCreateProductForm((prev) => ({
+                    ...prev,
+                    commonName: event.target.value,
+                  }))
+                }
+                fullWidth
               />
 
               {productImageFetching && (

@@ -4,6 +4,9 @@ import {
   Box,
   Button,
   InputAdornment,
+  IconButton,
+  Tooltip,
+  Menu,
   MenuItem,
   Paper,
   Stack,
@@ -19,6 +22,8 @@ import {
   Search as SearchIcon,
   Summarize as SummarizeIcon,
   ViewList as ViewListIcon,
+  Clear as ClearIcon,
+  MoreVert as MoreVertIcon,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
@@ -40,14 +45,7 @@ const toArray = (value) => {
 
 const ALL_MOVEMENTS_VALUE = "ALL";
 
-const readFirst = (row, keys) => {
-  for (const key of keys) {
-    if (row?.[key] !== undefined && row?.[key] !== null && row?.[key] !== "") {
-      return row[key];
-    }
-  }
-  return "";
-};
+// `readFirst` removed: use canonical backend field names directly.
 
 const toNumber = (value) => {
   if (value === null || value === undefined || value === "") return 0;
@@ -64,140 +62,70 @@ const safeParseDate = (raw) => {
 };
 
 const normalizeRow = (item) => {
-  const movementAtRaw = readFirst(item, [
-    "movementAt",
-    "movementDate",
-    "recordDate",
-    "createDate",
-    "movedAt",
-    "transactionDate",
-    "transactionAt",
-    "txDate",
-    "occurredAt",
-    "recordedAt",
-    "dateTime",
-    "date",
-    "createdAt",
-    "createdDate",
-    "updatedAt",
-    "updatedDate",
-    "timestamp",
-    "time",
-  ]);
+  const movementAtRaw =
+    item.recordDate ||
+    item.movementAt ||
+    item.movementDate ||
+    item.createDate ||
+    item.createdAt ||
+    item.updatedAt ||
+    "";
   const movementAtDate = safeParseDate(movementAtRaw);
 
-  const quantity = toNumber(
-    readFirst(item, [
-      "qty",
-      "quantity",
-      "movementQty",
-      "stockQty",
-      "changeQty",
-    ]),
-  );
+  const quantity = toNumber(item.qty || item.quantity || 0);
 
-  const stockModifier = toNumber(
-    readFirst(item, [
-      "stockModifier",
-      "movementModifier",
-      "stockMovementModifier",
-      "movementStockModifier",
-    ]),
-  );
-  const holdModifier = toNumber(
-    readFirst(item, [
-      "holdModifier",
-      "movementHoldModifier",
-      "holdMovementModifier",
-    ]),
-  );
+  const stockModifier = toNumber(item.stockModifier || 0);
+  const holdModifier = toNumber(item.holdModifier || 0);
 
   const stockMoved = (() => {
-    const v = readFirst(item, ["stockMoved", "movedStock", "stockMove"]);
-    return v !== "" ? toNumber(v) : quantity * stockModifier;
+    const v = item.stockMoved;
+    return v !== undefined && v !== null && v !== ""
+      ? toNumber(v)
+      : quantity * stockModifier;
   })();
   const holdMoved = (() => {
-    const v = readFirst(item, ["holdMoved", "movedHold", "holdMove"]);
-    return v !== "" ? toNumber(v) : quantity * holdModifier;
-  })();
-
-  const quantityMoved = toNumber(
-    readFirst(item, [
-      "quantityMoved",
-      "movedQty",
-      "totalMoved",
-      "quantityMove",
-    ]),
-  );
-  const quantityHolded = toNumber(
-    readFirst(item, [
-      "quantityHolded",
-      "quantityHeld",
-      "holdQty",
-      "heldQty",
-      "quantityHold",
-    ]),
-  );
-
-  // Use backend-computed values; fall back to formulas described by backend
-  const currentQuantity = (() => {
-    const v = readFirst(item, ["currentQuantity", "currentQty"]);
-    return v !== "" ? toNumber(v) : quantityMoved;
-  })();
-  const currentAvailableQuantity = (() => {
-    const v = readFirst(item, [
-      "currentAvailableQuantity",
-      "availableQuantity",
-      "availableQty",
-    ]);
-    return v !== ""
+    const v = item.holdMoved;
+    return v !== undefined && v !== null && v !== ""
       ? toNumber(v)
-      : quantityMoved + quantityHolded;
+      : quantity * holdModifier;
   })();
+
+  const quantityMoved = toNumber(item.quantityMoved || 0);
+  const quantityHolded = toNumber(item.quantityHolded || 0);
+
+  // Use backend-computed values; prefer canonical fields.
+  const currentQuantity =
+    item.currentQuantity !== undefined && item.currentQuantity !== null
+      ? toNumber(item.currentQuantity)
+      : quantityMoved;
+  const currentAvailableQuantity =
+    item.currentAvailableQuantity !== undefined &&
+    item.currentAvailableQuantity !== null
+      ? toNumber(item.currentAvailableQuantity)
+      : quantityMoved + quantityHolded;
 
   return {
     id:
-      String(readFirst(item, ["id", "movementId", "stockViewId"])) ||
-      `${readFirst(item, ["stockId", "stockCode"])}-${movementAtRaw}-${quantity}`,
+      String(item.id || item.movementId || item.stockViewId) ||
+      `${String(item.stockId || item.stockCode || "")} - ${movementAtRaw} - ${quantity}`,
     movementId: String(
-      readFirst(item, ["movementId", "id", "stockMovementId"]),
+      item.movementId || item.id || item.stockMovementId || "",
     ),
-    stockId: String(readFirst(item, ["stockId"])),
-    productId: String(readFirst(item, ["productId"])),
-    productName: String(
-      readFirst(item, [
-        "productName",
-        "stockName",
-        "name",
-        "productDescription",
-      ]),
-    ),
-    stockCode: String(readFirst(item, ["stockCode", "productCode", "code"])),
+    stockId: String(item.stockId || ""),
+    productId: String(item.productId || ""),
+    productName: String(item.productName || ""),
+    productDescription: String(item.productDescription || ""),
+    stockCode: String(item.stockCode || ""),
     stockLocation: String(
-      readFirst(item, [
-        "stockLocation",
-        "location",
-        "warehouse",
-        "bin",
-        "stockBin",
-      ]),
+      item.location ||
+        item.stockLocation ||
+        item.warehouse ||
+        item.bin ||
+        item.stockBin ||
+        "",
     ),
-    movementType: String(
-      readFirst(item, [
-        "movementType",
-        "movementCode",
-        "movementDescription",
-        "type",
-      ]),
-    ),
-    movementDescription: String(
-      readFirst(item, [
-        "movementDescription",
-        "description",
-        "remark",
-        "remarks",
-      ]),
-    ),
+    movementType: String(item.movementType || ""),
+    movementDescription: String(item.movementDescription || ""),
     quantity,
     stockMoved,
     holdMoved,
@@ -205,24 +133,13 @@ const normalizeRow = (item) => {
     quantityHolded,
     currentQuantity,
     currentAvailableQuantity,
-    uom: String(readFirst(item, ["uom", "unit", "unitOfMeasure"]) || ""),
+    uom: String(item.uom || ""),
     movementAtRaw,
     movementAt: movementAtDate
       ? movementAtDate.toLocaleDateString()
       : String(movementAtRaw || ""),
     movementAtTs: movementAtDate ? movementAtDate.getTime() : 0,
-    reference: String(
-      readFirst(item, [
-        "reference",
-        "ref",
-        "referenceNo",
-        "refNo",
-        "referenceNumber",
-        "docNo",
-        "documentNo",
-        "orderRef",
-      ]) || "",
-    ),
+    reference: String(item.reference || ""),
   };
 };
 
@@ -377,7 +294,7 @@ const StockEnquiry = () => {
     const productMap = new Map();
 
     movementRows.forEach((row) => {
-      const productKey = row.productId || row.productName || "unknown-product";
+      const productKey = row.productId || "unknown-product";
       const stockKey = row.stockCode || row.stockId || row.id;
 
       let productGroup = productMap.get(productKey);
@@ -516,7 +433,7 @@ const StockEnquiry = () => {
     const productMap = new Map();
 
     movementRows.forEach((row) => {
-      const productKey = row.productId || row.productName || "unknown-product";
+      const productKey = row.productId || "unknown-product";
       const stockKey = row.stockCode || row.stockId || row.id;
 
       let productGroup = productMap.get(productKey);
@@ -649,16 +566,68 @@ const StockEnquiry = () => {
         headerName: t("stockEnquiry.columns.product"),
         flex: 1,
         minWidth: 140,
+        renderCell: (params) => {
+          const full = `${params.row.productName || ""}${params.row.productDescription ? " — " + params.row.productDescription : ""}`;
+          return (
+            <Tooltip title={full} arrow enterDelay={300} leaveDelay={100}>
+              <Box
+                sx={{
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {params.value}
+              </Box>
+            </Tooltip>
+          );
+        },
       },
       {
         field: "stockCode",
         headerName: t("stockEnquiry.columns.stockCode"),
         width: 110,
+        renderCell: (params) => (
+          <Tooltip
+            title={String(params.value || params.row.stockCode || "")}
+            arrow
+            enterDelay={300}
+            leaveDelay={100}
+          >
+            <Box
+              sx={{
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {params.value}
+            </Box>
+          </Tooltip>
+        ),
       },
       {
         field: "stockLocation",
         headerName: t("stockEnquiry.columns.location"),
         width: 120,
+        renderCell: (params) => (
+          <Tooltip
+            title={String(params.value || params.row.stockLocation || "")}
+            arrow
+            enterDelay={300}
+            leaveDelay={100}
+          >
+            <Box
+              sx={{
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {params.value}
+            </Box>
+          </Tooltip>
+        ),
       },
       {
         field: "movementAt",
@@ -669,6 +638,24 @@ const StockEnquiry = () => {
         field: "reference",
         headerName: t("stockEnquiry.columns.reference"),
         width: 120,
+        renderCell: (params) => (
+          <Tooltip
+            title={String(params.value || params.row.reference || "")}
+            arrow
+            enterDelay={300}
+            leaveDelay={100}
+          >
+            <Box
+              sx={{
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {params.value}
+            </Box>
+          </Tooltip>
+        ),
       },
       {
         field: "movementType",
@@ -714,11 +701,45 @@ const StockEnquiry = () => {
         headerName: t("stockEnquiry.columns.product"),
         flex: 1,
         minWidth: 180,
+        renderCell: (params) => {
+          const full = `${params.row.productName || ""}${params.row.productDescription ? " — " + params.row.productDescription : ""}`;
+          return (
+            <Tooltip title={full} arrow enterDelay={300} leaveDelay={100}>
+              <Box
+                sx={{
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {params.value}
+              </Box>
+            </Tooltip>
+          );
+        },
       },
       {
         field: "stockCode",
         headerName: t("stockEnquiry.columns.stockCode"),
         width: 140,
+        renderCell: (params) => (
+          <Tooltip
+            title={String(params.value || params.row.stockCode || "")}
+            arrow
+            enterDelay={300}
+            leaveDelay={100}
+          >
+            <Box
+              sx={{
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {params.value}
+            </Box>
+          </Tooltip>
+        ),
       },
       {
         field: "quantityMoved",
@@ -771,6 +792,54 @@ const StockEnquiry = () => {
     label: column.headerName,
   }));
 
+  const pasteToFilter = (field, value) => {
+    if (value === undefined || value === null) return;
+    const v = String(value);
+    if (!v) return;
+    if (field === "productName") setProductKeyword(v);
+    else if (field === "stockCode") setStockCode(v);
+    else if (field === "stockLocation") setLocationKeyword(v);
+    else if (field === "reference") setReferenceKeyword(v);
+  };
+
+  const handleCellDoubleClick = (params) => {
+    if (!params) return;
+    pasteToFilter(params.field, params.value ?? params.row?.[params.field]);
+  };
+
+  const handleBlockDoubleClick = (e, row) => {
+    const text = String(e?.target?.textContent || "").trim();
+    if (!text) return;
+    if (String(row.productName || "") === text) setProductKeyword(text);
+    else if (String(row.stockCode || "") === text) setStockCode(text);
+    else if (String(row.stockLocation || "") === text) setLocationKeyword(text);
+    else if (String(row.reference || "") === text) setReferenceKeyword(text);
+  };
+
+  const [menuAnchorEl, setMenuAnchorEl] = useState(null);
+  const [menuRow, setMenuRow] = useState(null);
+
+  const openRowMenu = (event, row) => {
+    event.stopPropagation();
+    setMenuAnchorEl(event.currentTarget);
+    setMenuRow(row);
+  };
+
+  const closeRowMenu = () => {
+    setMenuAnchorEl(null);
+    setMenuRow(null);
+  };
+
+  const handleMenuPaste = (field) => {
+    if (!menuRow) return;
+    pasteToFilter(
+      field,
+      menuRow[field] ||
+        menuRow[field === "productName" ? "productName" : field],
+    );
+    closeRowMenu();
+  };
+
   return (
     <Box>
       <PageHeader
@@ -814,6 +883,20 @@ const StockEnquiry = () => {
                   <SearchIcon fontSize="small" />
                 </InputAdornment>
               ),
+              endAdornment:
+                productKeyword && productKeyword.trim() !== "" ? (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      edge="end"
+                      onClick={() => setProductKeyword("")}
+                      aria-label={t("basic.clear", "Clear")}
+                      sx={{ color: "text.secondary" }}
+                    >
+                      <ClearIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
             }}
           />
           <TextField
@@ -828,6 +911,20 @@ const StockEnquiry = () => {
                   <SearchIcon fontSize="small" />
                 </InputAdornment>
               ),
+              endAdornment:
+                stockCode && stockCode.trim() !== "" ? (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      edge="end"
+                      onClick={() => setStockCode("")}
+                      aria-label={t("basic.clear", "Clear")}
+                      sx={{ color: "text.secondary" }}
+                    >
+                      <ClearIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
             }}
           />
           <TextField
@@ -842,6 +939,20 @@ const StockEnquiry = () => {
                   <SearchIcon fontSize="small" />
                 </InputAdornment>
               ),
+              endAdornment:
+                locationKeyword && locationKeyword.trim() !== "" ? (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      edge="end"
+                      onClick={() => setLocationKeyword("")}
+                      aria-label={t("basic.clear", "Clear")}
+                      sx={{ color: "text.secondary" }}
+                    >
+                      <ClearIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
             }}
           />
           <TextField
@@ -856,6 +967,20 @@ const StockEnquiry = () => {
                   <SearchIcon fontSize="small" />
                 </InputAdornment>
               ),
+              endAdornment:
+                referenceKeyword && referenceKeyword.trim() !== "" ? (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      edge="end"
+                      onClick={() => setReferenceKeyword("")}
+                      aria-label={t("basic.clear", "Clear")}
+                      sx={{ color: "text.secondary" }}
+                    >
+                      <ClearIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
             }}
           />
           <TextField
@@ -874,6 +999,10 @@ const StockEnquiry = () => {
             ))}
           </TextField>
         </Stack>
+
+        <Typography variant="caption" sx={{ color: "text.secondary", mt: 1 }}>
+          {t("stockEnquiry.hint.doubleClick")}
+        </Typography>
 
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <ToggleButtonGroup
@@ -963,27 +1092,68 @@ const StockEnquiry = () => {
           description={t("stockEnquiry.emptyDescription")}
         />
       ) : shouldUseBlockLayout ? (
-        <LoadMoreBlockList
-          items={tableRows}
-          renderItem={(row) => (
-            <BlockListItem
-              key={row.id}
-              item={row}
-              columnDefs={blockColumnDefs}
-              t={t}
-              enableActions={false}
-              leadingMedia={{
-                placeholder: (
-                  <AssessmentIcon
-                    sx={{ color: "text.secondary", fontSize: "1.1rem" }}
-                  />
-                ),
-                width: 40,
-                height: 40,
-              }}
-            />
-          )}
-        />
+        <>
+          <LoadMoreBlockList
+            items={tableRows}
+            renderItem={(row) => (
+              <Box
+                key={row.id}
+                sx={{ position: "relative" }}
+                onDoubleClick={(e) => handleBlockDoubleClick(e, row)}
+              >
+                <IconButton
+                  size="small"
+                  onClick={(e) => openRowMenu(e, row)}
+                  sx={{ position: "absolute", right: 8, top: 8, zIndex: 2 }}
+                  aria-label={t(
+                    "stockEnquiry.actions.openPasteMenu",
+                    "Open paste menu",
+                  )}
+                >
+                  <MoreVertIcon fontSize="small" />
+                </IconButton>
+
+                <BlockListItem
+                  item={row}
+                  columnDefs={blockColumnDefs}
+                  t={t}
+                  enableActions={false}
+                  leadingMedia={{
+                    placeholder: (
+                      <AssessmentIcon
+                        sx={{ color: "text.secondary", fontSize: "1.1rem" }}
+                      />
+                    ),
+                    width: 40,
+                    height: 40,
+                  }}
+                />
+              </Box>
+            )}
+          />
+
+          <Menu
+            anchorEl={menuAnchorEl}
+            open={Boolean(menuAnchorEl)}
+            onClose={closeRowMenu}
+          >
+            <MenuItem disabled sx={{ opacity: 1, fontWeight: 600 }}>
+              {t("stockEnquiry.actions.pasteMenuTitle", "Paste into filter")}
+            </MenuItem>
+            <MenuItem onClick={() => handleMenuPaste("productName")}>
+              {t("stockEnquiry.filters.product")}
+            </MenuItem>
+            <MenuItem onClick={() => handleMenuPaste("stockCode")}>
+              {t("stockEnquiry.filters.stockCode")}
+            </MenuItem>
+            <MenuItem onClick={() => handleMenuPaste("stockLocation")}>
+              {t("stockEnquiry.filters.location")}
+            </MenuItem>
+            <MenuItem onClick={() => handleMenuPaste("reference")}>
+              {t("stockEnquiry.filters.reference")}
+            </MenuItem>
+          </Menu>
+        </>
       ) : (
         <Paper
           elevation={1}
@@ -998,6 +1168,7 @@ const StockEnquiry = () => {
             density={viewMode === "detail" ? "compact" : "standard"}
             rows={tableRows}
             columns={tableColumns}
+            onCellDoubleClick={handleCellDoubleClick}
             getRowId={(row) => row.id}
             getRowClassName={(params) =>
               `stock-enquiry-row-${params.row.rowType || "movement"}`

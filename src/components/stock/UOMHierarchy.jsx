@@ -54,9 +54,9 @@ const UOMHierarchy = () => {
           const child = productMap[String(h.childProductId)] || {};
           return {
             ...h,
-            parentProductCode: parent.productCode || h.parentProductId,
+            parentProductCode: parent.productCode || "",
             parentProductName: parent.productName || "",
-            childProductCode: child.productCode || h.childProductId,
+            childProductCode: child.productCode || "",
             childProductName: child.productName || "",
           };
         });

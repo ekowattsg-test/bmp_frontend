@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { TextField, Button, Box, MenuItem, Autocomplete } from "@mui/material";
 import { request } from "../../helpers/axios_helper";
+import { AuthContext } from "../../context/authContext";
+import { generateProductCode } from "../../helpers/itemcode_helper";
 import { useTranslation } from "react-i18next";
 import { DEFAULT_UOM_OPTIONS } from "../../helpers/common_options_helper";
 import FileGallery from "../common/FileGallery";
@@ -20,12 +22,23 @@ const ProductAdd = ({ onCancel }) => {
     productCategory: "",
     productClass: "",
     uom: "",
+    productBrand: "",
+    commonName: "",
+    specification: "",
   });
   const [productFiles, setProductFiles] = useState([]);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [success, setSuccess] = useState(false);
+
+  const { userInfo } = useContext(AuthContext);
+
+  useEffect(() => {
+    const prefix = String(userInfo?.companyId || "").trim();
+    setForm((prev) => ({ ...prev, productCode: generateProductCode(prefix) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const validate = () => {
     const errs = {};
@@ -62,6 +75,9 @@ const ProductAdd = ({ onCancel }) => {
         productName: form.productName,
         productCode: form.productCode,
         productDescription: form.productDescription,
+        productBrand: form.productBrand,
+        commonName: form.commonName,
+        specification: form.specification,
         productCategory: form.productCategory,
         productClass: form.productClass,
         uom: form.uom,
@@ -92,15 +108,13 @@ const ProductAdd = ({ onCancel }) => {
         borderRadius: 2,
       }}
     >
-      <HeaderBar
-        title={t("product.addTitle", "Add Product")}
-        sx={{ mb: 1 }}
-      />
+      <HeaderBar title={t("product.addTitle", "Add Product")} sx={{ mb: 1 }} />
       <TextField
         label={t("product.productCode", "Product Code")}
         name="productCode"
         value={form.productCode}
         onChange={handleChange}
+        inputProps={{ readOnly: true }}
         fullWidth
         margin="normal"
         error={!!errors.productCode}
@@ -118,6 +132,14 @@ const ProductAdd = ({ onCancel }) => {
         label={t("product.productDescription", "Description")}
         name="productDescription"
         value={form.productDescription}
+        onChange={handleChange}
+        fullWidth
+        margin="normal"
+      />
+      <TextField
+        label={t("product.productBrand", "Brand")}
+        name="productBrand"
+        value={form.productBrand}
         onChange={handleChange}
         fullWidth
         margin="normal"
@@ -175,6 +197,24 @@ const ProductAdd = ({ onCancel }) => {
           />
         )}
         fullWidth
+      />
+      <TextField
+        label={t("product.specification", "Specification")}
+        name="specification"
+        value={form.specification}
+        onChange={handleChange}
+        fullWidth
+        margin="normal"
+        multiline
+        minRows={2}
+      />
+      <TextField
+        label={t("product.commonName", "Common Name")}
+        name="commonName"
+        value={form.commonName}
+        onChange={handleChange}
+        fullWidth
+        margin="normal"
       />
 
       <Box sx={{ my: 1 }}>
