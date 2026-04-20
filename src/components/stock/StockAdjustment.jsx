@@ -149,49 +149,42 @@ const StockAdjustment = () => {
               "GET",
               `/api/stockviews/stock/${encodeURIComponent(baseStock.stockId)}`,
             );
-            return toArray(responseByStock?.data).map((row) => ({
-              row,
-              fallbackStockId: baseStock.stockId,
-            }));
+            return toArray(responseByStock?.data).map((row) => ({ row }));
           } catch {
             return [];
           }
         }),
       );
 
-      const viewRows = perStockViewRows
-        .flat()
-        .map(({ row, fallbackStockId }) => {
-          const stockId = String(row.stockId || fallbackStockId);
-          const location = String(row.location || "central");
-          const movementAtTs =
-            safeParseDate(row.recordDate || row.createDate)?.getTime() || 0;
+      const viewRows = perStockViewRows.flat().map(({ row }) => {
+        const stockId = String(row.stockId);
+        const location = String(row.location || "central");
+        const movementAtTs =
+          safeParseDate(row.recordDate || row.createDate)?.getTime() || 0;
 
-          const quantity = toNumber(row.qty || row.quantity || 0);
-          const stockModifier = toNumber(row.stockModifier || 0);
-          const holdModifier = toNumber(row.holdModifier || 0);
+        const quantity = toNumber(row.qty || row.quantity || 0);
+        const stockModifier = toNumber(row.stockModifier || 0);
+        const holdModifier = toNumber(row.holdModifier || 0);
 
-          const stockMoved = (() => {
-            const explicit = row.stockMoved;
-            return explicit !== ""
-              ? toNumber(explicit)
-              : quantity * stockModifier;
-          })();
-          const holdMoved = (() => {
-            const explicit = row.holdMoved;
-            return explicit !== ""
-              ? toNumber(explicit)
-              : quantity * holdModifier;
-          })();
+        const stockMoved = (() => {
+          const explicit = row.stockMoved;
+          return explicit !== ""
+            ? toNumber(explicit)
+            : quantity * stockModifier;
+        })();
+        const holdMoved = (() => {
+          const explicit = row.holdMoved;
+          return explicit !== "" ? toNumber(explicit) : quantity * holdModifier;
+        })();
 
-          return {
-            stockId,
-            location,
-            movementAtTs,
-            stockMoved,
-            holdMoved,
-          };
-        });
+        return {
+          stockId,
+          location,
+          movementAtTs,
+          stockMoved,
+          holdMoved,
+        };
+      });
 
       const groupedByLocation = new Map();
       viewRows.forEach((row) => {

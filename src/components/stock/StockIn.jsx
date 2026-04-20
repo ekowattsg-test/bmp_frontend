@@ -197,7 +197,6 @@ const mergeRowsWithProductTotals = (rows, codeToUse, product, totals) => {
     return rows;
 
   const productInfo = getProductDetails(product || rows[0] || {});
-  const fallbackStockId = String(rows[0]?.stockId || "");
   const mergedByLocation = new Map(
     rows.map((row) => [String(row.location || "central").toLowerCase(), row]),
   );
@@ -222,8 +221,8 @@ const mergeRowsWithProductTotals = (rows, codeToUse, product, totals) => {
     }
 
     mergedByLocation.set(locationKey, {
-      key: `${fallbackStockId}|${location}`,
-      stockId: fallbackStockId,
+      key: `|${location}`,
+      stockId: "",
       stockCode: String(codeToUse || rows[0]?.stockCode || ""),
       location,
       productId: productInfo.productId,
@@ -762,49 +761,42 @@ const StockIn = () => {
               null,
               { skipAuthRedirect: true },
             );
-            return toArray(responseByStock?.data).map((row) => ({
-              row,
-              fallbackStockId: baseStock.stockId,
-            }));
+            return toArray(responseByStock?.data).map((row) => ({ row }));
           } catch {
             return [];
           }
         }),
       );
 
-      const viewRows = perStockViewRows
-        .flat()
-        .map(({ row, fallbackStockId }) => {
-          const stockId = String(row.stockId || fallbackStockId);
-          const location = String(row.location || "central");
-          const movementAtTs =
-            safeParseDate(row.recordDate || row.createDate)?.getTime() || 0;
+      const viewRows = perStockViewRows.flat().map(({ row }) => {
+        const stockId = String(row.stockId);
+        const location = String(row.location || "central");
+        const movementAtTs =
+          safeParseDate(row.recordDate || row.createDate)?.getTime() || 0;
 
-          const quantity = toNumber(row.qty || row.quantity || 0);
-          const stockModifier = toNumber(row.stockModifier || 0);
-          const holdModifier = toNumber(row.holdModifier || 0);
+        const quantity = toNumber(row.qty || row.quantity || 0);
+        const stockModifier = toNumber(row.stockModifier || 0);
+        const holdModifier = toNumber(row.holdModifier || 0);
 
-          const stockMoved = (() => {
-            const explicit = row.stockMoved;
-            return explicit !== ""
-              ? toNumber(explicit)
-              : quantity * stockModifier;
-          })();
-          const holdMoved = (() => {
-            const explicit = row.holdMoved;
-            return explicit !== ""
-              ? toNumber(explicit)
-              : quantity * holdModifier;
-          })();
+        const stockMoved = (() => {
+          const explicit = row.stockMoved;
+          return explicit !== ""
+            ? toNumber(explicit)
+            : quantity * stockModifier;
+        })();
+        const holdMoved = (() => {
+          const explicit = row.holdMoved;
+          return explicit !== "" ? toNumber(explicit) : quantity * holdModifier;
+        })();
 
-          return {
-            stockId,
-            location,
-            movementAtTs,
-            stockMoved,
-            holdMoved,
-          };
-        });
+        return {
+          stockId,
+          location,
+          movementAtTs,
+          stockMoved,
+          holdMoved,
+        };
+      });
 
       const groupedByLocation = new Map();
       viewRows.forEach((row) => {
@@ -985,19 +977,14 @@ const StockIn = () => {
 
     const candidates = products
       .map((p) => ({
-        key:
-          p.productId ||
-          p.id ||
-          p.product_code ||
-          p.productCode ||
-          p.productName,
-        productId: p.productId || p.id || p.product_id || "",
-        productCode: p.productCode || p.product_code || "",
-        productName: p.productName || p.name || "",
+        key: p.productId,
+        productId: p.productId || "",
+        productCode: p.productCode || "",
+        productName: p.productName || "",
         productCategory: String(p.productCategory || "").toUpperCase(),
         productClass: p.productClass || "",
-        productDescription: p.productDescription || p.description || "",
-        productPicture: p.productPicture || p.product_picture || "",
+        productDescription: p.productDescription || "",
+        productPicture: p.productPicture || "",
         uom: p.uom || "",
         stockIds: [],
       }))
@@ -1026,15 +1013,12 @@ const StockIn = () => {
     setSuccessMsg("");
 
     try {
-      // After creating a product, rely only on backend totals. Construct
-      // display rows from `totals.locations` and do not invent a fallback
-      // row when the backend has no data.
       const productContext = product || null;
       const totals = await loadProductTotalsForProduct(productContext);
+      const prod = getProductDetails(product || {});
 
       let finalRows = [];
       if (Array.isArray(totals?.locations) && totals.locations.length > 0) {
-        const prod = getProductDetails(product || {});
         finalRows = totals.locations.map((loc) => ({
           key: `${""}|${loc.location || "central"}`,
           stockId: "",
@@ -1048,6 +1032,25 @@ const StockIn = () => {
           currentQuantity: Number(loc.currentQuantity) || 0,
           availableQuantity: Number(loc.availableQuantity) || 0,
         }));
+      } else {
+        // No movements yet (newly linked or newly created product).
+        // Show a single 0-quantity row at the default location so the user
+        // can enter the opening quantity without a second scan.
+        finalRows = [
+          {
+            key: "|central",
+            stockId: "",
+            stockCode: codeToUse,
+            location: "central",
+            productId: prod.productId,
+            productCode: product?.productCode || "",
+            productName: prod.productName,
+            productPicture: prod.productPicture,
+            uom: prod.uom,
+            currentQuantity: 0,
+            availableQuantity: 0,
+          },
+        ];
       }
 
       setStocks(finalRows);

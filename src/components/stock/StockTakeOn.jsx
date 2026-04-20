@@ -62,16 +62,6 @@ const toArray = (value) => {
   return [];
 };
 
-const readFirst = (row, keys) => {
-  // Return the first present non-empty value among the provided keys.
-  if (!row || !Array.isArray(keys) || keys.length === 0) return "";
-  for (const key of keys) {
-    const val = row?.[key];
-    if (val !== undefined && val !== null && val !== "") return val;
-  }
-  return "";
-};
-
 const toNumber = (value) => {
   if (value === null || value === undefined || value === "") return 0;
   const numberValue = Number(value);
@@ -100,41 +90,21 @@ const getProductDetails = (item = {}) => {
 
 const normalizeStock = (item, fallbackCode) => {
   const product = getProductDetails(item);
-  const stockId = String(readFirst(item, ["stockId", "id"]));
-  const location = String(
-    readFirst(item, [
-      "location",
-      "stockLocation",
-      "warehouse",
-      "bin",
-      "stockBin",
-    ]) || "central",
-  );
+  const stockId = String(item.stockId || "");
+  const location = String(item.location || "central");
 
   return {
     key: `${stockId || ""}|${location || "central"}`,
     stockId,
-    stockCode: String(
-      readFirst(item, ["stockCode", "code", "stock_code"]) || fallbackCode,
-    ),
+    stockCode: String(item.stockCode || fallbackCode),
     location,
     productId: product.productId,
-    productCode: String(
-      readFirst(item, ["productCode", "product_code", "code"]),
-    ),
+    productCode: String(item.productCode || ""),
     productName: product.productName,
     productPicture: product.productPicture,
     uom: product.uom,
-    currentQuantity: toNumber(
-      readFirst(item, ["currentQuantity", "quantity", "currentQty"]),
-    ),
-    availableQuantity: toNumber(
-      readFirst(item, [
-        "currentAvailableQuantity",
-        "availableQuantity",
-        "availableQty",
-      ]),
-    ),
+    currentQuantity: toNumber(item.quantity),
+    availableQuantity: 0,
   };
 };
 
@@ -170,34 +140,11 @@ const enrichRowsWithProduct = (rows, productData) => {
 // when backend product/stock totals are missing. Use backend totals directly.
 
 const getMovementTotals = (row) => {
-  const quantity = toNumber(
-    readFirst(row, ["qty", "quantity", "movementQty", "stockQty", "changeQty"]),
-  );
-  const stockModifier = toNumber(
-    readFirst(row, [
-      "stockModifier",
-      "movementModifier",
-      "stockMovementModifier",
-      "movementStockModifier",
-    ]),
-  );
-  const holdModifier = toNumber(
-    readFirst(row, [
-      "holdModifier",
-      "movementHoldModifier",
-      "holdMovementModifier",
-    ]),
-  );
-  const explicitStockMoved = readFirst(row, [
-    "stockMoved",
-    "movedStock",
-    "stockMove",
-  ]);
-  const explicitHoldMoved = readFirst(row, [
-    "holdMoved",
-    "movedHold",
-    "holdMove",
-  ]);
+  const quantity = toNumber(row.quantity);
+  const stockModifier = toNumber(row.stockModifier);
+  const holdModifier = toNumber(row.holdModifier);
+  const explicitStockMoved = row.stockMoved ?? "";
+  const explicitHoldMoved = row.holdMoved ?? "";
 
   return {
     stockMoved:
@@ -213,9 +160,7 @@ const getMovementTotals = (row) => {
 
 const sameProduct = (row, product) => {
   const rowProduct = getProductDetails(row);
-  const rowProductCode = String(
-    readFirst(row, ["productCode", "product_code", "code"]),
-  )
+  const rowProductCode = String(row.productCode || "")
     .trim()
     .toLowerCase();
   const productId = String(product?.productId || "").trim();
@@ -249,7 +194,6 @@ const mergeRowsWithProductTotals = (rows, codeToUse, product, totals) => {
     return rows;
 
   const productInfo = getProductDetails(product || rows[0] || {});
-  const fallbackStockId = String(rows[0]?.stockId || "");
   const mergedByLocation = new Map(
     rows.map((row) => [String(row.location || "central").toLowerCase(), row]),
   );
@@ -274,8 +218,8 @@ const mergeRowsWithProductTotals = (rows, codeToUse, product, totals) => {
     }
 
     mergedByLocation.set(locationKey, {
-      key: `${fallbackStockId}|${location}`,
-      stockId: fallbackStockId,
+      key: `|${location}`,
+      stockId: "",
       stockCode: String(codeToUse || rows[0]?.stockCode || ""),
       location,
       productId: productInfo.productId,
@@ -561,28 +505,19 @@ const uniqueValues = (values) =>
 
 const toProductCandidate = (row) => {
   const product = getProductDetails(row);
-  const stockCode = String(
-    readFirst(row, ["stockCode", "code", "stock_code", "productCode"]) || "",
-  );
+  const stockCode = String(row.stockCode || "");
 
   return {
     key: product.productId || stockCode || product.productName,
     productId: product.productId,
     productCode: stockCode,
     productName: product.productName || stockCode,
-    productCategory: String(
-      readFirst(row, ["productCategory", "category", "productCat"]) || "",
-    ).toUpperCase(),
-    productClass: String(
-      readFirst(row, ["productClass", "class", "productType"]) || "",
-    ),
-    productDescription: String(
-      readFirst(row, ["productDescription", "description", "productDesc"]) ||
-        "",
-    ),
+    productCategory: String(row.productCategory || "").toUpperCase(),
+    productClass: String(row.productClass || ""),
+    productDescription: String(row.productDescription || ""),
     productPicture: product.productPicture || "",
-    uom: String(readFirst(row, ["uom", "unit", "unitOfMeasure"]) || ""),
-    stockIds: uniqueValues([readFirst(row, ["stockId", "id"])]),
+    uom: String(row.uom || ""),
+    stockIds: uniqueValues([row.stockId]),
   };
 };
 
@@ -754,15 +689,7 @@ const StockTakeOnNew = () => {
 
     const byLocation = new Map();
     matchedRows.forEach((row) => {
-      const location = String(
-        readFirst(row, [
-          "location",
-          "stockLocation",
-          "warehouse",
-          "bin",
-          "stockBin",
-        ]) || "central",
-      );
+      const location = String(row.location || "central");
       const movement = getMovementTotals(row);
       const existing = byLocation.get(location) || {
         currentQuantity: 0,
@@ -817,97 +744,41 @@ const StockTakeOnNew = () => {
               null,
               { skipAuthRedirect: true },
             );
-            return toArray(responseByStock?.data).map((row) => ({
-              row,
-              fallbackStockId: baseStock.stockId,
-            }));
+            return toArray(responseByStock?.data).map((row) => ({ row }));
           } catch {
             return [];
           }
         }),
       );
 
-      const viewRows = perStockViewRows
-        .flat()
-        .map(({ row, fallbackStockId }) => {
-          const stockId = String(
-            readFirst(row, ["stockId", "id"]) || fallbackStockId,
-          );
-          const location = String(
-            readFirst(row, [
-              "stockLocation",
-              "location",
-              "warehouse",
-              "bin",
-              "stockBin",
-            ]) || "central",
-          );
-          const movementAtTs =
-            safeParseDate(
-              readFirst(row, [
-                "recordDate",
-                "movementAt",
-                "movementDate",
-                "createDate",
-                "createdAt",
-                "updatedAt",
-              ]),
-            )?.getTime() || 0;
+      const viewRows = perStockViewRows.flat().map(({ row }) => {
+        const stockId = String(row.stockId);
+        const location = String(row.location || "central");
+        const movementAtTs = safeParseDate(row.recordDate)?.getTime() || 0;
 
-          const quantity = toNumber(
-            readFirst(row, [
-              "qty",
-              "quantity",
-              "movementQty",
-              "stockQty",
-              "changeQty",
-            ]),
-          );
-          const stockModifier = toNumber(
-            readFirst(row, [
-              "stockModifier",
-              "movementModifier",
-              "stockMovementModifier",
-              "movementStockModifier",
-            ]),
-          );
-          const holdModifier = toNumber(
-            readFirst(row, [
-              "holdModifier",
-              "movementHoldModifier",
-              "holdMovementModifier",
-            ]),
-          );
+        const quantity = toNumber(row.quantity);
+        const stockModifier = toNumber(row.stockModifier);
+        const holdModifier = toNumber(row.holdModifier);
 
-          const stockMoved = (() => {
-            const explicit = readFirst(row, [
-              "stockMoved",
-              "movedStock",
-              "stockMove",
-            ]);
-            return explicit !== ""
-              ? toNumber(explicit)
-              : quantity * stockModifier;
-          })();
-          const holdMoved = (() => {
-            const explicit = readFirst(row, [
-              "holdMoved",
-              "movedHold",
-              "holdMove",
-            ]);
-            return explicit !== ""
-              ? toNumber(explicit)
-              : quantity * holdModifier;
-          })();
+        const stockMoved = (() => {
+          const explicit = row.stockMoved ?? "";
+          return explicit !== ""
+            ? toNumber(explicit)
+            : quantity * stockModifier;
+        })();
+        const holdMoved = (() => {
+          const explicit = row.holdMoved ?? "";
+          return explicit !== "" ? toNumber(explicit) : quantity * holdModifier;
+        })();
 
-          return {
-            stockId,
-            location,
-            movementAtTs,
-            stockMoved,
-            holdMoved,
-          };
-        });
+        return {
+          stockId,
+          location,
+          movementAtTs,
+          stockMoved,
+          holdMoved,
+        };
+      });
 
       const groupedByLocation = new Map();
       viewRows.forEach((row) => {
@@ -1084,19 +955,14 @@ const StockTakeOnNew = () => {
 
     const candidates = products
       .map((p) => ({
-        key:
-          p.productId ||
-          p.id ||
-          p.product_code ||
-          p.productCode ||
-          p.productName,
-        productId: p.productId || p.id || p.product_id || "",
-        productCode: p.productCode || p.product_code || "",
-        productName: p.productName || p.name || "",
+        key: p.productId,
+        productId: p.productId || "",
+        productCode: p.productCode || "",
+        productName: p.productName || "",
         productCategory: String(p.productCategory || "").toUpperCase(),
         productClass: p.productClass || "",
-        productDescription: p.productDescription || p.description || "",
-        productPicture: p.productPicture || p.product_picture || "",
+        productDescription: p.productDescription || "",
+        productPicture: p.productPicture || "",
         uom: p.uom || "",
         stockIds: [],
       }))
@@ -1125,15 +991,12 @@ const StockTakeOnNew = () => {
     setSuccessMsg("");
 
     try {
-      // After creating/choosing a product, do not create UI fallbacks. Use
-      // backend totals to build display rows; if there are no totals, show
-      // a warning and leave the list empty so the user can perform linking.
       const productContext = product || null;
       const totals = await loadProductTotalsForProduct(productContext);
+      const prod = getProductDetails(product || {});
 
       let finalRows = [];
       if (Array.isArray(totals?.locations) && totals.locations.length > 0) {
-        const prod = getProductDetails(product || {});
         finalRows = totals.locations.map((loc) => ({
           key: `${""}|${loc.location || "central"}`,
           stockId: "",
@@ -1147,6 +1010,25 @@ const StockTakeOnNew = () => {
           currentQuantity: Number(loc.currentQuantity) || 0,
           availableQuantity: Number(loc.availableQuantity) || 0,
         }));
+      } else {
+        // No movements yet (newly linked or newly created product).
+        // Show a single 0-quantity row at the default location so the user
+        // can enter the opening quantity without a second scan.
+        finalRows = [
+          {
+            key: "|central",
+            stockId: "",
+            stockCode: codeToUse,
+            location: "central",
+            productId: prod.productId,
+            productCode: product?.productCode || "",
+            productName: prod.productName,
+            productPicture: prod.productPicture,
+            uom: prod.uom,
+            currentQuantity: 0,
+            availableQuantity: 0,
+          },
+        ];
       }
 
       setStocks(finalRows);
@@ -1481,9 +1363,7 @@ const StockTakeOnNew = () => {
             location: trimmedLocation,
             createDate: new Date().toISOString(),
           });
-          targetStockId = Number(
-            readFirst(newStockRes?.data || {}, ["stockId", "id"]),
-          );
+          targetStockId = Number(newStockRes?.data?.stockId);
         } catch (stockErr) {
           throw new Error(
             stockErr?.message || t("stockTakeOn.createStockFailed"),
@@ -1500,9 +1380,7 @@ const StockTakeOnNew = () => {
           location: selectedStock.location || "central",
           createDate: new Date().toISOString(),
         });
-        targetStockId = Number(
-          readFirst(newStockRes?.data || {}, ["stockId", "id"]),
-        );
+        targetStockId = Number(newStockRes?.data?.stockId);
         if (!targetStockId) throw new Error(t("stockTakeOn.createStockFailed"));
         targetLocation = selectedStock.location || "central";
       } else {

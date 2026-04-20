@@ -39,15 +39,6 @@ const toArray = (value) => {
   return [];
 };
 
-const readFirst = (row, keys) => {
-  if (!row || !Array.isArray(keys) || keys.length === 0) return "";
-  for (const key of keys) {
-    const val = row?.[key];
-    if (val !== undefined && val !== null && val !== "") return val;
-  }
-  return "";
-};
-
 const toNumber = (value) => {
   if (value === null || value === undefined || value === "") return 0;
   const numberValue = Number(value);
@@ -64,50 +55,29 @@ const safeParseDate = (raw) => {
 const getProductDetails = (item = {}) => {
   const nested = item.product || {};
   return {
-    productId: String(readFirst(item, ["productId"]) || nested.productId || ""),
-    productName: String(
-      readFirst(item, ["productName"]) || nested.productName || "",
-    ),
-    productPicture:
-      readFirst(item, ["productPicture"]) || nested.productPicture || "",
-    uom: String(readFirst(item, ["uom"]) || nested.uom || ""),
+    productId: String(item.productId || nested.productId || ""),
+    productName: String(item.productName || nested.productName || ""),
+    productPicture: item.productPicture || nested.productPicture || "",
+    uom: String(item.uom || nested.uom || ""),
   };
 };
 
 const normalizeStock = (item, fallbackCode) => {
   const product = getProductDetails(item);
-  const stockId = String(readFirst(item, ["stockId", "id"]));
-  const location = String(
-    readFirst(item, [
-      "location",
-      "stockLocation",
-      "warehouse",
-      "bin",
-      "stockBin",
-    ]) || "central",
-  );
+  const stockId = String(item.stockId || "");
+  const location = String(item.location || "central");
 
   return {
     key: `${stockId || ""}|${location || "central"}`,
     stockId,
-    stockCode: String(
-      readFirst(item, ["stockCode", "code", "stock_code"]) || fallbackCode,
-    ),
+    stockCode: String(item.stockCode || fallbackCode),
     location,
     productId: product.productId,
     productName: product.productName,
     productPicture: product.productPicture,
     uom: product.uom,
-    currentQuantity: toNumber(
-      readFirst(item, ["currentQuantity", "quantity", "currentQty"]),
-    ),
-    availableQuantity: toNumber(
-      readFirst(item, [
-        "currentAvailableQuantity",
-        "availableQuantity",
-        "availableQty",
-      ]),
-    ),
+    currentQuantity: toNumber(item.quantity),
+    availableQuantity: 0,
   };
 };
 
@@ -209,97 +179,41 @@ const StockTransfer = () => {
               "GET",
               `/api/stockviews/stock/${encodeURIComponent(baseStock.stockId)}`,
             );
-            return toArray(responseByStock?.data).map((row) => ({
-              row,
-              fallbackStockId: baseStock.stockId,
-            }));
+            return toArray(responseByStock?.data).map((row) => ({ row }));
           } catch {
             return [];
           }
         }),
       );
 
-      const viewRows = perStockViewRows
-        .flat()
-        .map(({ row, fallbackStockId }) => {
-          const stockId = String(
-            readFirst(row, ["stockId", "id"]) || fallbackStockId,
-          );
-          const location = String(
-            readFirst(row, [
-              "stockLocation",
-              "location",
-              "warehouse",
-              "bin",
-              "stockBin",
-            ]) || "central",
-          );
-          const movementAtTs =
-            safeParseDate(
-              readFirst(row, [
-                "recordDate",
-                "movementAt",
-                "movementDate",
-                "createDate",
-                "createdAt",
-                "updatedAt",
-              ]),
-            )?.getTime() || 0;
+      const viewRows = perStockViewRows.flat().map(({ row }) => {
+        const stockId = String(row.stockId);
+        const location = String(row.location || "central");
+        const movementAtTs = safeParseDate(row.recordDate)?.getTime() || 0;
 
-          const quantity = toNumber(
-            readFirst(row, [
-              "qty",
-              "quantity",
-              "movementQty",
-              "stockQty",
-              "changeQty",
-            ]),
-          );
-          const stockModifier = toNumber(
-            readFirst(row, [
-              "stockModifier",
-              "movementModifier",
-              "stockMovementModifier",
-              "movementStockModifier",
-            ]),
-          );
-          const holdModifier = toNumber(
-            readFirst(row, [
-              "holdModifier",
-              "movementHoldModifier",
-              "holdMovementModifier",
-            ]),
-          );
+        const quantity = toNumber(row.quantity);
+        const stockModifier = toNumber(row.stockModifier);
+        const holdModifier = toNumber(row.holdModifier);
 
-          const stockMoved = (() => {
-            const explicit = readFirst(row, [
-              "stockMoved",
-              "movedStock",
-              "stockMove",
-            ]);
-            return explicit !== ""
-              ? toNumber(explicit)
-              : quantity * stockModifier;
-          })();
-          const holdMoved = (() => {
-            const explicit = readFirst(row, [
-              "holdMoved",
-              "movedHold",
-              "holdMove",
-            ]);
-            return explicit !== ""
-              ? toNumber(explicit)
-              : quantity * holdModifier;
-          })();
+        const stockMoved = (() => {
+          const explicit = row.stockMoved ?? "";
+          return explicit !== ""
+            ? toNumber(explicit)
+            : quantity * stockModifier;
+        })();
+        const holdMoved = (() => {
+          const explicit = row.holdMoved ?? "";
+          return explicit !== "" ? toNumber(explicit) : quantity * holdModifier;
+        })();
 
-          return {
-            stockId,
-            location,
-            movementAtTs,
-            stockMoved,
-            holdMoved,
-          };
-        });
+        return {
+          stockId,
+          location,
+          movementAtTs,
+          stockMoved,
+          holdMoved,
+        };
+      });
 
       const groupedByLocation = new Map();
       viewRows.forEach((row) => {
@@ -520,9 +434,7 @@ const StockTransfer = () => {
             location: trimmedLocation,
             createDate: new Date().toISOString(),
           });
-          targetInStockId = Number(
-            readFirst(newStockRes?.data || {}, ["stockId", "id"]),
-          );
+          targetInStockId = Number(newStockRes?.data?.stockId);
         } catch (stockErr) {
           throw new Error(
             stockErr?.message || t("stockTransfer.createStockFailed"),
