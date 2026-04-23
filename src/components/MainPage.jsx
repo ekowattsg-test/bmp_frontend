@@ -28,6 +28,7 @@ import PrivacyPage from "./information/PrivacyPage";
 import ProductModern from "./baseInformation/ProductModern";
 import ProductBundleModern from "./information/ProductBundleModern";
 import StaffExcelUpload from "./baseInformation/StaffExcelUpload";
+import ProductExcelUpload from "./baseInformation/ProductExcelUpload";
 import UserLoginList from "./baseInformation/UserLoginList";
 import ForcedPassword from "./baseInformation/ForcedPassword";
 
@@ -49,6 +50,7 @@ function MainPage() {
         <Route path="/purchaseorder" element={<PurchaseOrderModern />} />
         <Route path="/staffskill" element={<StaffSkillModern />} />
         <Route path="/staff-excel-upload" element={<StaffExcelUpload />} />
+        <Route path="/product-excel-upload" element={<ProductExcelUpload />} />
         <Route path="/stockmovementcode" element={<StockMovementCode />} />
         <Route path="/stocktakeon" element={<StockTakeOn />} />
         <Route path="/stockin" element={<StockIn />} />

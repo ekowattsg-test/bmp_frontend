@@ -101,6 +101,11 @@ const AppMenu = () => {
             label: t("menu.staffExcelUpload", "Staff Excel Upload"),
             icon: <UploadFile />,
           },
+          {
+            to: "/product-excel-upload",
+            label: t("menu.productExcelUpload", "Product Excel Upload"),
+            icon: <UploadFile />,
+          },
         ],
       },
       {

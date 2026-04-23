@@ -151,6 +151,7 @@
     "staffProfile": "Staff Profile",
     "productList": "Products",
     "staffExcelUpload": "Staff Excel Upload",
+    "productExcelUpload": "Product Excel Upload",
     "userLoginList": "Login Enquiry",
     "forcedPassword": "Forced Password"
   },
@@ -169,6 +170,22 @@
     "fileRequired": "Please select a file before uploading.",
     "success": "Staff file uploaded and processed successfully.",
     "failed": "Staff file upload failed."
+  },
+  "productExcelUpload": {
+    "title": "Product Excel Upload",
+    "subtitle": "Upload a product Excel file for backend processing.",
+    "helpTitle": "Product Excel Upload — User Manual",
+    "helpBody": "OVERVIEW\nProduct Excel Upload lets you bulk-import or update product data by uploading a formatted Excel spreadsheet. The file is transmitted to the processing system together with your company ID and applied automatically.\n\n\u26a0 WARNING — WRONG FORMAT CAN CAUSE DATA PROBLEMS\nUploading an incorrectly formatted file may create corrupt records, overwrite valid data, or trigger processing errors that are difficult to reverse. Always verify your file against the required template before uploading.\n\nFILE REQUIREMENTS\n\u2022 Accepted formats: .xls or .xlsx only.\n\u2022 The spreadsheet must follow the exact column layout defined in the official product upload template.\n\u2022 Column headers must match exactly — do not rename, reorder, or remove columns.\n\u2022 Do not include blank rows in the middle of the data.\n\u2022 Ensure all required fields are populated for every row.\n\nHOW TO UPLOAD\n1. Prepare your Excel file using the official product upload template.\n2. Double-check all data and column headers before proceeding.\n3. Click Select File and choose your .xls or .xlsx file.\n4. The selected filename is shown next to the button — confirm it is the correct file.\n5. Click Upload. Do not close the page while the upload is in progress.\n6. A success message confirms the file was received and processed.\n7. If an error message appears, check the file format and try again.\n\nAFTER UPLOADING\n\u2022 Verify the imported product records in the Product list to confirm data is correct.\n\u2022 If incorrect data was imported, contact your system administrator immediately.",
+    "fileHint": "Accepted file format: .csv",
+    "selectFile": "Select File",
+    "upload": "Upload",
+    "uploading": "Uploading...",
+    "selectedFile": "Selected file",
+    "none": "None",
+    "invalidFileType": "Please choose a CSV file (.csv).",
+    "fileRequired": "Please select a file before uploading.",
+    "success": "Product file uploaded and processed successfully.",
+    "failed": "Product file upload failed."
   },
   "userLoginList": {
     "title": "Login Enquiry",
@@ -992,6 +1009,7 @@
       "product": "Product",
       "location": "Stock Location",
       "reference": "Reference",
+      "actionBy": "Action By",
       "movement": "Movement"
     },
     "notes": {
@@ -1008,6 +1026,7 @@
     "columns": {
       "movementAt": "Date",
       "reference": "Reference",
+      "actionBy": "Action By",
       "stockCode": "Stock Code",
       "product": "Product",
       "location": "Location",

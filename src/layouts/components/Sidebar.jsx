@@ -137,6 +137,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               icon: <UploadFileIcon fontSize="small" />,
               path: "/staff-excel-upload",
             },
+            {
+              key: "productExcelUpload",
+              label: t("menu.productExcelUpload", "Product Excel Upload"),
+              icon: <UploadFileIcon fontSize="small" />,
+              path: "/product-excel-upload",
+            },
           ],
         },
         {

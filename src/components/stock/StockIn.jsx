@@ -1426,11 +1426,8 @@ const StockIn = () => {
         movementType: "I",
         quantity: qty,
         location: targetLocation,
-        reference:
-          ref +
-          (userInfo?.firstName || userInfo?.lastName
-            ? `/${[userInfo.firstName, userInfo.lastName].filter(Boolean).join(" ")}`
-            : ""),
+        reference: ref,
+        actionBy: userInfo?.login || "",
         recordDate: new Date().toISOString(),
       });
 

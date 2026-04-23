@@ -344,11 +344,8 @@ const StockAdjustment = () => {
         movementType: adjustmentType === "in" ? "M" : "L",
         quantity: qty,
         location: selectedStock.location || "central",
-        reference:
-          String(reference || "").trim() +
-          (userInfo?.firstName || userInfo?.lastName
-            ? `/${[userInfo.firstName, userInfo.lastName].filter(Boolean).join(" ")}`
-            : ""),
+        reference: String(reference || "").trim(),
+        actionBy: userInfo?.login || "",
         recordDate: new Date().toISOString(),
       });
 

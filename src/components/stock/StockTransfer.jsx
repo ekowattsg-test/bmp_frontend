@@ -410,12 +410,6 @@ const StockTransfer = () => {
     setWarnMsg("");
     setSuccessMsg("");
 
-    const userSuffix =
-      userInfo?.firstName || userInfo?.lastName
-        ? `/${[userInfo.firstName, userInfo.lastName].filter(Boolean).join(" ")}`
-        : "";
-    const fullRef = ref + userSuffix;
-
     try {
       // Resolve the IN stock target — may need to create a new stock record
       let targetInStockId;
@@ -452,7 +446,8 @@ const StockTransfer = () => {
         movementType: "G",
         quantity: qty,
         location: transferOutStock.location || "central",
-        reference: fullRef,
+        reference: ref,
+        actionBy: userInfo?.login || "",
         recordDate: new Date().toISOString(),
       });
 
@@ -462,7 +457,8 @@ const StockTransfer = () => {
         movementType: "C",
         quantity: qty,
         location: targetInLocation,
-        reference: fullRef,
+        reference: ref,
+        actionBy: userInfo?.login || "",
         recordDate: new Date().toISOString(),
       });
 

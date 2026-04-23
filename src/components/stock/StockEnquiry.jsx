@@ -140,6 +140,7 @@ const normalizeRow = (item) => {
       : String(movementAtRaw || ""),
     movementAtTs: movementAtDate ? movementAtDate.getTime() : 0,
     reference: String(item.reference || ""),
+    actionBy: String(item.actionBy || ""),
   };
 };
 
@@ -156,6 +157,7 @@ const StockEnquiry = () => {
   const [productKeyword, setProductKeyword] = useState("");
   const [locationKeyword, setLocationKeyword] = useState("");
   const [referenceKeyword, setReferenceKeyword] = useState("");
+  const [actionByKeyword, setActionByKeyword] = useState("");
   const [movementKeyword, setMovementKeyword] = useState(ALL_MOVEMENTS_VALUE);
   const [movementOptions, setMovementOptions] = useState([]);
   const [viewMode, setViewMode] = useState("summary");
@@ -220,6 +222,7 @@ const StockEnquiry = () => {
     setStockCode("");
     setLocationKeyword("");
     setReferenceKeyword("");
+    setActionByKeyword("");
     setMovementKeyword(ALL_MOVEMENTS_VALUE);
   };
 
@@ -227,6 +230,7 @@ const StockEnquiry = () => {
     stockCode.trim() !== "" ||
     locationKeyword.trim() !== "" ||
     referenceKeyword.trim() !== "" ||
+    actionByKeyword.trim() !== "" ||
     movementKeyword !== ALL_MOVEMENTS_VALUE;
 
   const movementRows = useMemo(() => {
@@ -234,6 +238,7 @@ const StockEnquiry = () => {
     const productFilter = productKeyword.trim().toLowerCase();
     const locationFilter = locationKeyword.trim().toLowerCase();
     const referenceFilter = referenceKeyword.trim().toLowerCase();
+    const actionByFilter = actionByKeyword.trim().toLowerCase();
     const movementFilter = movementKeyword.trim();
 
     return rows
@@ -241,6 +246,7 @@ const StockEnquiry = () => {
         const stockText = `${row.stockCode}`.toLowerCase();
         const productText = `${row.productName}`.toLowerCase();
         const referenceText = `${row.reference}`.toLowerCase();
+        const actionByText = `${row.actionBy}`.toLowerCase();
 
         const stockMatch = !stockFilter || stockText.includes(stockFilter);
         const productMatch =
@@ -250,6 +256,8 @@ const StockEnquiry = () => {
           row.stockLocation.toLowerCase().includes(locationFilter);
         const referenceMatch =
           !referenceFilter || referenceText.includes(referenceFilter);
+        const actionByMatch =
+          !actionByFilter || actionByText.includes(actionByFilter);
         const movementMatch =
           movementFilter === ALL_MOVEMENTS_VALUE ||
           row.movementType === movementFilter;
@@ -259,6 +267,7 @@ const StockEnquiry = () => {
           productMatch &&
           locationMatch &&
           referenceMatch &&
+          actionByMatch &&
           movementMatch
         );
       })
@@ -286,6 +295,7 @@ const StockEnquiry = () => {
     movementKeyword,
     productKeyword,
     referenceKeyword,
+    actionByKeyword,
     rows,
     stockCode,
   ]);
@@ -404,6 +414,8 @@ const StockEnquiry = () => {
             quantityHolded: movementRow.holdMoved,
             currentQuantity: "",
             currentAvailableQuantity: "",
+            reference: movementRow.reference,
+            actionBy: movementRow.actionBy,
           });
         });
       });
@@ -658,6 +670,29 @@ const StockEnquiry = () => {
         ),
       },
       {
+        field: "actionBy",
+        headerName: t("stockEnquiry.columns.actionBy"),
+        width: 120,
+        renderCell: (params) => (
+          <Tooltip
+            title={String(params.value || params.row.actionBy || "")}
+            arrow
+            enterDelay={300}
+            leaveDelay={100}
+          >
+            <Box
+              sx={{
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {params.value}
+            </Box>
+          </Tooltip>
+        ),
+      },
+      {
         field: "movementType",
         headerName: t("stockEnquiry.columns.movement"),
         flex: 1,
@@ -800,6 +835,7 @@ const StockEnquiry = () => {
     else if (field === "stockCode") setStockCode(v);
     else if (field === "stockLocation") setLocationKeyword(v);
     else if (field === "reference") setReferenceKeyword(v);
+    else if (field === "actionBy") setActionByKeyword(v);
   };
 
   const handleCellDoubleClick = (params) => {
@@ -814,6 +850,7 @@ const StockEnquiry = () => {
     else if (String(row.stockCode || "") === text) setStockCode(text);
     else if (String(row.stockLocation || "") === text) setLocationKeyword(text);
     else if (String(row.reference || "") === text) setReferenceKeyword(text);
+    else if (String(row.actionBy || "") === text) setActionByKeyword(text);
   };
 
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
@@ -974,6 +1011,34 @@ const StockEnquiry = () => {
                       size="small"
                       edge="end"
                       onClick={() => setReferenceKeyword("")}
+                      aria-label={t("basic.clear", "Clear")}
+                      sx={{ color: "text.secondary" }}
+                    >
+                      <ClearIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
+            }}
+          />
+          <TextField
+            label={t("stockEnquiry.filters.actionBy")}
+            value={actionByKeyword}
+            onChange={(e) => setActionByKeyword(e.target.value)}
+            size="small"
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+              endAdornment:
+                actionByKeyword && actionByKeyword.trim() !== "" ? (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      edge="end"
+                      onClick={() => setActionByKeyword("")}
                       aria-label={t("basic.clear", "Clear")}
                       sx={{ color: "text.secondary" }}
                     >
@@ -1151,6 +1216,9 @@ const StockEnquiry = () => {
             </MenuItem>
             <MenuItem onClick={() => handleMenuPaste("reference")}>
               {t("stockEnquiry.filters.reference")}
+            </MenuItem>
+            <MenuItem onClick={() => handleMenuPaste("actionBy")}>
+              {t("stockEnquiry.filters.actionBy")}
             </MenuItem>
           </Menu>
         </>

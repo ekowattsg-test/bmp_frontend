@@ -151,6 +151,7 @@
     "staffProfile": "员工档案",
     "productList": "产品",
     "staffExcelUpload": "员工 Excel 上传",
+    "productExcelUpload": "产品 Excel 上传",
     "userLoginList": "登录查询",
     "forcedPassword": "强制改密"
   },
@@ -169,6 +170,22 @@
     "fileRequired": "请先选择文件再上传。",
     "success": "员工文件上传并处理成功。",
     "failed": "员工文件上传失败。"
+  },
+  "productExcelUpload": {
+    "title": "产品 Excel 上传",
+    "subtitle": "上传产品 Excel 文件并交由后端处理。",
+    "helpTitle": "产品 Excel 上传 — 用户手册",
+    "helpBody": "概述\n产品 Excel 上传功能允许您通过上传格式化的 Excel 表格批量导入或更新产品数据。文件将连同公司 ID 一并传输至处理系统并自动应用。\n\n⚠ 警告 — 错误格式可能导致数据问题\n上传格式不正确的文件可能产生崩溃数据、覆盖有效记录，或触发难以撤销的处理错误。请在上传前始终对照官方模板核对您的文件。\n\n文件要求\n• 仅支持 .xls 或 .xlsx 格式，其他格式将被立即驳回。\n• 表格必须严格遵守官方产品上传模板规定的列布局。\n• 列标题必须完全匹配——不得重命名、调整顺序或删除任何列。\n• 数据中间不得包含空行。\n• 确保每一行的所有必填字段均已填写。\n\n如何上传\n1. 使用官方产品上传模板准备您的 Excel 文件。\n2. 上传前仔细核对所有数据和列标题。\n3. 点击【选择文件】，选择您的 .xls 或 .xlsx 文件。\n4. 按鈕旁显示所选文件名——请确认是否为正确文件。\n5. 点击【上传】，上传进行期间请勿关闭页面。\n6. 成功提示表示文件已成功接收并处理。\n7. 如果出现错误提示，请检查文件格式并重试。\n\n上传后\n• 在产品列表中核实导入的产品数据，确认信息正确。\n• 如果导入了错误数据，请立即联系系统管理员进行更正。",
+    "fileHint": "支持的文件格式：.csv",
+    "selectFile": "选择文件",
+    "upload": "上传",
+    "uploading": "上传中...",
+    "selectedFile": "已选文件",
+    "none": "无",
+    "invalidFileType": "请选择 CSV 文件（.csv）。",
+    "fileRequired": "请先选择文件再上传。",
+    "success": "产品文件上传并处理成功。",
+    "failed": "产品文件上传失败。"
   },
   "userLoginList": {
     "title": "登录查询",
@@ -992,6 +1009,7 @@
       "product": "产品",
       "location": "库存地点",
       "reference": "参考编号",
+      "actionBy": "操作人",
       "movement": "变动"
     },
     "notes": {
@@ -1008,6 +1026,7 @@
     "columns": {
       "movementAt": "日期",
       "reference": "参考编号",
+      "actionBy": "操作人",
       "stockCode": "库存编码",
       "product": "产品",
       "location": "地点",

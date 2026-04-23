@@ -343,11 +343,8 @@ const StockOut = () => {
         movementType: "O",
         quantity: qty,
         location: selectedStock.location || "central",
-        reference:
-          ref +
-          (userInfo?.firstName || userInfo?.lastName
-            ? `/${[userInfo.firstName, userInfo.lastName].filter(Boolean).join(" ")}`
-            : ""),
+        reference: ref,
+        actionBy: userInfo?.login || "",
         recordDate: new Date().toISOString(),
       });
 
