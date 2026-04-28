@@ -1,6 +1,6 @@
 import React from "react";
 import { useContext, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { request, setAuthHeader } from "../helpers/axios_helper";
@@ -10,11 +10,14 @@ import LoginForm from "./LoginForm.jsx";
 import { AuthContext } from "../context/authContext.jsx";
 import AuthLayout from "../layouts/AuthLayout.jsx";
 import { CircularProgress, Box } from "@mui/material";
+import PdaLogin from "./pda/PdaLogin.jsx";
+import PdaMenu from "./pda/PdaMenu.jsx";
 
 export default function AppContent() {
   const { isAuthenticated, setIsAuthenticated, setUserInfo, loading } =
     useContext(AuthContext);
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const [loginError, setLoginError] = useState(""); // Store raw backend error
   const [loginLoading, setLoginLoading] = useState(false);
@@ -100,6 +103,29 @@ export default function AppContent() {
       });
   };
 
+  const onOtpLogin = (e, otp) => {
+    e.preventDefault();
+    setLoginError("");
+    setLoginLoading(true);
+    request("POST", "/api/mobile-logins/verify", { otp })
+      .then((response) => {
+        setAuthHeader(response.data.token);
+        const userData = response.data;
+        setUserInfo(userData);
+        localStorage.setItem("user_info", JSON.stringify(userData));
+        setIsAuthenticated(true);
+        navigate("/home");
+        setLoginLoading(false);
+      })
+      .catch((error) => {
+        setAuthHeader(null);
+        const backendMessage =
+          error?.response?.data?.message || error?.message || "auth.otpFailed";
+        setLoginError(backendMessage);
+        setLoginLoading(false);
+      });
+  };
+
   // Don't render anything while checking authentication
   if (loading) {
     return (
@@ -118,11 +144,17 @@ export default function AppContent() {
 
   return (
     <>
-      {!isAuthenticated ? (
+      {location.pathname.startsWith("/pda") ? (
+        <Routes>
+          <Route path="/pda/login" element={<PdaLogin />} />
+          <Route path="/pda/menu" element={<PdaMenu />} />
+        </Routes>
+      ) : !isAuthenticated ? (
         <AuthLayout>
           <LoginForm
             onLogin={onLogin}
             onRegister={onRegister}
+            onOtpLogin={onOtpLogin}
             error={getTranslatedError(loginError)}
             loading={loginLoading}
           />

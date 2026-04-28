@@ -93,7 +93,20 @@
     "and": "and",
     "appTitle": "Business Management Platform",
     "appSubtitle": "Secure access for authorised users",
-    "footer": "© {{year}} BMP System. All rights reserved."
+    "footer": "© {{year}} BMP System. All rights reserved.",
+    "orSignInWithOtp": "Or sign in with OTP",
+    "otpLabel": "One-Time Password (OTP)",
+    "signInWithOtp": "Sign in with OTP",
+    "otpFailed": "OTP verification failed. Please try again."
+  },
+  "pda": {
+    "login": {
+      "missingKey": "Login key is missing. Please use a valid PDA login URL.",
+      "failed": "PDA login failed. Please contact your administrator."
+    },
+    "menu": {
+      "title": "PDA Menu"
+    }
   },
   "content": {
     "backendResponse": "Backend response",
@@ -153,7 +166,10 @@
     "staffExcelUpload": "Staff Excel Upload",
     "productExcelUpload": "Product Excel Upload",
     "userLoginList": "Login Enquiry",
-    "forcedPassword": "Forced Password"
+    "forcedPassword": "Forced Password",
+    "projects": "Projects",
+    "projectList": "Project List",
+    "projectPlanning": "Project Planning"
   },
   "staffExcelUpload": {
     "title": "Staff Excel Upload",
@@ -186,6 +202,34 @@
     "fileRequired": "Please select a file before uploading.",
     "success": "Product file uploaded and processed successfully.",
     "failed": "Product file upload failed."
+  },
+  "project": {
+    "title": "Projects",
+    "subtitle": "Manage and track projects",
+    "projectCode": "Project Code",
+    "projectName": "Project Name",
+    "projectDescription": "Description",
+    "customerId": "Customer",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "projectLocation": "Location",
+    "mobileNumber": "PIC Mobile",
+    "active": "Active",
+    "streamCount": "Streams",
+    "noCustomer": "None",
+    "addTitle": "Add Project",
+    "editTitle": "Edit Project",
+    "deleteTitle": "Delete Project",
+    "confirmDelete": "Are you sure you want to delete",
+    "loading": "Loading projects...",
+    "noProjects": "No projects found",
+    "noProjectsDescription": "Get started by adding your first project",
+    "searchPlaceholder": "Search projects...",
+    "noSearchResults": "Try adjusting your search terms"
+  },
+  "projectPlanning": {
+    "title": "Project Planning",
+    "subtitle": "Plan and schedule project activities"
   },
   "userLoginList": {
     "title": "Login Enquiry",

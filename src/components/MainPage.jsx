@@ -31,6 +31,8 @@ import StaffExcelUpload from "./baseInformation/StaffExcelUpload";
 import ProductExcelUpload from "./baseInformation/ProductExcelUpload";
 import UserLoginList from "./baseInformation/UserLoginList";
 import ForcedPassword from "./baseInformation/ForcedPassword";
+import ProjectModern from "./information/ProjectModern";
+import ProjectPlanningModern from "./information/ProjectPlanningModern";
 
 function MainPage() {
   return (
@@ -67,6 +69,8 @@ function MainPage() {
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/about/eula" element={<EulaPage />} />
         <Route path="/about/privacy" element={<PrivacyPage />} />
+        <Route path="/project" element={<ProjectModern />} />
+        <Route path="/projectplanning" element={<ProjectPlanningModern />} />
       </Routes>
     </AdminLayout>
   );

@@ -93,7 +93,20 @@
     "and": "和",
     "appTitle": "业务管理平台",
     "appSubtitle": "授权用户的安全访问",
-    "footer": "© {{year}} BMP 系统。保留所有权利。"
+    "footer": "© {{year}} BMP 系统。保留所有权利。",
+    "orSignInWithOtp": "或使用一次性密码登录",
+    "otpLabel": "一次性密码（OTP）",
+    "signInWithOtp": "使用 OTP 登录",
+    "otpFailed": "OTP 验证失败，请重试。"
+  },
+  "pda": {
+    "login": {
+      "missingKey": "登录密匙缺失，请使用有效的 PDA 登录链接。",
+      "failed": "PDA 登录失败，请联系系统管理员。"
+    },
+    "menu": {
+      "title": "PDA 菜单"
+    }
   },
   "content": {
     "backendResponse": "后端响应",
@@ -153,7 +166,10 @@
     "staffExcelUpload": "员工 Excel 上传",
     "productExcelUpload": "产品 Excel 上传",
     "userLoginList": "登录查询",
-    "forcedPassword": "强制改密"
+    "forcedPassword": "强制改密",
+    "projects": "项目",
+    "projectList": "项目列表",
+    "projectPlanning": "项目规划"
   },
   "staffExcelUpload": {
     "title": "员工 Excel 上传",
@@ -186,6 +202,34 @@
     "fileRequired": "请先选择文件再上传。",
     "success": "产品文件上传并处理成功。",
     "failed": "产品文件上传失败。"
+  },
+  "project": {
+    "title": "项目",
+    "subtitle": "管理和跟踪项目",
+    "projectCode": "项目代码",
+    "projectName": "项目名称",
+    "projectDescription": "描述",
+    "customerId": "客户",
+    "startDate": "开始日期",
+    "endDate": "结束日期",
+    "projectLocation": "地点",
+    "mobileNumber": "负责人手机",
+    "active": "启用",
+    "streamCount": "工作流数",
+    "noCustomer": "无",
+    "addTitle": "添加项目",
+    "editTitle": "编辑项目",
+    "deleteTitle": "删除项目",
+    "confirmDelete": "确定要删除",
+    "loading": "加载项目中...",
+    "noProjects": "未找到项目",
+    "noProjectsDescription": "开始添加您的第一个项目",
+    "searchPlaceholder": "搜索项目...",
+    "noSearchResults": "请尝试调整搜索条件"
+  },
+  "projectPlanning": {
+    "title": "项目规划",
+    "subtitle": "规划和安排项目活动"
   },
   "userLoginList": {
     "title": "登录查询",

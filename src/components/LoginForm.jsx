@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
-import { Alert, Button } from "@mui/material";
+import { Alert, Button, Divider, TextField, Typography } from "@mui/material";
 
 export default function LoginForm({
   onLogin,
   onRegister,
+  onOtpLogin,
   error = "",
   loading = false,
 }) {
@@ -16,6 +17,7 @@ export default function LoginForm({
   const [lastName, setLastName] = useState("");
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
 
   const onChangeHandler = (event) => {
     const name = event.target.name;
@@ -46,6 +48,13 @@ export default function LoginForm({
   const onSubmitRegister = (e) => {
     onRegister(e, firstName, lastName, login, password);
   };
+
+  const onSubmitOtp = (e) => {
+    onOtpLogin(e, otp);
+  };
+
+  const hasCredentials = login.trim() !== "" || password.trim() !== "";
+  const hasOtp = otp.trim() !== "";
 
   const openPolicyPopup = (event, url, windowName) => {
     event.preventDefault();
@@ -82,34 +91,34 @@ export default function LoginForm({
             id="pills-login"
           >
             <form onSubmit={onSubmitLogin}>
-              <div className="form-outline mb-4">
-                <input
-                  type="login"
-                  id="loginName"
-                  name="login"
-                  className="form-control"
-                  onChange={onChangeHandler}
-                />
-                <label className="form-label" htmlFor="loginName">
-                  {t("auth.username")}
-                </label>
-              </div>
+              <TextField
+                label={t("auth.username")}
+                type="text"
+                id="loginName"
+                name="login"
+                fullWidth
+                margin="normal"
+                onChange={onChangeHandler}
+                disabled={hasOtp || loading}
+              />
 
-              <div className="form-outline mb-4">
-                <input
-                  type="password"
-                  id="loginPassword"
-                  name="password"
-                  className="form-control"
-                  onChange={onChangeHandler}
-                />
-                <label className="form-label" htmlFor="loginPassword">
-                  {t("auth.password")}
-                </label>
-              </div>
+              <TextField
+                label={t("auth.password")}
+                type="password"
+                id="loginPassword"
+                name="password"
+                fullWidth
+                margin="normal"
+                onChange={onChangeHandler}
+                disabled={hasOtp || loading}
+              />
 
               <div
-                style={{ marginBottom: 12, fontSize: "0.9rem", color: "#555" }}
+                style={{
+                  marginBottom: 12,
+                  fontSize: "0.9rem",
+                  color: "var(--color-text-secondary)",
+                }}
               >
                 {t("auth.legalPrefix")}{" "}
                 <a
@@ -143,13 +152,57 @@ export default function LoginForm({
                 variant="contained"
                 color="primary"
                 fullWidth
-                disabled={loading}
+                disabled={loading || hasOtp}
                 sx={{ mb: 4 }}
               >
                 {loading
                   ? t("auth.signingIn", "Signing in...")
                   : t("auth.signIn")}
               </Button>
+            </form>
+
+            <Divider sx={{ mb: 3 }}>
+              <Typography
+                variant="body2"
+                sx={{ color: "text.secondary", px: 1 }}
+              >
+                {t("auth.orSignInWithOtp")}
+              </Typography>
+            </Divider>
+
+            <form onSubmit={onSubmitOtp}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "center",
+                  marginBottom: 32,
+                }}
+              >
+                <TextField
+                  label={t("auth.otpLabel")}
+                  type="password"
+                  id="otpInput"
+                  name="otp"
+                  fullWidth
+                  margin="normal"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  disabled={hasCredentials || loading}
+                  sx={{ mb: 0, mt: 1 }}
+                />
+                <Button
+                  type="submit"
+                  variant={hasOtp ? "contained" : "outlined"}
+                  color="primary"
+                  disabled={loading || hasCredentials}
+                  sx={{ mt: 1, whiteSpace: "nowrap", flexShrink: 0 }}
+                >
+                  {loading
+                    ? t("auth.signingIn", "Signing in...")
+                    : t("auth.signInWithOtp")}
+                </Button>
+              </div>
             </form>
           </div>
           <div
@@ -161,57 +214,45 @@ export default function LoginForm({
             id="pills-register"
           >
             <form onSubmit={onSubmitRegister}>
-              <div className="form-outline mb-4">
-                <input
-                  type="text"
-                  id="firstName"
-                  name="firstName"
-                  className="form-control"
-                  onChange={onChangeHandler}
-                />
-                <label className="form-label" htmlFor="firstName">
-                  {t("auth.firstName")}
-                </label>
-              </div>
+              <TextField
+                label={t("auth.firstName")}
+                type="text"
+                id="firstName"
+                name="firstName"
+                fullWidth
+                margin="normal"
+                onChange={onChangeHandler}
+              />
 
-              <div className="form-outline mb-4">
-                <input
-                  type="text"
-                  id="lastName"
-                  name="lastName"
-                  className="form-control"
-                  onChange={onChangeHandler}
-                />
-                <label className="form-label" htmlFor="lastName">
-                  {t("auth.lastName")}
-                </label>
-              </div>
+              <TextField
+                label={t("auth.lastName")}
+                type="text"
+                id="lastName"
+                name="lastName"
+                fullWidth
+                margin="normal"
+                onChange={onChangeHandler}
+              />
 
-              <div className="form-outline mb-4">
-                <input
-                  type="text"
-                  id="login"
-                  name="login"
-                  className="form-control"
-                  onChange={onChangeHandler}
-                />
-                <label className="form-label" htmlFor="login">
-                  {t("auth.username")}
-                </label>
-              </div>
+              <TextField
+                label={t("auth.username")}
+                type="text"
+                id="login"
+                name="login"
+                fullWidth
+                margin="normal"
+                onChange={onChangeHandler}
+              />
 
-              <div className="form-outline mb-4">
-                <input
-                  type="password"
-                  id="registerPassword"
-                  name="password"
-                  className="form-control"
-                  onChange={onChangeHandler}
-                />
-                <label className="form-label" htmlFor="registerPassword">
-                  {t("auth.password")}
-                </label>
-              </div>
+              <TextField
+                label={t("auth.password")}
+                type="password"
+                id="registerPassword"
+                name="password"
+                fullWidth
+                margin="normal"
+                onChange={onChangeHandler}
+              />
 
               <Button
                 type="submit"

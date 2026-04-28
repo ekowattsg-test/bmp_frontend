@@ -32,6 +32,10 @@ import {
   AccountTree as AccountTreeIcon,
   Inventory2 as BundleIcon,
   LockReset as LockResetIcon,
+  Assignment as AssignmentIcon,
+  Task as TaskIcon,
+  People as PeopleManpowerIcon,
+  Warehouse as WarehouseIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -255,6 +259,26 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               label: t("menu.stockEnquiry", "Stock Enquiry"),
               icon: <HistoryIcon fontSize="small" />,
               path: "/stockenquiry",
+            },
+          ],
+        },
+        {
+          key: "Projects",
+          menu: "ProjectControl",
+          label: t("menu.projects", "Projects"),
+          icon: <AssignmentIcon />,
+          children: [
+            {
+              key: "projectList",
+              label: t("menu.projectList", "Project List"),
+              icon: <AssignmentIcon fontSize="small" />,
+              path: "/project",
+            },
+            {
+              key: "projectPlanning",
+              label: t("menu.projectPlanning", "Project Planning"),
+              icon: <AccountTreeIcon fontSize="small" />,
+              path: "/projectplanning",
             },
           ],
         },

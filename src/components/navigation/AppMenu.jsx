@@ -22,6 +22,11 @@ import {
   History,
   Store,
   CompareArrows,
+  Assignment,
+  AccountTree,
+  Task,
+  Inventory2,
+  Warehouse,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 
@@ -189,6 +194,24 @@ const AppMenu = () => {
             to: "/stockenquiry",
             label: t("menu.stockEnquiry", "Stock Enquiry"),
             icon: <History />,
+          },
+        ],
+      },
+      {
+        key: "Projects",
+        menu: "ProjectControl",
+        label: t("menu.projects", "Projects"),
+        icon: <Assignment />,
+        items: [
+          {
+            to: "/project",
+            label: t("menu.projectList", "Project List"),
+            icon: <Assignment />,
+          },
+          {
+            to: "/projectplanning",
+            label: t("menu.projectPlanning", "Project Planning"),
+            icon: <AccountTree />,
           },
         ],
       },
