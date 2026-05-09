@@ -112,6 +112,18 @@
     "backendResponse": "Backend response",
     "content": "Content:"
   },
+  "error": {
+    "serverError": "Server error",
+    "autoClose": "Auto close in {{seconds}}s",
+    "labels": {
+      "unauthorized": "Authentication required",
+      "forbidden": "Access denied",
+      "notFound": "Not found",
+      "clientError": "Client error",
+      "serverError": "Server error",
+      "unknown": "Error"
+    }
+  },
   "languages": {
     "en": "English",
     "zh": "Chinese"
@@ -126,6 +138,7 @@
     "save": "Save",
     "delete": "Delete",
     "cancel": "Cancel",
+    "ok": "OK",
     "back": "Back",
     "failed": "Action Failed"
   },
@@ -1015,6 +1028,7 @@
     "selectStockLine": "Please select a stock line.",
     "referenceRequired": "Reference is required.",
     "quantityRequired": "Please enter a stock-out quantity greater than zero.",
+    "quantityExceeds": "Stock out quantity cannot exceed the current quantity at the selected location.",
     "saveSuccess": "Stock out saved.",
     "saveFailed": "Failed to save stock out.",
     "columns": {

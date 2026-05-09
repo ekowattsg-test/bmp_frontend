@@ -331,6 +331,15 @@ const StockOut = () => {
       return;
     }
 
+    // Prevent issuing more than the quantity present in the selected location
+    if (
+      selectedStock &&
+      Number.isFinite(Number(selectedStock.currentQuantity)) &&
+      qty > Number(selectedStock.currentQuantity)
+    ) {
+      setWarnMsg(t("stockOut.quantityExceeds"));
+      return;
+    }
     setSaveBusy(true);
     setErrorMsg("");
     setWarnMsg("");
@@ -490,7 +499,13 @@ const StockOut = () => {
               <TextField
                 size="small"
                 type="number"
-                inputProps={{ min: 1, step: 1 }}
+                inputProps={{
+                  min: 1,
+                  step: 1,
+                  max: selectedStock
+                    ? Number(selectedStock.currentQuantity)
+                    : undefined,
+                }}
                 label={t("stockOut.quantity")}
                 value={stockOutQty}
                 onChange={(event) => {

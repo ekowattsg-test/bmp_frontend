@@ -9,7 +9,16 @@ import MainPage from "./MainPage.jsx";
 import LoginForm from "./LoginForm.jsx";
 import { AuthContext } from "../context/authContext.jsx";
 import AuthLayout from "../layouts/AuthLayout.jsx";
-import { CircularProgress, Box } from "@mui/material";
+import {
+  CircularProgress,
+  Box,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Typography,
+} from "@mui/material";
 import PdaLogin from "./pda/PdaLogin.jsx";
 import PdaMenu from "./pda/PdaMenu.jsx";
 
@@ -21,6 +30,133 @@ export default function AppContent() {
   const { t } = useTranslation();
   const [loginError, setLoginError] = useState(""); // Store raw backend error
   const [loginLoading, setLoginLoading] = useState(false);
+  // Backend error dialog state and refs for acknowledgement
+  const [backendDialogOpen, setBackendDialogOpen] = useState(false);
+  const [backendDialogMessage, setBackendDialogMessage] = useState("");
+  const [backendDialogDetails, setBackendDialogDetails] = useState("");
+  const [backendDialogStatus, setBackendDialogStatus] = useState(null);
+  const [backendDialogSecondsLeft, setBackendDialogSecondsLeft] = useState(0);
+  const ackResolveRef = React.useRef(null);
+  const timeoutRef = React.useRef(null);
+  const intervalRef = React.useRef(null);
+
+  // Expose a global function the axios helper can call to show a blocking error
+  React.useEffect(() => {
+    const showFn = (payload, timeoutMs) =>
+      new Promise((resolve) => {
+        const messageText =
+          payload && typeof payload === "object"
+            ? payload.message
+            : payload || "";
+        setBackendDialogMessage(messageText || "");
+        setBackendDialogStatus(
+          payload && typeof payload === "object" ? payload.status : null,
+        );
+        // if there's a response object, extract a user-friendly message
+        const formatResponse = (resp) => {
+          if (resp == null) return "";
+          if (
+            typeof resp === "string" ||
+            typeof resp === "number" ||
+            typeof resp === "boolean"
+          )
+            return String(resp);
+          // resp is object: prefer common message fields and avoid dumping full JSON envelope
+          if (typeof resp === "object") {
+            if (typeof resp.message === "string") return resp.message;
+            if (typeof resp.error === "string") return resp.error;
+            if (typeof resp.data === "string") return resp.data;
+            if (resp.data && typeof resp.data.message === "string")
+              return resp.data.message;
+            // ignore purely structural objects (only status/code/timestamps)
+            const keys = Object.keys(resp).filter(
+              (k) => !["status", "code", "timestamp"].includes(k),
+            );
+            if (keys.length === 0) return "";
+            // try to find any primitive value to show
+            for (const k of keys) {
+              const v = resp[k];
+              if (
+                typeof v === "string" ||
+                typeof v === "number" ||
+                typeof v === "boolean"
+              )
+                return String(v);
+              if (v && typeof v === "object" && typeof v.message === "string")
+                return v.message;
+            }
+            return ""; // don't show full JSON envelope by default
+          }
+          return "";
+        };
+
+        if (payload && typeof payload === "object" && payload.response) {
+          setBackendDialogDetails(formatResponse(payload.response));
+        } else {
+          setBackendDialogDetails("");
+        }
+        setBackendDialogOpen(true);
+        ackResolveRef.current = resolve;
+        // clear any previous timers
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+
+        if (typeof timeoutMs === "number" && timeoutMs > 0) {
+          const seconds = Math.ceil(timeoutMs / 1000);
+          setBackendDialogSecondsLeft(seconds);
+          intervalRef.current = setInterval(() => {
+            setBackendDialogSecondsLeft((s) => {
+              if (s <= 1) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+                return 0;
+              }
+              return s - 1;
+            });
+          }, 1000);
+
+          timeoutRef.current = setTimeout(() => {
+            if (ackResolveRef.current) {
+              ackResolveRef.current();
+              ackResolveRef.current = null;
+            }
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current);
+              intervalRef.current = null;
+            }
+            setBackendDialogOpen(false);
+            timeoutRef.current = null;
+            setBackendDialogSecondsLeft(0);
+          }, timeoutMs);
+        } else {
+          setBackendDialogSecondsLeft(0);
+        }
+      });
+
+    // attach to window for helpers to call
+    if (typeof window !== "undefined") {
+      window.showBackendError = showFn;
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        delete window.showBackendError;
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, []);
 
   // Map backend error messages to translation keys
   const getTranslatedError = (errorMessage) => {
@@ -40,6 +176,17 @@ export default function AppContent() {
 
     const translationKey = errorKeyMap[errorMessage];
     return translationKey ? t(translationKey) : errorMessage;
+  };
+
+  const mapStatusToLabelKey = (status) => {
+    if (!status) return "error.labels.unknown";
+    const s = Number(status);
+    if (s === 401) return "error.labels.unauthorized";
+    if (s === 403) return "error.labels.forbidden";
+    if (s === 404) return "error.labels.notFound";
+    if (s >= 400 && s < 500) return "error.labels.clientError";
+    if (s >= 500) return "error.labels.serverError";
+    return "error.labels.unknown";
   };
 
   const onLogin = (e, username, password) => {
@@ -162,6 +309,68 @@ export default function AppContent() {
       ) : (
         <MainPage />
       )}
+      <Dialog
+        open={backendDialogOpen}
+        onClose={() => {
+          // treat close as acknowledgement
+          if (ackResolveRef.current) {
+            ackResolveRef.current();
+            ackResolveRef.current = null;
+          }
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+          }
+          setBackendDialogOpen(false);
+        }}
+      >
+        <DialogTitle>{t("error.serverError")}</DialogTitle>
+        <DialogContent>
+          {backendDialogStatus ? (
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              {t(mapStatusToLabelKey(backendDialogStatus))}
+            </Typography>
+          ) : null}
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ whiteSpace: "pre-wrap", mt: backendDialogStatus ? 1 : 0 }}
+          >
+            {backendDialogDetails || backendDialogMessage}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "space-between", px: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            {backendDialogSecondsLeft > 0 && (
+              <Typography variant="body2" color="text.secondary">
+                {t("error.autoClose", { seconds: backendDialogSecondsLeft })}
+              </Typography>
+            )}
+          </Box>
+          <Box>
+            <Button
+              onClick={() => {
+                if (ackResolveRef.current) {
+                  ackResolveRef.current();
+                  ackResolveRef.current = null;
+                }
+                if (timeoutRef.current) {
+                  clearTimeout(timeoutRef.current);
+                  timeoutRef.current = null;
+                }
+                if (intervalRef.current) {
+                  clearInterval(intervalRef.current);
+                  intervalRef.current = null;
+                }
+                setBackendDialogOpen(false);
+              }}
+              autoFocus
+            >
+              {t("basic.ok")}
+            </Button>
+          </Box>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

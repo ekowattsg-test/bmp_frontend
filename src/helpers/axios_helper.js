@@ -76,6 +76,36 @@ api.interceptors.response.use(
     const originalRequest = error.config;
     if (!originalRequest) return Promise.reject(error);
 
+    // Show blocking error prompt (if available in the app) and wait
+    const tryShowBlockingError = async (msg) => {
+      try {
+        const timeoutMs = parseInt(
+          import.meta.env.VITE_ERROR_ACK_TIMEOUT_MS || "0",
+          10,
+        );
+        if (typeof window !== "undefined" && window.showBackendError) {
+          // window.showBackendError resolves when user acknowledges or timeout
+          await window.showBackendError(msg, timeoutMs);
+        } else if (timeoutMs > 0) {
+          // Fallback: wait for the timeout
+          await new Promise((res) => setTimeout(res, timeoutMs));
+        }
+      } catch (e) {
+        // ignore any errors from the UI handshake
+      }
+    };
+
+    // Prepare payload with message and full backend response when available
+    const payload = {
+      message:
+        error?.response?.data?.message || error?.message || "Server error",
+      status: error?.response?.status || null,
+      response: error?.response?.data || null,
+    };
+
+    // Fire and wait for UI acknowledgement before proceeding with recovery
+    await tryShowBlockingError(payload);
+
     // Some endpoints use 401 for business validation (e.g. invalid admin password).
     // Allow callers to opt out of global auth refresh/redirect handling.
     if (
