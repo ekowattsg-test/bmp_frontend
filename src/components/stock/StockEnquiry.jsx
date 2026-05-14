@@ -414,7 +414,6 @@ const StockEnquiry = () => {
             quantityHolded: movementRow.holdMoved,
             currentQuantity: "",
             currentAvailableQuantity: "",
-            reference: movementRow.reference,
             actionBy: movementRow.actionBy,
           });
         });

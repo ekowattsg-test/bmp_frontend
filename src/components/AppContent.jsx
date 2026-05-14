@@ -33,8 +33,6 @@ export default function AppContent() {
   // Backend error dialog state and refs for acknowledgement
   const [backendDialogOpen, setBackendDialogOpen] = useState(false);
   const [backendDialogMessage, setBackendDialogMessage] = useState("");
-  const [backendDialogDetails, setBackendDialogDetails] = useState("");
-  const [backendDialogStatus, setBackendDialogStatus] = useState(null);
   const [backendDialogSecondsLeft, setBackendDialogSecondsLeft] = useState(0);
   const ackResolveRef = React.useRef(null);
   const timeoutRef = React.useRef(null);
@@ -42,59 +40,9 @@ export default function AppContent() {
 
   // Expose a global function the axios helper can call to show a blocking error
   React.useEffect(() => {
-    const showFn = (payload, timeoutMs) =>
+    const showFn = (message, timeoutMs) =>
       new Promise((resolve) => {
-        const messageText =
-          payload && typeof payload === "object"
-            ? payload.message
-            : payload || "";
-        setBackendDialogMessage(messageText || "");
-        setBackendDialogStatus(
-          payload && typeof payload === "object" ? payload.status : null,
-        );
-        // if there's a response object, extract a user-friendly message
-        const formatResponse = (resp) => {
-          if (resp == null) return "";
-          if (
-            typeof resp === "string" ||
-            typeof resp === "number" ||
-            typeof resp === "boolean"
-          )
-            return String(resp);
-          // resp is object: prefer common message fields and avoid dumping full JSON envelope
-          if (typeof resp === "object") {
-            if (typeof resp.message === "string") return resp.message;
-            if (typeof resp.error === "string") return resp.error;
-            if (typeof resp.data === "string") return resp.data;
-            if (resp.data && typeof resp.data.message === "string")
-              return resp.data.message;
-            // ignore purely structural objects (only status/code/timestamps)
-            const keys = Object.keys(resp).filter(
-              (k) => !["status", "code", "timestamp"].includes(k),
-            );
-            if (keys.length === 0) return "";
-            // try to find any primitive value to show
-            for (const k of keys) {
-              const v = resp[k];
-              if (
-                typeof v === "string" ||
-                typeof v === "number" ||
-                typeof v === "boolean"
-              )
-                return String(v);
-              if (v && typeof v === "object" && typeof v.message === "string")
-                return v.message;
-            }
-            return ""; // don't show full JSON envelope by default
-          }
-          return "";
-        };
-
-        if (payload && typeof payload === "object" && payload.response) {
-          setBackendDialogDetails(formatResponse(payload.response));
-        } else {
-          setBackendDialogDetails("");
-        }
+        setBackendDialogMessage(message || "");
         setBackendDialogOpen(true);
         ackResolveRef.current = resolve;
         // clear any previous timers
@@ -151,10 +99,6 @@ export default function AppContent() {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
     };
   }, []);
 
@@ -176,17 +120,6 @@ export default function AppContent() {
 
     const translationKey = errorKeyMap[errorMessage];
     return translationKey ? t(translationKey) : errorMessage;
-  };
-
-  const mapStatusToLabelKey = (status) => {
-    if (!status) return "error.labels.unknown";
-    const s = Number(status);
-    if (s === 401) return "error.labels.unauthorized";
-    if (s === 403) return "error.labels.forbidden";
-    if (s === 404) return "error.labels.notFound";
-    if (s >= 400 && s < 500) return "error.labels.clientError";
-    if (s >= 500) return "error.labels.serverError";
-    return "error.labels.unknown";
   };
 
   const onLogin = (e, username, password) => {
@@ -326,17 +259,8 @@ export default function AppContent() {
       >
         <DialogTitle>{t("error.serverError")}</DialogTitle>
         <DialogContent>
-          {backendDialogStatus ? (
-            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-              {t(mapStatusToLabelKey(backendDialogStatus))}
-            </Typography>
-          ) : null}
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ whiteSpace: "pre-wrap", mt: backendDialogStatus ? 1 : 0 }}
-          >
-            {backendDialogDetails || backendDialogMessage}
+          <Typography sx={{ whiteSpace: "pre-wrap" }}>
+            {backendDialogMessage}
           </Typography>
         </DialogContent>
         <DialogActions sx={{ justifyContent: "space-between", px: 2 }}>

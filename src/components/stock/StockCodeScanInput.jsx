@@ -50,6 +50,7 @@ const StockCodeScanInput = ({
 }) => {
   const { t } = useTranslation();
   const html5QrRef = useRef(null);
+  const inputRef = useRef(null);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSearch, setPickerSearch] = useState("");
@@ -156,6 +157,38 @@ const StockCodeScanInput = ({
     }
   };
 
+  React.useEffect(() => {
+    const tryFocus = () => {
+      const el = inputRef.current;
+      if (!el) return;
+      // Visible check
+      if (el.offsetParent === null) return;
+      // Don't steal focus if another input is active
+      const active =
+        typeof document !== "undefined" ? document.activeElement : null;
+      if (
+        active &&
+        (active.tagName === "INPUT" ||
+          active.tagName === "TEXTAREA" ||
+          active.isContentEditable)
+      ) {
+        return;
+      }
+      try {
+        el.focus({ preventScroll: true });
+      } catch {
+        try {
+          el.focus();
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    const id = setTimeout(tryFocus, 50);
+    return () => clearTimeout(id);
+  }, [pickerOpen, scannerOpen, busy]);
+
   return (
     <>
       <Box
@@ -165,6 +198,7 @@ const StockCodeScanInput = ({
           label={label || t("stockTake.stockCode", "Stock code")}
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          inputRef={inputRef}
           placeholder={placeholder || t("stockTake.scanPlaceholder")}
           fullWidth
           size="small"

@@ -95,16 +95,11 @@ api.interceptors.response.use(
       }
     };
 
-    // Prepare payload with message and full backend response when available
-    const payload = {
-      message:
-        error?.response?.data?.message || error?.message || "Server error",
-      status: error?.response?.status || null,
-      response: error?.response?.data || null,
-    };
-
+    // Try to extract meaningful message for the user
+    const backendMessage =
+      error?.response?.data?.message || error?.message || "Server error";
     // Fire and wait for UI acknowledgement before proceeding with recovery
-    await tryShowBlockingError(payload);
+    await tryShowBlockingError(backendMessage);
 
     // Some endpoints use 401 for business validation (e.g. invalid admin password).
     // Allow callers to opt out of global auth refresh/redirect handling.

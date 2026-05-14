@@ -114,15 +114,7 @@
   },
   "error": {
     "serverError": "Server error",
-    "autoClose": "Auto close in {{seconds}}s",
-    "labels": {
-      "unauthorized": "Authentication required",
-      "forbidden": "Access denied",
-      "notFound": "Not found",
-      "clientError": "Client error",
-      "serverError": "Server error",
-      "unknown": "Error"
-    }
+    "autoClose": "Auto close in {{seconds}}s"
   },
   "languages": {
     "en": "English",
