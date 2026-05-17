@@ -127,11 +127,14 @@
     "true": "True",
     "false": "False",
     "actions": "Actions",
+    "add": "Add",
     "save": "Save",
     "delete": "Delete",
     "cancel": "Cancel",
     "ok": "OK",
     "back": "Back",
+    "none": "\u2014 None \u2014",
+    "noSearchResults": "No results found",
     "failed": "Action Failed"
   },
   "menu": {
@@ -174,7 +177,27 @@
     "forcedPassword": "Forced Password",
     "projects": "Projects",
     "projectList": "Project List",
-    "projectPlanning": "Project Planning"
+    "projectPlanning": "Project Planning",
+    "workOrders": "Work Orders",
+    "workOrderList": "Work Order List",
+    "vehicle": "Vehicles"
+  },
+  "vehicleList": {
+    "title": "Vehicles",
+    "subtitle": "Manage vehicles",
+    "helpTitle": "Vehicles — User Manual",
+    "helpBody": "OVERVIEW\nThe Vehicles page lets you add, edit, and delete vehicle records used across work orders and stock operations.\n\nFIELDS\n\u2022 Vehicle No. \u2014 unique identifier for the vehicle. Required. Cannot be changed after creation.\n\u2022 Driver (Mobile) \u2014 mobile number of the default driver assigned to this vehicle.\n\u2022 Active \u2014 indicates whether the vehicle is currently in service.\n\nHOW TO ADD\n1. Click Add Vehicle.\n2. Enter a unique Vehicle No.\n3. Optionally enter the driver\u2019s mobile number.\n4. Set Active status.\n5. Click Save.\n\nHOW TO EDIT\n1. Click the edit icon on a row.\n2. Update Driver or Active fields as needed.\n3. Click Save.\n\nHOW TO DELETE\n1. Click the delete icon on a row.\n2. Confirm the vehicle number shown in the prompt.\n3. Click Delete to permanently remove the record.",
+    "addTitle": "Add Vehicle",
+    "editTitle": "Edit Vehicle",
+    "deleteTitle": "Delete Vehicle",
+    "confirmDelete": "Are you sure you want to delete this vehicle?",
+    "vehicleNumber": "Vehicle No.",
+    "driver": "Driver",
+    "active": "Active",
+    "searchPlaceholder": "Search...",
+    "noVehicles": "No vehicles found.",
+    "emptyDescription": "Add a vehicle to get started.",
+    "loading": "Loading vehicles..."
   },
   "staffExcelUpload": {
     "title": "Staff Excel Upload",
@@ -223,6 +246,8 @@
     "streamCount": "Streams",
     "noCustomer": "None",
     "addTitle": "Add Project",
+    "helpTitle": "Projects Help",
+    "helpBody": "Manage projects: add, edit, and track projects. Click a project to view or edit details.",
     "editTitle": "Edit Project",
     "deleteTitle": "Delete Project",
     "confirmDelete": "Are you sure you want to delete",
@@ -234,7 +259,9 @@
   },
   "projectPlanning": {
     "title": "Project Planning",
-    "subtitle": "Plan and schedule project activities"
+    "subtitle": "Plan and schedule project activities",
+    "helpTitle": "Project Planning Help",
+    "helpBody": "Plan and schedule project tasks and resources."
   },
   "userLoginList": {
     "title": "Login Enquiry",
@@ -1089,6 +1116,92 @@
       "uom": "Unit",
       "movementCount": "Movements",
       "lastMovement": "Last Movement"
+    }
+  },
+  "workOrder": {
+    "title": "Work Orders",
+    "subtitle": "Manage and track work orders",
+    "workOrderId": "ID",
+    "workOrderType": "Type",
+    "workDescription": "Description",
+    "issuedBy": "Issued By",
+    "workOrderDate": "Date",
+    "workBy": "Assigned To",
+    "workOrderStatus": "Status",
+    "addTitle": "Add Work Order",
+    "editTitle": "Edit Work Order",
+    "viewTitle": "View Work Order",
+    "helpTitle": "Work Orders Help",
+    "helpBody": "Manage work orders: add, edit, and track work orders. Click a work order to view or edit details.",
+    "selectType": "Select Work Order Type",
+    "filterByType": "Filter by type",
+    "allTypes": "All types",
+    "typeGeneral": "General",
+    "loading": "Loading work orders...",
+    "noItems": "No work orders found",
+    "noItemsDescription": "Get started by adding your first work order",
+    "noSearchResults": "Try adjusting your search or filter",
+    "searchPlaceholder": "Search work orders...",
+    "required": "Required",
+    "status": {
+      "OPEN": "Open",
+      "IN_PROGRESS": "In Progress",
+      "CLOSED": "Closed",
+      "ISSUED": "Issued"
+    },
+    "issue": {
+      "title": "Issue Work Order",
+      "iconTitle": "Issue",
+      "button": "Issue Work Order",
+      "failed": "Failed to issue work order."
+    }
+  },
+  "workOrderData": {
+    "title": "Work Order Details",
+    "details": "Details",
+    "addItem": "Add Detail Item",
+    "productName": "Product",
+    "productId": "Product ID",
+    "selectProduct": "Select Product",
+    "searchProduct": "Search by name or code",
+    "noProductMatch": "No products found",
+    "quantity": "Quantity",
+    "staffId": "Staff",
+    "loading": "Loading detail items...",
+    "noItems": "No detail items yet.",
+    "required": "Required",
+    "duplicateProduct": "Product already added",
+    "duplicateStaff": "Staff already added"
+  },
+  "workOrderSteps": {
+    "title": "Work Order Steps",
+    "steps": "Steps",
+    "saved": "Steps saved successfully.",
+    "addStep": "Add Step",
+    "stepNumber": "Step #",
+    "description": "Description",
+    "fromLocation": "From",
+    "toLocation": "To",
+    "stepStatus": "Status",
+    "loading": "Loading steps...",
+    "noItems": "No steps configured for this work order type.",
+    "required": "Required",
+    "entityWorkerHint": "Auto-filled from work order",
+    "validation": {
+      "allEntitiesRequired": "Step {{steps}}: all fields must be filled before saving."
+    },
+    "placeholder": {
+      "worker": "Worker",
+      "po": "Select PO",
+      "vehicle": "Select Vehicle",
+      "location": "Location"
+    },
+    "mismatch": {
+      "vehicleDriverTitle": "Vehicle-Staff Mismatch",
+      "vehicleDriver": "The selected vehicle's driver ({{driver}}) differs from the assigned staff ({{staff}}). Proceed anyway?",
+      "workerTitle": "Worker-Staff Mismatch",
+      "worker": "The selected worker ({{worker}}) differs from the assigned staff ({{staff}}). Proceed anyway?",
+      "proceed": "Proceed"
     }
   },
   "stockCodeScan": {

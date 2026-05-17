@@ -33,6 +33,8 @@ import UserLoginList from "./baseInformation/UserLoginList";
 import ForcedPassword from "./baseInformation/ForcedPassword";
 import ProjectModern from "./information/ProjectModern";
 import ProjectPlanningModern from "./information/ProjectPlanningModern";
+import VehicleModern from "./information/VehicleModern";
+import WorkOrderModern from "./workorder/WorkOrderModern";
 
 function MainPage() {
   return (
@@ -71,6 +73,8 @@ function MainPage() {
         <Route path="/about/privacy" element={<PrivacyPage />} />
         <Route path="/project" element={<ProjectModern />} />
         <Route path="/projectplanning" element={<ProjectPlanningModern />} />
+        <Route path="/vehicle" element={<VehicleModern />} />
+        <Route path="/workorder" element={<WorkOrderModern />} />
       </Routes>
     </AdminLayout>
   );

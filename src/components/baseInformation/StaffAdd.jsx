@@ -17,13 +17,14 @@ import {
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import { AuthContext } from "../../context/authContext";
+import { toLocalDate } from "../../helpers/date_helper";
 import { HeaderBar } from "../common";
 
 const formatDateForInput = (value) => {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().split("T")[0];
+  return toLocalDate(date);
 };
 
 const StaffAdd = ({ onCancel }) => {
@@ -274,10 +275,7 @@ const StaffAdd = ({ onCancel }) => {
         borderRadius: 2,
       }}
     >
-      <HeaderBar
-        title={t("staffList.addTitle", "Add Staff")}
-        sx={{ mb: 1 }}
-      />
+      <HeaderBar title={t("staffList.addTitle", "Add Staff")} sx={{ mb: 1 }} />
       <TextField
         label={t("staffList.name", "Staff Name")}
         name="staffName"

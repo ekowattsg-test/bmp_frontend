@@ -27,6 +27,7 @@ import {
   Task,
   Inventory2,
   Warehouse,
+  EngineeringOutlined as EngineeringIcon,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 
@@ -215,13 +216,33 @@ const AppMenu = () => {
           },
         ],
       },
+      {
+        key: "WorkOrders",
+        menu: null,
+        role: "WorkOrders",
+        label: t("menu.workOrders", "Work Orders"),
+        icon: <EngineeringIcon />,
+        items: [
+          {
+            to: "/workorder",
+            label: t("menu.workOrderList", "Work Order List"),
+            icon: <EngineeringIcon />,
+          },
+        ],
+      },
     ],
     [t],
   );
 
-  const visibleSections = menuSections.filter(
-    (section) => !section.menu || hasMenu(section.menu, menus),
-  );
+  const visibleSections = menuSections.filter((section) => {
+    if (section.role) {
+      if (Array.isArray(section.role)) {
+        return section.role.some((r) => hasRole(r, roles));
+      }
+      return hasRole(section.role, roles);
+    }
+    return !section.menu || hasMenu(section.menu, menus);
+  });
   const styles = {
     container: {
       padding: "4px 0",

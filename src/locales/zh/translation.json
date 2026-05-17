@@ -127,11 +127,14 @@
     "true": "是",
     "false": "否",
     "actions": "操作",
+    "add": "新增",
     "save": "保存",
     "delete": "删除",
     "cancel": "取消",
     "ok": "确定",
     "back": "返回",
+    "none": "— 无 —",
+    "noSearchResults": "未找到相关结果",
     "failed": "操作失败"
   },
   "menu": {
@@ -174,7 +177,27 @@
     "forcedPassword": "强制改密",
     "projects": "项目",
     "projectList": "项目列表",
-    "projectPlanning": "项目规划"
+    "projectPlanning": "项目规划",
+    "workOrders": "工单",
+    "workOrderList": "工单列表",
+    "vehicle": "车辆"
+  },
+  "vehicleList": {
+    "title": "车辆",
+    "subtitle": "管理车辆",
+    "helpTitle": "车辆 — 用户手册",
+    "helpBody": "概述\n车辆页面用于添加、编辑和删除车辆记录，这些车辆将用于工单和库存操作中。\n\n字段说明\n• 车狌编号 — 车辆的唯一标识符，必填，创建后不可更改。\n• 司机（手机）— 该车辆默认司机的手机号码。\n• 激活 — 表示车辆是否处于活跃状态。\n\n如何添加\n1. 点击《添加车辆》。\n2. 输入唯一的车狌编号。\n3. 可选填写司机的手机号码。\n4. 设置激活状态。\n5. 点击保存。\n\n如何编辑\n1. 点击对应行的编辑图标。\n2. 根据需要更新司机或激活字段。\n3. 点击保存。\n\n如何删除\n1. 点击对应行的删除图标。\n2. 确认提示中显示的车狌编号。\n3. 点击删除以永久删除该记录。",
+    "addTitle": "添加车辆",
+    "editTitle": "编辑车辆",
+    "deleteTitle": "删除车辆",
+    "confirmDelete": "您确定要删除此车辆吗？",
+    "vehicleNumber": "车狌编号",
+    "driver": "司机",
+    "active": "激活",
+    "searchPlaceholder": "搜索...",
+    "noVehicles": "未找到车辆。",
+    "emptyDescription": "添加车辆以开始。",
+    "loading": "正在加载车辆..."
   },
   "staffExcelUpload": {
     "title": "员工 Excel 上传",
@@ -223,6 +246,8 @@
     "streamCount": "工作流数",
     "noCustomer": "无",
     "addTitle": "添加项目",
+    "helpTitle": "项目帮助",
+    "helpBody": "管理项目：新增、编辑和跟踪项目。点击项目查看或编辑详情。",
     "editTitle": "编辑项目",
     "deleteTitle": "删除项目",
     "confirmDelete": "确定要删除",
@@ -234,7 +259,9 @@
   },
   "projectPlanning": {
     "title": "项目规划",
-    "subtitle": "规划和安排项目活动"
+    "subtitle": "规划和安排项目活动",
+    "helpTitle": "项目规划帮助",
+    "helpBody": "规划和安排项目任务及资源。"
   },
   "userLoginList": {
     "title": "登录查询",
@@ -1088,6 +1115,92 @@
       "uom": "单位",
       "movementCount": "变动次数",
       "lastMovement": "最近变动"
+    }
+  },
+  "workOrder": {
+    "title": "工单",
+    "subtitle": "管理和跟踪工单",
+    "workOrderId": "编号",
+    "workOrderType": "类型",
+    "workDescription": "描述",
+    "issuedBy": "发起人",
+    "workOrderDate": "日期",
+    "workBy": "指派给",
+    "workOrderStatus": "状态",
+    "addTitle": "新增工单",
+    "editTitle": "编辑工单",
+    "viewTitle": "查看工单",
+    "helpTitle": "工单帮助",
+    "helpBody": "管理工单：新增、编辑和跟踪工单。点击工单查看或编辑详情。",
+    "selectType": "选择工单类型",
+    "filterByType": "按类型筛选",
+    "allTypes": "全部类型",
+    "typeGeneral": "通用",
+    "loading": "正在加载工单...",
+    "noItems": "未找到工单",
+    "noItemsDescription": "点击新增工单开始创建",
+    "noSearchResults": "请调整搜索条件或筛选器",
+    "searchPlaceholder": "搜索工单...",
+    "required": "必填",
+    "status": {
+      "OPEN": "待处理",
+      "IN_PROGRESS": "进行中",
+      "CLOSED": "已关闭",
+      "ISSUED": "已发布"
+    },
+    "issue": {
+      "title": "发布工单",
+      "iconTitle": "发布",
+      "button": "发布工单",
+      "failed": "发布工单失败。"
+    }
+  },
+  "workOrderData": {
+    "title": "工单明细",
+    "details": "明细",
+    "addItem": "新增明细项",
+    "productName": "产品",
+    "productId": "产品编号",
+    "selectProduct": "选择产品",
+    "searchProduct": "按名称或代码搜索",
+    "noProductMatch": "未找到产品",
+    "quantity": "数量",
+    "staffId": "员工",
+    "loading": "正在加载明细...",
+    "noItems": "暂无明细项。",
+    "required": "必填",
+    "duplicateProduct": "产品已添加",
+    "duplicateStaff": "员工已添加"
+  },
+  "workOrderSteps": {
+    "title": "工单步骤",
+    "steps": "步骤",
+    "saved": "步骤保存成功。",
+    "addStep": "新增步骤",
+    "stepNumber": "步骤编号",
+    "description": "描述",
+    "fromLocation": "起始位置",
+    "toLocation": "目标位置",
+    "stepStatus": "状态",
+    "loading": "正在加载步骤...",
+    "noItems": "此工单类型未配置步骤。",
+    "required": "必填",
+    "entityWorkerHint": "自动填入工单指派人员",
+    "validation": {
+      "allEntitiesRequired": "步骤 {{steps}}：保存前请填写所有字段。"
+    },
+    "placeholder": {
+      "worker": "人员",
+      "po": "选择采购单",
+      "vehicle": "选择车辆",
+      "location": "位置"
+    },
+    "mismatch": {
+      "vehicleDriverTitle": "车辆与人员不一致",
+      "vehicleDriver": "所选车辆的司机（{{driver}}）与工单指派人员（{{staff}}）不一致，是否继续？",
+      "workerTitle": "工人与指派人员不一致",
+      "worker": "所选工人（{{worker}}）与工单指派人员（{{staff}}）不一致，是否继续？",
+      "proceed": "继续"
     }
   },
   "stockCodeScan": {

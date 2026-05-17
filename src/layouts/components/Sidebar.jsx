@@ -36,6 +36,8 @@ import {
   Task as TaskIcon,
   People as PeopleManpowerIcon,
   Warehouse as WarehouseIcon,
+  EngineeringOutlined as EngineeringIcon,
+  DirectionsCar as CarIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -179,6 +181,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               path: "/purchaseorder",
             },
             {
+              key: "vehicles",
+              label: t("menu.vehicle", "Vehicles"),
+              icon: <CarIcon fontSize="small" />,
+              path: "/vehicle",
+            },
+            {
               key: "staff",
               label: t("menu.staff", "Staff"),
               icon: <PeopleIcon fontSize="small" />,
@@ -282,7 +290,29 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
             },
           ],
         },
+        {
+          key: "WorkOrders",
+          menu: null,
+          role: "WorkOrders",
+          label: t("menu.workOrders", "Work Orders"),
+          icon: <EngineeringIcon />,
+          children: [
+            {
+              key: "workOrderList",
+              label: t("menu.workOrderList", "Work Order List"),
+              icon: <EngineeringIcon fontSize="small" />,
+              path: "/workorder",
+            },
+          ],
+        },
       ].filter((section) => {
+        if (section.role) {
+          if (Array.isArray(section.role)) {
+            return section.role.some((r) => hasRole(r, roles));
+          }
+          return hasRole(section.role, roles);
+        }
+
         if (!section.menu) return true;
 
         if (Array.isArray(section.menu)) {

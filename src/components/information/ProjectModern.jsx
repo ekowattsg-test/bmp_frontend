@@ -22,6 +22,7 @@ import {
   BlockListItem,
   LoadMoreBlockList,
 } from "../common";
+import HelpDialog from "../common/HelpDialog";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import ProjectAdd from "./ProjectAdd";
 import ProjectEdit from "./ProjectEdit";
@@ -37,6 +38,7 @@ const ProjectModern = () => {
   const [deleteMode, setDeleteMode] = useState(false);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [helpOpen, setHelpOpen] = useState(false);
   const { t } = useTranslation();
   const { shouldUseBlockLayout } = useResponsiveLayout();
 
@@ -248,6 +250,14 @@ const ProjectModern = () => {
         icon={AssignmentIcon}
         actionLabel={t("project.addTitle")}
         onActionClick={() => setShowAdd(true)}
+        onHelpClick={() => setHelpOpen(true)}
+      />
+
+      <HelpDialog
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title={t("project.helpTitle")}
+        content={t("project.helpBody")}
       />
 
       <Box

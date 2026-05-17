@@ -1394,7 +1394,7 @@ const StockIn = () => {
             productId: Number(productId),
             stockCode: codeToUse,
             location: trimmedLocation,
-            createDate: new Date().toISOString(),
+            createDate: toLocalISO(),
           });
           // Expect canonical `stockId` from the created resource.
           targetStockId = Number(newStockRes?.data?.stockId || 0);
@@ -1410,7 +1410,7 @@ const StockIn = () => {
           productId: Number(productId),
           stockCode: codeToUse,
           location: selectedStock.location || "central",
-          createDate: new Date().toISOString(),
+          createDate: toLocalISO(),
         });
         // Expect canonical `stockId` from the created resource.
         targetStockId = Number(newStockRes?.data?.stockId || 0);
@@ -1428,7 +1428,7 @@ const StockIn = () => {
         location: targetLocation,
         reference: ref,
         actionBy: userInfo?.login || "",
-        recordDate: new Date().toISOString(),
+        recordDate: toLocalISO(),
       });
 
       setSuccessMsg(t("stockIn.saveSuccess"));

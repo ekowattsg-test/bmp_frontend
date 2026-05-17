@@ -27,31 +27,34 @@ const PurchaseOrderView = ({ order, onClose }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [vendor, setVendor] = useState(null);
+  const [productMap, setProductMap] = useState({});
   const { shouldUseBlockLayout } = useResponsiveLayout();
 
   useEffect(() => {
     // Load vendor details
-    request("GET", `/api/vendors/${order.vendorId}`)
-      .then((response) => {
-        setVendor(response.data);
-      })
-      .catch((error) => {
-        console.error("Error loading vendor:", error);
-      });
-
-    // Load purchase order items
+    // Load vendor, items and products in parallel
     setLoading(true);
-    request("GET", `/api/purchaseOrderItems/order/${order.orderId}`)
-      .then((response) => {
-        setItems(response.data || []);
+    Promise.allSettled([
+      request("GET", `/api/vendors/${order.vendorId}`),
+      request("GET", `/api/purchaseOrderItems/order/${order.orderId}`),
+      request("GET", "/api/products"),
+    ])
+      .then(([vendorRes, itemsRes, productsRes]) => {
+        if (vendorRes.status === "fulfilled") setVendor(vendorRes.value.data);
+        setItems(
+          itemsRes.status === "fulfilled" ? itemsRes.value.data || [] : [],
+        );
+        const pList =
+          productsRes.status === "fulfilled"
+            ? productsRes.value.data || []
+            : [];
+        const map = {};
+        pList.forEach((p) => {
+          map[String(p.productCode)] = p.productName || "";
+        });
+        setProductMap(map);
       })
-      .catch((error) => {
-        console.error("Error loading items:", error);
-        setItems([]);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+      .finally(() => setLoading(false));
   }, [order.orderId, order.vendorId]);
 
   const getStatusColor = (status) => {
@@ -101,40 +104,33 @@ const PurchaseOrderView = ({ order, onClose }) => {
           ? Number(item.lineTotal)
           : (item.quantity || 0) * (item.unitPrice || 0);
 
+      const productName = productMap[String(item.productCode)] || "";
+      const displayProduct = productName
+        ? `${productName} (${item.productCode})`
+        : item.productCode || "-";
+
       return {
         ...item,
         lineNo: index + 1,
+        displayProduct,
         displayItemType,
-        displayInternalProductCode: item.internalProductCode || "-",
-        displayInternalOrderId: item.internalOrderId || "-",
         displayQuantity: item.quantity,
         displayUnitPrice: `$${Number(item.unitPrice || 0).toFixed(2)}`,
         displayLineTotal: `$${lineTotal.toFixed(2)}`,
       };
     });
-  }, [items, t]);
+  }, [items, t, productMap]);
 
   const itemColumnDefs = useMemo(
     () => [
       { field: "lineNo", label: t("purchaseOrderList.lineNo", "#") },
       {
-        field: "productCode",
-        label: t("purchaseOrderList.productCode", "Product Code"),
+        field: "displayProduct",
+        label: t("purchaseOrderList.product", "Product"),
       },
       {
         field: "displayItemType",
         label: t("purchaseOrderList.itemType", "Item Type"),
-      },
-      {
-        field: "displayInternalProductCode",
-        label: t(
-          "purchaseOrderList.internalProductCode",
-          "Internal Product Code",
-        ),
-      },
-      {
-        field: "displayInternalOrderId",
-        label: t("purchaseOrderList.internalOrderId", "Internal Order ID"),
       },
       {
         field: "displayQuantity",
@@ -317,23 +313,11 @@ const PurchaseOrderView = ({ order, onClose }) => {
                       <TableCell>
                         {t("purchaseOrderList.lineNo", "#")}
                       </TableCell>
-                      <TableCell>
-                        {t("purchaseOrderList.productCode", "Product Code")}
+                      <TableCell sx={{ minWidth: 220 }}>
+                        {t("purchaseOrderList.product", "Product")}
                       </TableCell>
                       <TableCell>
                         {t("purchaseOrderList.itemType", "Item Type")}
-                      </TableCell>
-                      <TableCell>
-                        {t(
-                          "purchaseOrderList.internalProductCode",
-                          "Internal Product Code",
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {t(
-                          "purchaseOrderList.internalOrderId",
-                          "Internal Order ID",
-                        )}
                       </TableCell>
                       <TableCell align="right">
                         {t("purchaseOrderList.quantity", "Quantity")}
@@ -350,10 +334,10 @@ const PurchaseOrderView = ({ order, onClose }) => {
                     {normalizedItems.map((item, index) => (
                       <TableRow key={item.itemId || index}>
                         <TableCell>{item.lineNo}</TableCell>
-                        <TableCell>{item.productCode}</TableCell>
+                        <TableCell sx={{ minWidth: 220 }}>
+                          {item.displayProduct}
+                        </TableCell>
                         <TableCell>{item.displayItemType}</TableCell>
-                        <TableCell>{item.displayInternalProductCode}</TableCell>
-                        <TableCell>{item.displayInternalOrderId}</TableCell>
                         <TableCell align="right">
                           {item.displayQuantity}
                         </TableCell>
@@ -367,7 +351,7 @@ const PurchaseOrderView = ({ order, onClose }) => {
                     ))}
                     <TableRow>
                       <TableCell
-                        colSpan={7}
+                        colSpan={5}
                         align="right"
                         sx={{ fontWeight: "bold", borderTop: 2 }}
                       >

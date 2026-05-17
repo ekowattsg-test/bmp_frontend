@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
@@ -21,18 +21,14 @@ import {
   Paper,
 } from "@mui/material";
 import { Add as AddIcon, Delete as DeleteIcon } from "@mui/icons-material";
-import UserContext from "../../context/userContext";
-import { AuthContext } from "../../context/authContext";
 import { LoadMoreBlockList } from "../common";
+import ProductDialog from "../stock/ProductDialog";
 
 const PurchaseOrderAdd = ({ onCancel }) => {
   const { t } = useTranslation();
   const { shouldUseBlockLayout } = useResponsiveLayout();
-  const userContext = useContext(UserContext);
-  const authContext = useContext(AuthContext);
   const [vendors, setVendors] = useState([]);
   const [formData, setFormData] = useState({
-    orderId: "",
     vendorId: "",
     orderDate: new Date().toISOString().split("T")[0],
     orderStatus: "PROCESSING",
@@ -40,6 +36,8 @@ const PurchaseOrderAdd = ({ onCancel }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [productDialogOpen, setProductDialogOpen] = useState(false);
+  const [activeItemTempId, setActiveItemTempId] = useState(null);
 
   useEffect(() => {
     // Load vendors for dropdown
@@ -61,11 +59,34 @@ const PurchaseOrderAdd = ({ onCancel }) => {
     setErrorMsg("");
   };
 
+  const handleOpenProductDialog = (tempId) => {
+    setActiveItemTempId(tempId);
+    setProductDialogOpen(true);
+  };
+
+  const handleProductSelected = ({ product }) => {
+    if (!product || !activeItemTempId) return;
+    setItems((prev) =>
+      prev.map((item) =>
+        item.tempId === activeItemTempId
+          ? {
+              ...item,
+              productCode: product.productCode || "",
+              productName: product.productName || "",
+            }
+          : item,
+      ),
+    );
+    setProductDialogOpen(false);
+    setActiveItemTempId(null);
+  };
+
   const handleAddItem = () => {
     const newItem = {
       tempId: Date.now(), // Temporary ID for UI
       itemType: "I",
       productCode: "",
+      productName: "",
       internalProductCode: "",
       internalOrderId: "",
       quantity: 1,
@@ -101,53 +122,6 @@ const PurchaseOrderAdd = ({ onCancel }) => {
     e.preventDefault();
     setErrorMsg("");
 
-    // 1. Prefix with companyId only if not already present
-    let companyId = authContext?.userInfo?.companyId;
-    let rawOrderId = formData.orderId || "";
-    let orderId = rawOrderId;
-    if (companyId) {
-      const prefix = companyId + "_";
-      if (!orderId.startsWith(prefix)) {
-        orderId = prefix + orderId;
-      }
-    }
-
-    // 2. Check for duplicate orderId (async, before POST)
-    let duplicateCheck = false;
-    let allOrders = [];
-    try {
-      const response = await request("GET", "/api/purchaseOrders");
-      allOrders = response.data || [];
-      const normalizedCheck = String(orderId).trim().toLowerCase();
-      if (
-        allOrders.some(
-          (po) =>
-            String(po.orderId || "")
-              .trim()
-              .toLowerCase() === normalizedCheck,
-        )
-      ) {
-        duplicateCheck = true;
-      }
-    } catch (err) {
-      // ignore, fallback to no duplicate check
-    }
-    if (duplicateCheck) {
-      setErrorMsg(
-        t(
-          "purchaseOrderList.errors.duplicateOrderId",
-          "Order ID already exists. Please enter a unique Order ID.",
-        ),
-      );
-      return;
-    }
-
-    if (!orderId) {
-      setErrorMsg(
-        t("purchaseOrderList.errors.orderIdRequired", "Order ID is required"),
-      );
-      return;
-    }
     if (!formData.vendorId) {
       setErrorMsg(
         t("purchaseOrderList.errors.vendorRequired", "Vendor is required"),
@@ -208,7 +182,6 @@ const PurchaseOrderAdd = ({ onCancel }) => {
     }));
     const purchaseOrderData = {
       ...formData,
-      orderId,
       purchaseAmount: total,
       // Ensure orderStatus is explicitly provided and normalized to the
       // backend-expected form (uppercase). Default to "PROCESSING" for manual creates.
@@ -274,14 +247,6 @@ const PurchaseOrderAdd = ({ onCancel }) => {
               gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
             }}
           >
-            <TextField
-              fullWidth
-              label={t("purchaseOrderList.orderId", "Order ID")}
-              name="orderId"
-              value={formData.orderId}
-              onChange={handleChange}
-              required
-            />
             <FormControl fullWidth required>
               <InputLabel>
                 {t("purchaseOrderList.vendorId", "Vendor")}
@@ -421,18 +386,22 @@ const PurchaseOrderAdd = ({ onCancel }) => {
                     >
                       <TextField
                         size="small"
-                        label={t(
-                          "purchaseOrderList.productCode",
-                          "Product Code",
-                        )}
-                        value={item.productCode}
-                        onChange={(e) =>
-                          handleItemChange(
-                            item.tempId,
-                            "productCode",
-                            e.target.value,
-                          )
+                        label={t("purchaseOrderList.product", "Product")}
+                        value={
+                          item.productName
+                            ? `${item.productName} (${item.productCode})`
+                            : ""
                         }
+                        placeholder={t(
+                          "purchaseOrderList.selectProduct",
+                          "Click to select product...",
+                        )}
+                        InputProps={{
+                          readOnly: true,
+                          sx: { cursor: "pointer" },
+                        }}
+                        inputProps={{ style: { cursor: "pointer" } }}
+                        onClick={() => handleOpenProductDialog(item.tempId)}
                         required
                         fullWidth
                       />
@@ -463,41 +432,6 @@ const PurchaseOrderAdd = ({ onCancel }) => {
                           </MenuItem>
                         </Select>
                       </FormControl>
-
-                      <TextField
-                        size="small"
-                        label={t(
-                          "purchaseOrderList.internalProductCode",
-                          "Internal Product Code",
-                        )}
-                        value={item.internalProductCode || ""}
-                        onChange={(e) =>
-                          handleItemChange(
-                            item.tempId,
-                            "internalProductCode",
-                            e.target.value,
-                          )
-                        }
-                        fullWidth
-                      />
-
-                      <TextField
-                        size="small"
-                        type="number"
-                        label={t(
-                          "purchaseOrderList.internalOrderId",
-                          "Internal Order ID",
-                        )}
-                        value={item.internalOrderId || ""}
-                        onChange={(e) =>
-                          handleItemChange(
-                            item.tempId,
-                            "internalOrderId",
-                            e.target.value,
-                          )
-                        }
-                        fullWidth
-                      />
 
                       <Box
                         sx={{
@@ -580,23 +514,11 @@ const PurchaseOrderAdd = ({ onCancel }) => {
                 <TableHead>
                   <TableRow sx={{ backgroundColor: "background.default" }}>
                     <TableCell>{t("purchaseOrderList.lineNo", "#")}</TableCell>
-                    <TableCell>
-                      {t("purchaseOrderList.productCode", "Product Code")}
+                    <TableCell sx={{ minWidth: 220 }}>
+                      {t("purchaseOrderList.product", "Product")}
                     </TableCell>
                     <TableCell>
                       {t("purchaseOrderList.itemType", "Item Type")}
-                    </TableCell>
-                    <TableCell>
-                      {t(
-                        "purchaseOrderList.internalProductCode",
-                        "Internal Product Code",
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {t(
-                        "purchaseOrderList.internalOrderId",
-                        "Internal Order ID",
-                      )}
                     </TableCell>
                     <TableCell align="right">
                       {t("purchaseOrderList.quantity", "Quantity")}
@@ -616,17 +538,24 @@ const PurchaseOrderAdd = ({ onCancel }) => {
                   {items.map((item, index) => (
                     <TableRow key={item.tempId}>
                       <TableCell>{index + 1}</TableCell>
-                      <TableCell>
+                      <TableCell sx={{ minWidth: 220 }}>
                         <TextField
                           size="small"
-                          value={item.productCode}
-                          onChange={(e) =>
-                            handleItemChange(
-                              item.tempId,
-                              "productCode",
-                              e.target.value,
-                            )
+                          value={
+                            item.productName
+                              ? `${item.productName} (${item.productCode})`
+                              : ""
                           }
+                          placeholder={t(
+                            "purchaseOrderList.selectProduct",
+                            "Click to select product...",
+                          )}
+                          InputProps={{
+                            readOnly: true,
+                            sx: { cursor: "pointer" },
+                          }}
+                          inputProps={{ style: { cursor: "pointer" } }}
+                          onClick={() => handleOpenProductDialog(item.tempId)}
                           required
                           fullWidth
                         />
@@ -654,35 +583,6 @@ const PurchaseOrderAdd = ({ onCancel }) => {
                             </MenuItem>
                           </Select>
                         </FormControl>
-                      </TableCell>
-                      <TableCell>
-                        <TextField
-                          size="small"
-                          value={item.internalProductCode}
-                          onChange={(e) =>
-                            handleItemChange(
-                              item.tempId,
-                              "internalProductCode",
-                              e.target.value,
-                            )
-                          }
-                          fullWidth
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <TextField
-                          size="small"
-                          type="number"
-                          value={item.internalOrderId}
-                          onChange={(e) =>
-                            handleItemChange(
-                              item.tempId,
-                              "internalOrderId",
-                              e.target.value,
-                            )
-                          }
-                          fullWidth
-                        />
                       </TableCell>
                       <TableCell>
                         <TextField
@@ -737,7 +637,7 @@ const PurchaseOrderAdd = ({ onCancel }) => {
                   ))}
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={4}
                       align="right"
                       sx={{ fontWeight: "bold" }}
                     >
@@ -786,6 +686,15 @@ const PurchaseOrderAdd = ({ onCancel }) => {
           </Button>
         </Box>
       </form>
+
+      <ProductDialog
+        open={productDialogOpen}
+        onClose={() => {
+          setProductDialogOpen(false);
+          setActiveItemTempId(null);
+        }}
+        onSelected={handleProductSelected}
+      />
     </Box>
   );
 };

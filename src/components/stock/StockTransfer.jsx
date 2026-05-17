@@ -18,6 +18,7 @@ import {
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
+import { toLocalISO } from "../../helpers/date_helper";
 import { AuthContext } from "../../context/authContext";
 import { PageHeader, ProductInfoCard } from "../common";
 import HelpDialog from "../common/HelpDialog";
@@ -426,7 +427,7 @@ const StockTransfer = () => {
             productId: Number(productId),
             stockCode: codeToUse,
             location: trimmedLocation,
-            createDate: new Date().toISOString(),
+            createDate: toLocalISO(),
           });
           targetInStockId = Number(newStockRes?.data?.stockId);
         } catch (stockErr) {
@@ -448,7 +449,7 @@ const StockTransfer = () => {
         location: transferOutStock.location || "central",
         reference: ref,
         actionBy: userInfo?.login || "",
-        recordDate: new Date().toISOString(),
+        recordDate: toLocalISO(),
       });
 
       // Transfer In (C)
@@ -459,7 +460,7 @@ const StockTransfer = () => {
         location: targetInLocation,
         reference: ref,
         actionBy: userInfo?.login || "",
-        recordDate: new Date().toISOString(),
+        recordDate: toLocalISO(),
       });
 
       const refreshedRows = await loadStocksForCode(

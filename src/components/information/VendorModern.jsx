@@ -276,8 +276,14 @@ const VendorModern = () => {
                   "Get started by adding your first vendor",
                 )
           }
-          actionLabel={!search ? t("vendorList.addTitle", "Add Vendor") : null}
-          onActionClick={!search ? () => setShowAdd(true) : null}
+          actionLabel={
+            enableActions && !search
+              ? t("vendorList.addTitle", "Add Vendor")
+              : null
+          }
+          onActionClick={
+            enableActions && !search ? () => setShowAdd(true) : null
+          }
         />
       ) : shouldUseBlockLayout ? (
         <LoadMoreBlockList

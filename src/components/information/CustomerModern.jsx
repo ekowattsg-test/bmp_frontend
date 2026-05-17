@@ -286,9 +286,13 @@ const CustomerModern = () => {
                 )
           }
           actionLabel={
-            !search ? t("customerList.addTitle", "Add Customer") : null
+            enableActions && !search
+              ? t("customerList.addTitle", "Add Customer")
+              : null
           }
-          onActionClick={!search ? () => setShowAdd(true) : null}
+          onActionClick={
+            enableActions && !search ? () => setShowAdd(true) : null
+          }
         />
       ) : shouldUseBlockLayout ? (
         <LoadMoreBlockList

@@ -20,6 +20,7 @@ import {
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
+import { toLocalISO } from "../../helpers/date_helper";
 import { AuthContext } from "../../context/authContext";
 import { PageHeader, ProductInfoCard } from "../common";
 import HelpDialog from "../common/HelpDialog";
@@ -346,7 +347,7 @@ const StockAdjustment = () => {
         location: selectedStock.location || "central",
         reference: String(reference || "").trim(),
         actionBy: userInfo?.login || "",
-        recordDate: new Date().toISOString(),
+        recordDate: toLocalISO(),
       });
 
       const refreshedRows = await loadStocksForCode(selectedStock.stockCode);

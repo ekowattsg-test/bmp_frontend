@@ -29,6 +29,7 @@ import {
 import AddBoxIcon from "@mui/icons-material/AddBox";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
+import { toLocalISO } from "../../helpers/date_helper";
 import { AuthContext } from "../../context/authContext";
 import { PageHeader, ProductInfoCard } from "../common";
 import HelpDialog from "../common/HelpDialog";
@@ -1361,7 +1362,7 @@ const StockTakeOnNew = () => {
             productId: Number(productId),
             stockCode: codeToUse,
             location: trimmedLocation,
-            createDate: new Date().toISOString(),
+            createDate: toLocalISO(),
           });
           targetStockId = Number(newStockRes?.data?.stockId);
         } catch (stockErr) {
@@ -1378,7 +1379,7 @@ const StockTakeOnNew = () => {
           productId: Number(productId),
           stockCode: codeToUse,
           location: selectedStock.location || "central",
-          createDate: new Date().toISOString(),
+          createDate: toLocalISO(),
         });
         targetStockId = Number(newStockRes?.data?.stockId);
         if (!targetStockId) throw new Error(t("stockTakeOn.createStockFailed"));
@@ -1395,7 +1396,7 @@ const StockTakeOnNew = () => {
         location: targetLocation,
         reference: "",
         actionBy: userInfo?.login || "",
-        recordDate: new Date().toISOString(),
+        recordDate: toLocalISO(),
       });
 
       setSuccessMsg(t("stockTakeOn.saveSuccess"));

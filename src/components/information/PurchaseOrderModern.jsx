@@ -13,6 +13,7 @@ import {
   Delete as DeleteIcon,
   ShoppingCart as ShoppingCartIcon,
   Visibility as VisibilityIcon,
+  PlayCircleOutline as ActionIcon,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
@@ -29,6 +30,7 @@ import PurchaseOrderAdd from "./PurchaseOrderAdd";
 import PurchaseOrderEdit from "./PurchaseOrderEdit";
 import PurchaseOrderDelete from "./PurchaseOrderDelete";
 import PurchaseOrderView from "./PurchaseOrderView";
+import PurchaseOrderStatusAction from "./PurchaseOrderStatusAction";
 
 const PurchaseOrderModern = () => {
   const [action, setAction] = useState("view");
@@ -39,6 +41,7 @@ const PurchaseOrderModern = () => {
   const [search, setSearch] = useState("");
   const [deleteMode, setDeleteMode] = useState(false);
   const [viewMode, setViewMode] = useState(false);
+  const [actionMode, setActionMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [helpOpen, setHelpOpen] = useState(false);
   const { t } = useTranslation();
@@ -90,6 +93,11 @@ const PurchaseOrderModern = () => {
   const handleView = useCallback((order) => {
     setSelectedOrder(order);
     setViewMode(true);
+  }, []);
+
+  const handleAction = useCallback((order) => {
+    setSelectedOrder(order);
+    setActionMode(true);
   }, []);
 
   const filteredOrders = useMemo(() => {
@@ -214,9 +222,7 @@ const PurchaseOrderModern = () => {
                     }}
                     sx={{
                       color: "info.main",
-                      "&:hover": {
-                        backgroundColor: "action.hover",
-                      },
+                      "&:hover": { backgroundColor: "action.hover" },
                     }}
                   >
                     <VisibilityIcon fontSize="small" />
@@ -227,14 +233,30 @@ const PurchaseOrderModern = () => {
                       e.stopPropagation();
                       handleEdit(params.row);
                     }}
+                    disabled={params.row.orderStatus !== "PROCESSING"}
                     sx={{
-                      color: "primary.main",
-                      "&:hover": {
-                        backgroundColor: "action.hover",
-                      },
+                      color:
+                        params.row.orderStatus === "PROCESSING"
+                          ? "primary.main"
+                          : "text.disabled",
+                      "&:hover": { backgroundColor: "action.hover" },
                     }}
                   >
                     <EditIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAction(params.row);
+                    }}
+                    title={t("purchaseOrderList.action.title", "Actions")}
+                    sx={{
+                      color: "success.main",
+                      "&:hover": { backgroundColor: "action.hover" },
+                    }}
+                  >
+                    <ActionIcon fontSize="small" />
                   </IconButton>
                   <IconButton
                     size="small"
@@ -244,9 +266,7 @@ const PurchaseOrderModern = () => {
                     }}
                     sx={{
                       color: "error.main",
-                      "&:hover": {
-                        backgroundColor: "action.hover",
-                      },
+                      "&:hover": { backgroundColor: "action.hover" },
                     }}
                   >
                     <DeleteIcon fontSize="small" />
@@ -257,7 +277,7 @@ const PurchaseOrderModern = () => {
           ]
         : []),
     ],
-    [t, enableActions, handleEdit, handleDelete, handleView],
+    [t, enableActions, handleEdit, handleDelete, handleView, handleAction],
   );
 
   const blockColumnDefs = columns
@@ -299,6 +319,20 @@ const PurchaseOrderModern = () => {
           onClose={() => {
             setViewMode(false);
             setSelectedOrder(null);
+          }}
+        />
+      )}
+      {actionMode && selectedOrder && (
+        <PurchaseOrderStatusAction
+          order={selectedOrder}
+          onClose={() => {
+            setActionMode(false);
+            setSelectedOrder(null);
+          }}
+          onUpdated={() => {
+            setActionMode(false);
+            setSelectedOrder(null);
+            setRefresh(true);
           }}
         />
       )}
@@ -353,7 +387,7 @@ const PurchaseOrderModern = () => {
           <LoadingState />
         ) : filteredOrders.length === 0 ? (
           <EmptyState
-            message={
+            title={
               search
                 ? t("basic.noSearchResults", "No results found")
                 : t("purchaseOrderList.noOrders", "No purchase orders found")
@@ -368,8 +402,11 @@ const PurchaseOrderModern = () => {
                 columnDefs={blockColumnDefs}
                 item={item}
                 onView={handleView}
-                onEdit={handleEdit}
+                onEdit={
+                  item.orderStatus === "PROCESSING" ? handleEdit : undefined
+                }
                 onDelete={handleDelete}
+                onAction={handleAction}
                 leadingMedia={{
                   placeholder: (
                     <ShoppingCartIcon
