@@ -345,6 +345,7 @@ const WorkOrderModern = () => {
         width: 180,
         sortable: false,
         filterable: false,
+        align: "center",
         renderCell: (params) => {
           const wo = params.row;
           const stepsReady = isStepsReady(wo);
@@ -352,7 +353,14 @@ const WorkOrderModern = () => {
           const issuable = canIssue(wo);
           const editable = canEdit(wo);
           return (
-            <Box sx={{ display: "flex", gap: 0.5 }}>
+            <Box
+              sx={{
+                display: "flex",
+                gap: 0.5,
+                alignItems: "center",
+                height: "100%",
+              }}
+            >
               {wo.workOrderStatus !== "OPEN" && (
                 <IconButton
                   size="small"

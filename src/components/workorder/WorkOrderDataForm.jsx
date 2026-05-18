@@ -118,6 +118,26 @@ const WorkOrderDataForm = ({
 
   const handleProductSelect = ({ product }) => {
     if (!product) return;
+
+    // Category validation based on contentType
+    const requiredCategory = contentType === "asset" ? "A" : "C";
+    if (product.productCategory !== requiredCategory) {
+      const expected =
+        requiredCategory === "C"
+          ? t("workOrderData.categoryConsumable", "Consumable (C)")
+          : t("workOrderData.categoryAsset", "Asset (A)");
+      setErrors((prev) => ({
+        ...prev,
+        productId: t(
+          "workOrderData.wrongCategory",
+          "Invalid product category. Expected: {{expected}}",
+          { expected },
+        ),
+      }));
+      setPickerOpen(false);
+      return;
+    }
+
     setForm((prev) => ({ ...prev, productId: product.productId }));
     setErrors((prev) => ({ ...prev, productId: undefined }));
     setPickerOpen(false);

@@ -1171,7 +1171,10 @@
     "noItems": "No detail items yet.",
     "required": "Required",
     "duplicateProduct": "Product already added",
-    "duplicateStaff": "Staff already added"
+    "duplicateStaff": "Staff already added",
+    "wrongCategory": "Invalid product category. Expected: {{expected}}",
+    "categoryConsumable": "Consumable (C)",
+    "categoryAsset": "Asset (A)"
   },
   "workOrderSteps": {
     "title": "Work Order Steps",

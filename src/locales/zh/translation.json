@@ -1170,7 +1170,10 @@
     "noItems": "暂无明细项。",
     "required": "必填",
     "duplicateProduct": "产品已添加",
-    "duplicateStaff": "员工已添加"
+    "duplicateStaff": "员工已添加",
+    "wrongCategory": "产品类别不正确，需要：{{expected}}",
+    "categoryConsumable": "耗材 (C)",
+    "categoryAsset": "资产 (A)"
   },
   "workOrderSteps": {
     "title": "工单步骤",
