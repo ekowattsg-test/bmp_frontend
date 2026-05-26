@@ -1,6 +1,6 @@
 import React from "react";
 import { useContext, useState } from "react";
-import { useNavigate, useLocation, Routes, Route } from "react-router-dom";
+import { useNavigate, useLocation, Routes, Route, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { request, setAuthHeader } from "../helpers/axios_helper";
@@ -20,7 +20,11 @@ import {
   Typography,
 } from "@mui/material";
 import PdaLogin from "./pda/PdaLogin.jsx";
-import PdaMenu from "./pda/PdaMenu.jsx";
+import PdaLayout from "./pda/layout/PdaLayout.jsx";
+import PdaWorkOrderList from "./pda/workorder/PdaWorkOrderList.jsx";
+import PdaWorkOrderDetail from "./pda/workorder/PdaWorkOrderDetail.jsx";
+import PdaSchedule from "./pda/schedule/PdaSchedule.jsx";
+import PdaMe from "./pda/me/PdaMe.jsx";
 
 export default function AppContent() {
   const { isAuthenticated, setIsAuthenticated, setUserInfo, loading } =
@@ -227,7 +231,14 @@ export default function AppContent() {
       {location.pathname.startsWith("/pda") ? (
         <Routes>
           <Route path="/pda/login" element={<PdaLogin />} />
-          <Route path="/pda/menu" element={<PdaMenu />} />
+          <Route path="/pda/menu" element={<Navigate to="/pda/orders" replace />} />
+          <Route path="/pda" element={<Navigate to="/pda/orders" replace />} />
+          <Route element={<PdaLayout />}>
+            <Route path="/pda/orders" element={<PdaWorkOrderList />} />
+            <Route path="/pda/orders/:workOrderId" element={<PdaWorkOrderDetail />} />
+            <Route path="/pda/schedule" element={<PdaSchedule />} />
+            <Route path="/pda/me" element={<PdaMe />} />
+          </Route>
         </Routes>
       ) : !isAuthenticated ? (
         <AuthLayout>

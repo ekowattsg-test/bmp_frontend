@@ -28,6 +28,7 @@ import {
   Inventory2,
   Warehouse,
   EngineeringOutlined as EngineeringIcon,
+  ManageAccounts,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 
@@ -111,6 +112,11 @@ const AppMenu = () => {
             to: "/product-excel-upload",
             label: t("menu.productExcelUpload", "Product Excel Upload"),
             icon: <UploadFile />,
+          },
+          {
+            to: "/operationrole",
+            label: t("menu.operationRole", "Operation Roles"),
+            icon: <ManageAccounts />,
           },
         ],
       },

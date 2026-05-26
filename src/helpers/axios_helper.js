@@ -16,6 +16,22 @@ export const getAuthToken = () => {
   return null;
 };
 
+const isPdaPath = () =>
+  typeof window !== "undefined" && window.location.pathname.startsWith("/pda/");
+
+const redirectToLogin = () => {
+  if (isPdaPath()) {
+    window.dispatchEvent(new CustomEvent("pda:auth:expired"));
+  } else {
+    try {
+      window.dispatchEvent(new CustomEvent("auth:expired", { detail: {} }));
+    } catch (e) {
+      /* ignore */
+    }
+    window.location.href = "/login";
+  }
+};
+
 export const setAuthHeader = (token) => {
   if (token !== null && token !== undefined) {
     window.localStorage.setItem("auth_token", token);
@@ -76,8 +92,10 @@ api.interceptors.response.use(
     const originalRequest = error.config;
     if (!originalRequest) return Promise.reject(error);
 
-    // Show blocking error prompt (if available in the app) and wait
+    // Show blocking error prompt (if available in the app) and wait.
+    // Skipped for PDA paths — PDA has its own error handling.
     const tryShowBlockingError = async (msg) => {
+      if (isPdaPath()) return;
       try {
         const timeoutMs = parseInt(
           import.meta.env.VITE_ERROR_ACK_TIMEOUT_MS || "0",
@@ -100,6 +118,17 @@ api.interceptors.response.use(
       error?.response?.data?.message || error?.message || "Server error";
     // Fire and wait for UI acknowledgement before proceeding with recovery
     await tryShowBlockingError(backendMessage);
+
+    // PDA users have no refresh token — skip refresh cycle, notify layout directly
+    if (
+      error.response?.status === 401 &&
+      isPdaPath() &&
+      !originalRequest.skipAuthRedirect
+    ) {
+      setAuthHeader(null);
+      window.dispatchEvent(new CustomEvent("pda:auth:expired"));
+      return Promise.reject(error);
+    }
 
     // Some endpoints use 401 for business validation (e.g. invalid admin password).
     // Allow callers to opt out of global auth refresh/redirect handling.
@@ -149,19 +178,13 @@ api.interceptors.response.use(
         // No new token returned — force logout
         processQueue(new Error("No token"), null);
         setAuthHeader(null);
-        window.location.href = "/login";
+        redirectToLogin();
         return Promise.reject(error);
       } catch (refreshErr) {
         processQueue(refreshErr, null);
         setAuthHeader(null);
         // UX: inform user and redirect to login
-        try {
-          // Non-blocking notification if available
-          window.dispatchEvent(new CustomEvent("auth:expired", { detail: {} }));
-        } catch (e) {
-          /* ignore */
-        }
-        window.location.href = "/login";
+        redirectToLogin();
         return Promise.reject(refreshErr);
       } finally {
         isRefreshing = false;
@@ -182,12 +205,7 @@ export const request = (method, url, data, config = {}) => {
     // If 401 not handled by interceptor, clear token and redirect
     if (error.response && error.response.status === 401) {
       setAuthHeader(null);
-      try {
-        window.dispatchEvent(new CustomEvent("auth:expired", { detail: {} }));
-      } catch (e) {
-        /* ignore */
-      }
-      window.location.href = "/login";
+      redirectToLogin();
     }
     throw error;
   });

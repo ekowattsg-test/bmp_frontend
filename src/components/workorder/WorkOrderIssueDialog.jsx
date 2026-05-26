@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import { toLocalISO } from "../../helpers/date_helper";
+import { ThumbnailImg, ImageCarousel } from "../../helpers/file_helper";
 import {
   Dialog,
   DialogTitle,
@@ -21,7 +22,11 @@ import {
   TableCell,
   TableContainer,
 } from "@mui/material";
-import { Close as CloseIcon, Send as SendIcon } from "@mui/icons-material";
+import {
+  Close as CloseIcon,
+  Send as SendIcon,
+  Image as ImageIcon,
+} from "@mui/icons-material";
 
 /**
  * WorkOrderIssueDialog
@@ -42,6 +47,7 @@ const WorkOrderIssueDialog = ({
   dataItems,
   staffMap,
   contentType = "stock",
+  typeDescription,
   viewOnly = false,
   onClose,
   onIssued,
@@ -51,7 +57,42 @@ const WorkOrderIssueDialog = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const isInProgress = ["INPROGRESS", "CLOSED"].includes(
+    workOrder.workOrderStatus,
+  );
+
+  // Fetch sub-data to compute scanned quantities when work order is in progress
+  const [subDataMap, setSubDataMap] = useState({}); // workOrderDataId → sum of subQuantity
+  useEffect(() => {
+    if (!isInProgress || dataItems.length === 0) {
+      setSubDataMap({});
+      return;
+    }
+    const dataIds = new Set(dataItems.map((d) => d.workOrderDataId));
+    request("GET", "/api/workorder-subdata")
+      .then((res) => {
+        const map = {};
+        (res.data || [])
+          .filter((s) => dataIds.has(s.workOrderDataId))
+          .forEach((s) => {
+            map[s.workOrderDataId] =
+              (map[s.workOrderDataId] || 0) + Number(s.subQuantity || 1);
+          });
+        setSubDataMap(map);
+      })
+      .catch(() => setSubDataMap({}));
+  }, [isInProgress, dataItems]);
+
+  // Sorted steps by stepNumber
+  const sortedSteps = useMemo(
+    () => [...steps].sort((a, b) => (a.stepNumber ?? 0) - (b.stepNumber ?? 0)),
+    [steps],
+  );
+
   const [products, setProducts] = useState([]);
+  const [carouselOpen, setCarouselOpen] = useState(false);
+  const [carouselImages, setCarouselImages] = useState([]);
+  const [carouselStart, setCarouselStart] = useState(0);
   useEffect(() => {
     if (!isWorker) {
       request("GET", "/api/products")
@@ -103,7 +144,9 @@ const WorkOrderIssueDialog = ({
         }}
       >
         <Typography variant="h6" fontWeight={600}>
-          {t("workOrder.issue.title", "Issue Work Order")}
+          {viewOnly
+            ? t("workOrder.viewTitle", "View Work Order")
+            : t("workOrder.issueTitle", "Issue Work Order")}
         </Typography>
         <IconButton onClick={onClose} size="small" disabled={loading}>
           <CloseIcon />
@@ -153,7 +196,9 @@ const WorkOrderIssueDialog = ({
               <Typography variant="caption" color="text.secondary">
                 {t("workOrder.workOrderType", "Type")}
               </Typography>
-              <Typography variant="body1">{workOrder.workOrderType}</Typography>
+              <Typography variant="body1">
+                {typeDescription || workOrder.workOrderType}
+              </Typography>
             </Box>
             <Box>
               <Typography variant="caption" color="text.secondary">
@@ -191,7 +236,7 @@ const WorkOrderIssueDialog = ({
         </Box>
 
         {/* Steps */}
-        {steps.length > 0 && (
+        {sortedSteps.length > 0 && (
           <>
             <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
               {t("workOrderSteps.steps", "Steps")}
@@ -222,7 +267,7 @@ const WorkOrderIssueDialog = ({
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {steps.map((s) => {
+                  {sortedSteps.map((s) => {
                     const fromDisplay =
                       s._fromEntity === "worker"
                         ? staffMap[s.fromLocation] || s.fromLocation || "—"
@@ -231,14 +276,135 @@ const WorkOrderIssueDialog = ({
                       s._toEntity === "worker"
                         ? staffMap[s.toLocation] || s.toLocation || "—"
                         : s.toLocation || "—";
+
+                    // Parse photos stored as JSON string on the step record
+                    let photos = [];
+                    if (s.photos) {
+                      try {
+                        photos = JSON.parse(s.photos);
+                      } catch {
+                        photos = [];
+                      }
+                      if (!Array.isArray(photos)) photos = [];
+                    }
+
                     return (
-                      <TableRow key={s.workStepsId}>
-                        <TableCell>{s.stepNumber}</TableCell>
-                        <TableCell>{s._description || "—"}</TableCell>
-                        <TableCell>{fromDisplay}</TableCell>
-                        <TableCell>{toDisplay}</TableCell>
-                        <TableCell>{s.stepStatus || "—"}</TableCell>
-                      </TableRow>
+                      <React.Fragment key={s.workStepsId}>
+                        <TableRow>
+                          <TableCell>{s.stepNumber}</TableCell>
+                          <TableCell>{s._description || "—"}</TableCell>
+                          <TableCell>{fromDisplay}</TableCell>
+                          <TableCell>{toDisplay}</TableCell>
+                          <TableCell>{s.stepStatus || "—"}</TableCell>
+                        </TableRow>
+                        {photos.length > 0 && (
+                          <TableRow>
+                            <TableCell
+                              colSpan={5}
+                              sx={{ py: 1, bgcolor: "background.default" }}
+                            >
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  gap: 1,
+                                  flexWrap: "wrap",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  sx={{ mr: 0.5 }}
+                                >
+                                  {t("workOrderSteps.photos", "Photos")}:
+                                </Typography>
+                                {photos.map((p, i) => {
+                                  const openCarousel = () => {
+                                    setCarouselImages(
+                                      photos.map((ph) => ({
+                                        displayUrl:
+                                          ph.viewUrl || ph.url || null,
+                                        viewUrl: ph.viewUrl || null,
+                                        title: ph.name || "",
+                                        provider: ph.provider || null,
+                                        meta: ph,
+                                      })),
+                                    );
+                                    setCarouselStart(i);
+                                    setCarouselOpen(true);
+                                  };
+                                  if (p.id) {
+                                    return (
+                                      <ThumbnailImg
+                                        key={i}
+                                        fileId={p.id}
+                                        viewUrl={p.viewUrl || p.url || ""}
+                                        provider={p.provider || null}
+                                        width={64}
+                                        height={64}
+                                        alt={p.name || `photo-${i + 1}`}
+                                        style={{
+                                          borderRadius: 4,
+                                          cursor: "pointer",
+                                          border:
+                                            "1px solid var(--color-gray-300)",
+                                          flexShrink: 0,
+                                        }}
+                                        onClick={openCarousel}
+                                      />
+                                    );
+                                  }
+                                  if (p.viewUrl || p.url) {
+                                    return (
+                                      <Box
+                                        key={i}
+                                        component="img"
+                                        src={p.viewUrl || p.url}
+                                        alt={p.name || `photo-${i + 1}`}
+                                        onClick={openCarousel}
+                                        sx={{
+                                          width: 64,
+                                          height: 64,
+                                          objectFit: "cover",
+                                          borderRadius: 1,
+                                          border: "1px solid",
+                                          borderColor: "divider",
+                                          display: "block",
+                                          cursor: "pointer",
+                                          flexShrink: 0,
+                                        }}
+                                      />
+                                    );
+                                  }
+                                  return (
+                                    <Box
+                                      key={i}
+                                      sx={{
+                                        width: 64,
+                                        height: 64,
+                                        borderRadius: 1,
+                                        border: "1px dashed",
+                                        borderColor: "divider",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        bgcolor: "background.paper",
+                                      }}
+                                    >
+                                      <ImageIcon
+                                        sx={{
+                                          color: "text.disabled",
+                                          fontSize: 24,
+                                        }}
+                                      />
+                                    </Box>
+                                  );
+                                })}
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </TableBody>
@@ -269,7 +435,7 @@ const WorkOrderIssueDialog = ({
                         <TableCell sx={{ fontWeight: 600 }}>
                           {t("workOrderData.productName", "Product")}
                         </TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>
+                        <TableCell align="right" sx={{ fontWeight: 600 }}>
                           {t("workOrderData.quantity", "Quantity")}
                         </TableCell>
                       </>
@@ -291,7 +457,48 @@ const WorkOrderIssueDialog = ({
                               item.productId ||
                               "—"}
                           </TableCell>
-                          <TableCell>{item.quantity}</TableCell>
+                          <TableCell align="right">
+                            {isInProgress ? (
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 0.5,
+                                  justifyContent: "flex-end",
+                                }}
+                              >
+                                <Typography
+                                  component="span"
+                                  variant="body2"
+                                  fontWeight={700}
+                                  sx={{
+                                    color:
+                                      (subDataMap[item.workOrderDataId] || 0) >=
+                                      item.quantity
+                                        ? "success.main"
+                                        : (subDataMap[item.workOrderDataId] ||
+                                              0) > 0
+                                          ? "warning.main"
+                                          : "text.disabled",
+                                  }}
+                                >
+                                  {subDataMap[item.workOrderDataId] || 0}
+                                </Typography>
+                                <Typography
+                                  component="span"
+                                  variant="body2"
+                                  color="text.disabled"
+                                >
+                                  /
+                                </Typography>
+                                <Typography component="span" variant="body2">
+                                  {item.quantity}
+                                </Typography>
+                              </Box>
+                            ) : (
+                              item.quantity
+                            )}
+                          </TableCell>
                         </>
                       )}
                       {isWorker && (
@@ -338,6 +545,12 @@ const WorkOrderIssueDialog = ({
           </Button>
         )}
       </DialogActions>
+      <ImageCarousel
+        images={carouselImages}
+        open={carouselOpen}
+        onClose={() => setCarouselOpen(false)}
+        startIndex={carouselStart}
+      />
     </Dialog>
   );
 };

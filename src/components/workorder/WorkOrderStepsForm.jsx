@@ -32,7 +32,7 @@ import { HeaderBar } from "../common";
  * Smart input cell for a step's from/to location.
  * Renders different UI based on the workorderentity type code.
  *
- * entityType: "PO" | "location" | "vehicle" | "worker" | "" (plain text)
+ * entityType: "PO" | "DO" | "location" | "vehicle" | "worker" | "" (plain text)
  */
 const EntityInput = ({
   entityType,
@@ -82,6 +82,28 @@ const EntityInput = ({
         {(lookups.pos || []).map((po) => (
           <MenuItem key={po.orderId} value={String(po.orderId)}>
             {po.orderId}
+          </MenuItem>
+        ))}
+      </TextField>
+    );
+  }
+
+  if (entityType === "DO") {
+    return (
+      <TextField
+        select
+        size="small"
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        variant="standard"
+        label={t("workOrderSteps.placeholder.do", "Select DO")}
+        sx={{ minWidth: 140 }}
+        SelectProps={{ displayEmpty: true }}
+      >
+        <MenuItem value="">—</MenuItem>
+        {(lookups.dos || []).map((doItem) => (
+          <MenuItem key={doItem.orderId} value={String(doItem.orderId)}>
+            {doItem.orderId}
           </MenuItem>
         ))}
       </TextField>
@@ -179,6 +201,7 @@ const WorkOrderStepsForm = ({
   // Lookup data for entity inputs
   const [lookups, setLookups] = useState({
     pos: [],
+    dos: [],
     vehicles: [],
     locations: [],
     allStaff: [],
@@ -193,9 +216,10 @@ const WorkOrderStepsForm = ({
   // Fetch PO, vehicle, location and staff lookups once on mount
   useEffect(() => {
     const fetchLookups = async () => {
-      const [posRes, vehiclesRes, stockviewsRes, staffRes] =
+      const [posRes, dosRes, vehiclesRes, stockviewsRes, staffRes] =
         await Promise.allSettled([
           request("GET", "/api/purchaseOrders"),
+          request("GET", "/api/deliveryOrders"),
           request("GET", "/api/vehicles"),
           request("GET", "/api/stockviews"),
           request("GET", "/api/staffs"),
@@ -205,6 +229,12 @@ const WorkOrderStepsForm = ({
         posRes.status === "fulfilled" ? posRes.value.data || [] : [];
       const readyPOs = allPOs.filter(
         (po) => (po.orderStatus || "").toUpperCase() === "READY",
+      );
+
+      const allDOs =
+        dosRes.status === "fulfilled" ? dosRes.value.data || [] : [];
+      const issuedDOs = allDOs.filter(
+        (doItem) => (doItem.orderStatus || "").toUpperCase() === "ISSUED",
       );
 
       const allVehicles =
@@ -227,6 +257,7 @@ const WorkOrderStepsForm = ({
 
       setLookups({
         pos: readyPOs,
+        dos: issuedDOs,
         vehicles: activeVehicles,
         locations: Array.from(locSet).sort(),
         allStaff,

@@ -35,7 +35,7 @@ export default function PdaLogin() {
         console.log(
           "[PdaLogin] User info saved to localStorage, navigating to /pda/menu",
         );
-        navigate("/pda/menu", { replace: true });
+        navigate("/pda/orders", { replace: true });
       })
       .catch((err) => {
         console.error("[PdaLogin] Login failed:", err);

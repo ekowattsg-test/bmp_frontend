@@ -8,6 +8,7 @@ import {
   Button,
 } from "@mui/material";
 import WarningIcon from "@mui/icons-material/Warning";
+import { useTranslation } from "react-i18next";
 
 /**
  * Common Modal Dialog for Delete Confirmation
@@ -135,11 +136,14 @@ export const SuccessDialog = ({
 export const FormActions = ({
   onSubmit,
   onCancel,
-  submitLabel = "Submit",
-  cancelLabel = "Cancel",
+  submitLabel,
+  cancelLabel,
   loading = false,
   variant = "standard", // 'standard' or 'inline'
 }) => {
+  const { t } = useTranslation();
+  const resolvedCancelLabel = cancelLabel ?? t("basic.cancel", "Cancel");
+  const resolvedSubmitLabel = submitLabel ?? t("basic.save", "Save");
   const baseStyle = {
     display: "flex",
     gap: 1,
@@ -170,7 +174,7 @@ export const FormActions = ({
           },
         }}
       >
-        {cancelLabel}
+        {resolvedCancelLabel}
       </Button>
       <Button
         onClick={onSubmit}
@@ -183,7 +187,7 @@ export const FormActions = ({
           },
         }}
       >
-        {loading ? "Processing..." : submitLabel}
+        {loading ? t("basic.processing", "Processing...") : resolvedSubmitLabel}
       </Button>
     </Box>
   );

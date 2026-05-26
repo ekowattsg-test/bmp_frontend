@@ -1,32 +1,55 @@
-import React, { useMemo } from "react";
+import React from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { AppBar, Box, Toolbar, Typography } from "@mui/material";
+import { Box, Card, CardActionArea, CardContent, Typography } from "@mui/material";
+import AssignmentIcon from "@mui/icons-material/Assignment";
 
+/**
+ * PdaMenu — landing page after PDA login.
+ *
+ * Renders navigation cards to each operational area.
+ * Shell (AppBar, back button, user name) is provided by PdaLayout.
+ */
 export default function PdaMenu() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
-  const userName = useMemo(() => {
-    try {
-      const stored = localStorage.getItem("pda_user_info");
-      if (!stored) return "";
-      const user = JSON.parse(stored);
-      const parts = [user.firstName, user.lastName].filter(Boolean);
-      return parts.length > 0 ? parts.join(" ") : user.login || "";
-    } catch {
-      return "";
-    }
-  }, []);
+  const menuItems = [
+    {
+      key: "workorder",
+      label: t("pda.menu.workorder"),
+      description: t("pda.menu.workorderDesc"),
+      icon: <AssignmentIcon sx={{ fontSize: 40, color: "primary.main" }} />,
+      path: "/pda/workorder",
+    },
+  ];
 
   return (
-    <Box sx={{ minHeight: "100vh" }}>
-      <AppBar position="static" color="primary">
-        <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            {t("pda.menu.title")}
-          </Typography>
-          {userName && <Typography variant="body1">{userName}</Typography>}
-        </Toolbar>
-      </AppBar>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+      {menuItems.map((item) => (
+        <Card key={item.key} variant="outlined">
+          <CardActionArea
+            onClick={() =>
+              navigate(item.path, { state: { title: item.label } })
+            }
+            sx={{ p: 1 }}
+          >
+            <CardContent
+              sx={{ display: "flex", alignItems: "center", gap: 2, p: 1.5 }}
+            >
+              {item.icon}
+              <Box>
+                <Typography variant="subtitle1" fontWeight={600}>
+                  {item.label}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {item.description}
+                </Typography>
+              </Box>
+            </CardContent>
+          </CardActionArea>
+        </Card>
+      ))}
     </Box>
   );
 }

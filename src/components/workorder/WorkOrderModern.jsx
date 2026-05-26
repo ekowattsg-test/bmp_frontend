@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogContent,
   List,
+  Typography,
   ListItemButton,
   ListItemText,
 } from "@mui/material";
@@ -29,6 +30,7 @@ import {
   ListAlt as ListAltIcon,
   FormatListNumbered as StepsIcon,
   Send as SendIcon,
+  DoDisturb as CancelWOIcon,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
@@ -186,6 +188,14 @@ const WorkOrderModern = () => {
     return m;
   }, [workOrderTypes]);
 
+  const typeDescriptionMap = useMemo(() => {
+    const m = {};
+    workOrderTypes.forEach((wt) => {
+      m[wt.workOrderType] = wt.workOrderDescription || wt.workOrderType;
+    });
+    return m;
+  }, [workOrderTypes]);
+
   /**
    * Returns true when all steps for the work order have
    * fromLocation and toLocation filled (non-worker entities).
@@ -220,20 +230,38 @@ const WorkOrderModern = () => {
 
   const canIssue = useCallback(
     (workOrder) => {
-      if (workOrder.workOrderStatus === "ISSUED") return false;
+      if (workOrder.workOrderStatus !== "OPEN") return false;
       return isStepsReady(workOrder) && isDetailsReady(workOrder);
     },
     [isStepsReady, isDetailsReady],
   );
 
-  // Level 2+ can edit any status; others can only edit non-ISSUED
+  // Level 2+ can edit ISSUED orders; all others can edit OPEN and INPROGRESS
   const canEdit = useCallback(
     (workOrder) => {
-      if (workOrder.workOrderStatus === "ISSUED") return userLevel >= 2;
+      const s = workOrder.workOrderStatus;
+      if (s === "CLOSED" || s === "CANCELLED") return false;
+      if (s === "ISSUED") return userLevel >= 2;
       return true;
     },
     [userLevel],
   );
+
+  const handleCancelWorkOrder = useCallback(async (wo) => {
+    try {
+      await request("PUT", `/api/workorders/${wo.workOrderId}`, {
+        workOrderType: wo.workOrderType,
+        workDescription: wo.workDescription,
+        issuedBy: wo.issuedBy,
+        workOrderDate: wo.workOrderDate,
+        workBy: wo.workBy,
+        workOrderStatus: "CANCELLED",
+      });
+      setRefresh(true);
+    } catch {
+      // non-fatal — list will not refresh but UI remains consistent
+    }
+  }, []);
 
   /** Enriches steps with template descriptions before passing to dialog */
   const getEnrichedSteps = useCallback(
@@ -288,7 +316,8 @@ const WorkOrderModern = () => {
       {
         field: "workOrderType",
         headerName: t("workOrder.workOrderType"),
-        width: 130,
+        width: 160,
+        valueGetter: (value) => typeDescriptionMap[value] || value || "",
       },
       {
         field: "workDescription",
@@ -348,10 +377,20 @@ const WorkOrderModern = () => {
         align: "center",
         renderCell: (params) => {
           const wo = params.row;
+          const status = wo.workOrderStatus;
           const stepsReady = isStepsReady(wo);
           const detailsReady = isDetailsReady(wo);
-          const issuable = canIssue(wo);
           const editable = canEdit(wo);
+
+          // Status-based visibility matrix:
+          // OPEN       — view, edit, steps, details, issue
+          // ISSUED     — view, edit, steps, details, cancel
+          // INPROGRESS — view, edit, steps, details
+          // CLOSED     — view
+          // CANCELLED  — view
+          const isActive =
+            status === "OPEN" || status === "ISSUED" || status === "INPROGRESS";
+
           return (
             <Box
               sx={{
@@ -361,16 +400,17 @@ const WorkOrderModern = () => {
                 height: "100%",
               }}
             >
-              {wo.workOrderStatus !== "OPEN" && (
-                <IconButton
-                  size="small"
-                  sx={{ color: "text.secondary" }}
-                  onClick={() => setViewWorkOrder(wo)}
-                  title={t("basic.view", "View")}
-                >
-                  <ViewIcon fontSize="small" />
-                </IconButton>
-              )}
+              {/* View — all statuses */}
+              <IconButton
+                size="small"
+                sx={{ color: "text.secondary" }}
+                onClick={() => setViewWorkOrder(wo)}
+                title={t("basic.view", "View")}
+              >
+                <ViewIcon fontSize="small" />
+              </IconButton>
+
+              {/* Edit — OPEN / ISSUED (level 2+) / INPROGRESS */}
               {editable && (
                 <IconButton
                   size="small"
@@ -381,17 +421,9 @@ const WorkOrderModern = () => {
                   <EditIcon fontSize="small" />
                 </IconButton>
               )}
-              {typeNeedsDetailsMap[wo.workOrderType] && (
-                <IconButton
-                  size="small"
-                  onClick={() => setDataFormWorkOrder(wo)}
-                  title={t("workOrderData.details", "Details")}
-                  sx={{ color: detailsReady ? "success.main" : "error.main" }}
-                >
-                  <ListAltIcon fontSize="small" />
-                </IconButton>
-              )}
-              {typeNeedsStepsMap[wo.workOrderType] && (
+
+              {/* Steps — active statuses only */}
+              {isActive && typeNeedsStepsMap[wo.workOrderType] && (
                 <IconButton
                   size="small"
                   onClick={() => setStepsWorkOrder(wo)}
@@ -401,7 +433,21 @@ const WorkOrderModern = () => {
                   <StepsIcon fontSize="small" />
                 </IconButton>
               )}
-              {issuable && (
+
+              {/* Details — active statuses only */}
+              {isActive && typeNeedsDetailsMap[wo.workOrderType] && (
+                <IconButton
+                  size="small"
+                  onClick={() => setDataFormWorkOrder(wo)}
+                  title={t("workOrderData.details", "Details")}
+                  sx={{ color: detailsReady ? "success.main" : "error.main" }}
+                >
+                  <ListAltIcon fontSize="small" />
+                </IconButton>
+              )}
+
+              {/* Issue — OPEN only, when steps+details ready */}
+              {status === "OPEN" && canIssue(wo) && (
                 <IconButton
                   size="small"
                   onClick={() => setIssueDialogWorkOrder(wo)}
@@ -409,6 +455,18 @@ const WorkOrderModern = () => {
                   sx={{ color: "primary.main" }}
                 >
                   <SendIcon fontSize="small" />
+                </IconButton>
+              )}
+
+              {/* Cancel — ISSUED only */}
+              {status === "ISSUED" && (
+                <IconButton
+                  size="small"
+                  onClick={() => handleCancelWorkOrder(wo)}
+                  title={t("workOrder.cancel", "Cancel")}
+                  sx={{ color: "error.main" }}
+                >
+                  <CancelWOIcon fontSize="small" />
                 </IconButton>
               )}
             </Box>
@@ -419,7 +477,9 @@ const WorkOrderModern = () => {
     [
       t,
       staffMap,
+      typeDescriptionMap,
       handleRowClick,
+      handleCancelWorkOrder,
       typeNeedsDetailsMap,
       typeNeedsStepsMap,
       isStepsReady,
@@ -495,8 +555,166 @@ const WorkOrderModern = () => {
         open={helpOpen}
         onClose={() => setHelpOpen(false)}
         title={t("workOrder.helpTitle")}
-        content={t("workOrder.helpBody")}
-      />
+      >
+        {/* Overview */}
+        <Typography variant="body2" sx={{ mb: 2 }}>
+          {t("workOrder.help.overview")}
+        </Typography>
+
+        {/* Status */}
+        <Typography
+          variant="subtitle2"
+          fontWeight={600}
+          sx={{ mt: 2, mb: 0.5 }}
+        >
+          {t("workOrder.help.statusHeading")}
+        </Typography>
+        <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+          <Typography component="li" variant="body2">
+            {t("workOrder.help.statusOpen")}
+          </Typography>
+          <Typography component="li" variant="body2">
+            {t("workOrder.help.statusIssued")}
+          </Typography>
+          <Typography component="li" variant="body2">
+            {t("workOrder.help.statusInProgress")}
+          </Typography>
+          <Typography component="li" variant="body2">
+            {t("workOrder.help.statusClosed")}
+          </Typography>
+          <Typography component="li" variant="body2">
+            {t("workOrder.help.statusCancelled")}
+          </Typography>
+        </Box>
+
+        {/* Icons */}
+        <Typography
+          variant="subtitle2"
+          fontWeight={600}
+          sx={{ mt: 2, mb: 0.5 }}
+        >
+          {t("workOrder.help.iconsHeading")}
+        </Typography>
+        <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+          <Typography component="li" variant="body2">
+            {t("workOrder.help.iconView")}
+          </Typography>
+          <Typography component="li" variant="body2">
+            {t("workOrder.help.iconEdit")}
+          </Typography>
+          <Typography component="li" variant="body2">
+            {t("workOrder.help.iconDetails")}
+          </Typography>
+          <Typography component="li" variant="body2">
+            {t("workOrder.help.iconSteps")}
+          </Typography>
+          <Typography component="li" variant="body2">
+            {t("workOrder.help.iconIssue")}
+          </Typography>
+        </Box>
+
+        {/* Creating */}
+        <Typography
+          variant="subtitle2"
+          fontWeight={600}
+          sx={{ mt: 2, mb: 0.5 }}
+        >
+          {t("workOrder.help.createHeading")}
+        </Typography>
+        <Box component="ol" sx={{ m: 0, pl: 2.5 }}>
+          <Typography component="li" variant="body2">
+            {t("workOrder.help.createStep1")}
+          </Typography>
+          <Typography component="li" variant="body2">
+            {t("workOrder.help.createStep2")}
+          </Typography>
+          <Typography component="li" variant="body2">
+            {t("workOrder.help.createStep3")}
+          </Typography>
+          <Typography component="li" variant="body2">
+            {t("workOrder.help.createStep4")}
+          </Typography>
+        </Box>
+
+        {/* Steps */}
+        <Typography
+          variant="subtitle2"
+          fontWeight={600}
+          sx={{ mt: 2, mb: 0.5 }}
+        >
+          {t("workOrder.help.stepsHeading")}
+        </Typography>
+        <Typography variant="body2">{t("workOrder.help.stepsBody")}</Typography>
+
+        {/* Details */}
+        <Typography
+          variant="subtitle2"
+          fontWeight={600}
+          sx={{ mt: 2, mb: 0.5 }}
+        >
+          {t("workOrder.help.detailsHeading")}
+        </Typography>
+        <Typography variant="body2" sx={{ mb: 0.5 }}>
+          {t("workOrder.help.detailsBody")}
+        </Typography>
+        <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+          <Typography component="li" variant="body2">
+            {t("workOrder.help.detailsStock")}
+          </Typography>
+          <Typography component="li" variant="body2">
+            {t("workOrder.help.detailsAsset")}
+          </Typography>
+          <Typography component="li" variant="body2">
+            {t("workOrder.help.detailsWorker")}
+          </Typography>
+        </Box>
+        <Typography variant="body2" sx={{ mt: 0.5 }}>
+          {t("workOrder.help.detailsRules")}
+        </Typography>
+
+        {/* Issuing */}
+        <Typography
+          variant="subtitle2"
+          fontWeight={600}
+          sx={{ mt: 2, mb: 0.5 }}
+        >
+          {t("workOrder.help.issueHeading")}
+        </Typography>
+        <Typography variant="body2">{t("workOrder.help.issueBody")}</Typography>
+        <Typography variant="body2" sx={{ mt: 0.5, fontStyle: "italic" }}>
+          {t("workOrder.help.issueNote")}
+        </Typography>
+
+        {/* Viewing */}
+        <Typography
+          variant="subtitle2"
+          fontWeight={600}
+          sx={{ mt: 2, mb: 0.5 }}
+        >
+          {t("workOrder.help.viewHeading")}
+        </Typography>
+        <Typography variant="body2">{t("workOrder.help.viewBody")}</Typography>
+
+        {/* Lifecycle */}
+        <Typography
+          variant="subtitle2"
+          fontWeight={600}
+          sx={{ mt: 2, mb: 0.5 }}
+        >
+          {t("workOrder.help.lifecycleHeading")}
+        </Typography>
+        <Typography
+          variant="body2"
+          sx={{
+            fontFamily: "monospace",
+            bgcolor: "background.default",
+            p: 1,
+            borderRadius: 1,
+          }}
+        >
+          {t("workOrder.help.lifecycle")}
+        </Typography>
+      </HelpDialog>
 
       {/* Filters */}
       <Box
@@ -655,6 +873,9 @@ const WorkOrderModern = () => {
           steps={getEnrichedSteps(issueDialogWorkOrder)}
           dataItems={dataItemsMap[issueDialogWorkOrder.workOrderId] || []}
           staffMap={staffMap}
+          typeDescription={
+            typeDescriptionMap[issueDialogWorkOrder.workOrderType]
+          }
           contentType={
             workOrderTypes.find(
               (wt) => wt.workOrderType === issueDialogWorkOrder.workOrderType,
@@ -675,6 +896,7 @@ const WorkOrderModern = () => {
           steps={getEnrichedSteps(viewWorkOrder)}
           dataItems={dataItemsMap[viewWorkOrder.workOrderId] || []}
           staffMap={staffMap}
+          typeDescription={typeDescriptionMap[viewWorkOrder.workOrderType]}
           contentType={
             workOrderTypes.find(
               (wt) => wt.workOrderType === viewWorkOrder.workOrderType,

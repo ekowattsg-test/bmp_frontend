@@ -38,6 +38,9 @@ import {
   Warehouse as WarehouseIcon,
   EngineeringOutlined as EngineeringIcon,
   DirectionsCar as CarIcon,
+  ManageAccounts as ManageAccountsIcon,
+  LocalShipping as LocalShippingIcon,
+  QrCode2 as QrCode2Icon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -123,6 +126,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               icon: <LockResetIcon fontSize="small" />,
               path: "/forced-password",
             },
+            {
+              key: "qrGenerator",
+              label: t("menu.qrGenerator", "QR Generator"),
+              icon: <QrCode2Icon fontSize="small" />,
+              path: "/qr-generator",
+            },
           ],
         },
         {
@@ -149,6 +158,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               icon: <UploadFileIcon fontSize="small" />,
               path: "/product-excel-upload",
             },
+            {
+              key: "operationRole",
+              label: t("menu.operationRole", "Operation Roles"),
+              icon: <ManageAccountsIcon fontSize="small" />,
+              path: "/operationrole",
+            },
           ],
         },
         {
@@ -173,12 +188,6 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               label: t("menu.vendor"),
               icon: <StoreIcon fontSize="small" />,
               path: "/vendor",
-            },
-            {
-              key: "purchaseOrders",
-              label: t("menu.purchaseOrder"),
-              icon: <BusinessIcon fontSize="small" />,
-              path: "/purchaseorder",
             },
             {
               key: "vehicles",
@@ -293,13 +302,25 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
         {
           key: "WorkOrders",
           menu: null,
-          role: "WorkOrders",
-          label: t("menu.workOrders", "Work Orders"),
+          role: "Operations",
+          label: t("menu.workOrders", "Operations"),
           icon: <EngineeringIcon />,
           children: [
             {
+              key: "purchaseOrders",
+              label: t("menu.purchaseOrder"),
+              icon: <BusinessIcon fontSize="small" />,
+              path: "/purchaseorder",
+            },
+            {
+              key: "deliveryOrders",
+              label: t("menu.deliveryOrder", "Delivery Orders"),
+              icon: <LocalShippingIcon fontSize="small" />,
+              path: "/deliveryorder",
+            },
+            {
               key: "workOrderList",
-              label: t("menu.workOrderList", "Work Order List"),
+              label: t("menu.workOrderList", "Work Orders"),
               icon: <EngineeringIcon fontSize="small" />,
               path: "/workorder",
             },

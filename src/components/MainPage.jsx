@@ -11,6 +11,7 @@ import UserModern from "./baseInformation/UserModern";
 import CustomerModern from "./information/CustomerModern";
 import VendorModern from "./information/VendorModern";
 import PurchaseOrderModern from "./information/PurchaseOrderModern";
+import DeliveryOrderModern from "./information/DeliveryOrderModern";
 import StaffProfile from "./staffprofile/staffProfile";
 import StaffSkillModern from "./baseInformation/StaffSkillModern";
 import StockTakeOn from "./stock/StockTakeOn";
@@ -35,6 +36,8 @@ import ProjectModern from "./information/ProjectModern";
 import ProjectPlanningModern from "./information/ProjectPlanningModern";
 import VehicleModern from "./information/VehicleModern";
 import WorkOrderModern from "./workorder/WorkOrderModern";
+import OperationRoleModern from "./baseInformation/OperationRoleModern";
+import QrGenerator from "./baseInformation/QrGenerator";
 
 function MainPage() {
   return (
@@ -52,6 +55,7 @@ function MainPage() {
         <Route path="/customer" element={<CustomerModern />} />
         <Route path="/vendor" element={<VendorModern />} />
         <Route path="/purchaseorder" element={<PurchaseOrderModern />} />
+        <Route path="/deliveryorder" element={<DeliveryOrderModern />} />
         <Route path="/staffskill" element={<StaffSkillModern />} />
         <Route path="/staff-excel-upload" element={<StaffExcelUpload />} />
         <Route path="/product-excel-upload" element={<ProductExcelUpload />} />
@@ -75,6 +79,8 @@ function MainPage() {
         <Route path="/projectplanning" element={<ProjectPlanningModern />} />
         <Route path="/vehicle" element={<VehicleModern />} />
         <Route path="/workorder" element={<WorkOrderModern />} />
+        <Route path="/operationrole" element={<OperationRoleModern />} />
+        <Route path="/qr-generator" element={<QrGenerator />} />
       </Routes>
     </AdminLayout>
   );
