@@ -1,7 +1,18 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
-import { Alert, Button, Divider, TextField, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Divider,
+  IconButton,
+  InputAdornment,
+  TextField,
+  Typography,
+} from "@mui/material";
+import QrCodeScannerIcon from "@mui/icons-material/QrCodeScanner";
+import { useCameraScanner } from "../helpers/camera_scanner_helper";
 
 export default function LoginForm({
   onLogin,
@@ -18,6 +29,8 @@ export default function LoginForm({
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
+  const [qrLoginUrl, setQrLoginUrl] = useState("");
+  const [qrInputOpen, setQrInputOpen] = useState(false);
 
   const onChangeHandler = (event) => {
     const name = event.target.name;
@@ -55,6 +68,57 @@ export default function LoginForm({
 
   const hasCredentials = login.trim() !== "" || password.trim() !== "";
   const hasOtp = otp.trim() !== "";
+
+  const openScannedLoginUrl = (scannedValue) => {
+    const rawValue = String(scannedValue || "").trim();
+    if (!rawValue) return;
+
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(rawValue);
+    } catch {
+      alert(t("auth.qrLoginInvalidUrl"));
+      return;
+    }
+
+    if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+      alert(t("auth.qrLoginInvalidUrl"));
+      return;
+    }
+
+    if (parsedUrl.hostname !== window.location.hostname) {
+      alert(t("auth.qrLoginDomainMismatch"));
+      return;
+    }
+
+    const popup = window.open(
+      parsedUrl.toString(),
+      "_blank",
+      "noopener,noreferrer",
+    );
+
+    if (!popup) {
+      window.location.assign(parsedUrl.toString());
+      return;
+    }
+
+    popup.focus();
+  };
+
+  const { openScanner: openQrUrlScanner, scannerOverlay: qrUrlScannerOverlay } =
+    useCameraScanner({
+      onScan: (scannedValue) => {
+        setQrLoginUrl(scannedValue);
+        openScannedLoginUrl(scannedValue);
+      },
+      containerId: "login-url-scanner",
+      normalize: false,
+    });
+
+  const showQrInput = () => {
+    setQrLoginUrl("");
+    setQrInputOpen(true);
+  };
 
   const openPolicyPopup = (event, url, windowName) => {
     event.preventDefault();
@@ -161,7 +225,7 @@ export default function LoginForm({
               </Button>
             </form>
 
-            <Divider sx={{ mb: 3 }}>
+            <Divider sx={{ mb: 1.5 }}>
               <Typography
                 variant="body2"
                 sx={{ color: "text.secondary", px: 1 }}
@@ -176,7 +240,7 @@ export default function LoginForm({
                   display: "flex",
                   gap: 8,
                   alignItems: "center",
-                  marginBottom: 32,
+                  marginBottom: 10,
                 }}
               >
                 <TextField
@@ -185,18 +249,18 @@ export default function LoginForm({
                   id="otpInput"
                   name="otp"
                   fullWidth
-                  margin="normal"
+                  margin="none"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
                   disabled={hasCredentials || loading}
-                  sx={{ mb: 0, mt: 1 }}
+                  sx={{ mb: 0 }}
                 />
                 <Button
                   type="submit"
                   variant={hasOtp ? "contained" : "outlined"}
                   color="primary"
                   disabled={loading || hasCredentials}
-                  sx={{ mt: 1, whiteSpace: "nowrap", flexShrink: 0 }}
+                  sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
                 >
                   {loading
                     ? t("auth.signingIn", "Signing in...")
@@ -204,6 +268,96 @@ export default function LoginForm({
                 </Button>
               </div>
             </form>
+
+            <Box
+              sx={{
+                mb: 1,
+                borderTop: "1px solid",
+                borderColor: "divider",
+              }}
+            />
+
+            {qrInputOpen ? (
+              <Box sx={{ mb: 0 }}>
+                <TextField
+                  value={qrLoginUrl}
+                  onChange={(event) => setQrLoginUrl(event.target.value)}
+                  autoFocus
+                  fullWidth
+                  size="small"
+                  margin="none"
+                  placeholder={t(
+                    "auth.qrLoginPlaceholder",
+                    "Scan or enter login QR URL",
+                  )}
+                  disabled={loading}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          size="small"
+                          onClick={openQrUrlScanner}
+                          aria-label={t("auth.scanQrLogin")}
+                          disabled={loading}
+                        >
+                          <QrCodeScannerIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      openScannedLoginUrl(qrLoginUrl);
+                    }
+                  }}
+                />
+              </Box>
+            ) : (
+              <Box
+                role="button"
+                tabIndex={loading ? -1 : 0}
+                aria-disabled={loading}
+                onClick={() => {
+                  if (!loading) showQrInput();
+                }}
+                onKeyDown={(event) => {
+                  if (loading) return;
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    showQrInput();
+                  }
+                }}
+                sx={{
+                  mb: 0,
+                  py: 0.75,
+                  px: 1.5,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  color: "primary.main",
+                  cursor: loading ? "not-allowed" : "pointer",
+                }}
+              >
+                <Typography variant="body1">{t("auth.scanQrLogin")}</Typography>
+                <IconButton
+                  size="small"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openQrUrlScanner();
+                  }}
+                  aria-label={t("auth.scanQrLogin")}
+                  disabled={loading}
+                  sx={{ color: "primary.main" }}
+                >
+                  <QrCodeScannerIcon />
+                </IconButton>
+              </Box>
+            )}
+            {qrUrlScannerOverlay}
           </div>
           <div
             className={classNames(

@@ -40,6 +40,7 @@ export const normalizeScannedValue = (raw) => {
 export function useCameraScanner({
   onScan,
   containerId = "pda-camera-scanner",
+  normalize = true,
 }) {
   const { t } = useTranslation();
   const html5QrRef = useRef(null);
@@ -86,10 +87,12 @@ export function useCameraScanner({
         { facingMode: "environment" },
         { fps: 15, qrbox: 200 },
         async (decodedText) => {
-          const normalized = normalizeScannedValue(decodedText);
-          if (!normalized) return;
+          const scannedValue = normalize
+            ? normalizeScannedValue(decodedText)
+            : String(decodedText || "").trim();
+          if (!scannedValue) return;
           await stopScanner();
-          onScanRef.current?.(normalized);
+          onScanRef.current?.(scannedValue);
         },
         () => {},
       );

@@ -94,10 +94,15 @@
     "appTitle": "业务管理平台",
     "appSubtitle": "授权用户的安全访问",
     "footer": "© {{year}} BMP 系统。保留所有权利。",
-    "orSignInWithOtp": "或使用一次性密码登录",
+    "orSignInWithOtp": "其他登录方式",
     "otpLabel": "一次性密码（OTP）",
     "signInWithOtp": "使用 OTP 登录",
-    "otpFailed": "OTP 验证失败，请重试。"
+    "otpFailed": "OTP 验证失败，请重试。",
+    "qrLoginHint": "或扫描登录链接二维码",
+    "scanQrLogin": "扫描二维码登录",
+    "qrLoginPlaceholder": "扫描或输入登录二维码链接",
+    "qrLoginInvalidUrl": "二维码登录链接无效，请扫描有效的 http(s) 链接。",
+    "qrLoginDomainMismatch": "二维码登录链接无效，链接域名必须与当前系统一致。"
   },
   "pda": {
     "login": {
@@ -123,6 +128,9 @@
       "comingSoonDesc": "项目任务日程与班次安排将在此显示。"
     },
     "me": {
+      "nameLabel": "用户",
+      "mobileLabel": "手机号",
+      "logout": "登出",
       "assets": "持有物资",
       "assetsPlaceholder": "暂无物资分配到此位置。",
       "assetsLoading": "正在加载物资…",

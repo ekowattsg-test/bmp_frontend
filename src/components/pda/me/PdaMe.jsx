@@ -1,21 +1,27 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useContext } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import {
   Avatar,
   Box,
+  Button,
   Card,
   CardContent,
   CircularProgress,
   Divider,
+  Stack,
   Typography,
 } from "@mui/material";
 import PersonIcon from "@mui/icons-material/Person";
 import PhoneAndroidIcon from "@mui/icons-material/PhoneAndroid";
 import InventoryIcon from "@mui/icons-material/Inventory";
+import LogoutIcon from "@mui/icons-material/Logout";
 import { QRCodeSVG } from "qrcode.react";
 import { getPdaUser } from "../common/pda_user_helper";
 import { signEntity } from "../../../helpers/qr_token_helper";
 import { request } from "../../../helpers/axios_helper";
+import { AuthContext } from "../../../context/authContext";
 
 /**
  * PdaMe — profile tab.
@@ -26,6 +32,8 @@ import { request } from "../../../helpers/axios_helper";
  */
 export default function PdaMe() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { logout } = useContext(AuthContext);
 
   const user = useMemo(() => getPdaUser() || {}, []);
 
@@ -45,6 +53,13 @@ export default function PdaMe() {
   const [assets, setAssets] = useState([]);
   const [assetsLoading, setAssetsLoading] = useState(false);
   const [assetsError, setAssetsError] = useState("");
+
+  const handleLogout = () => {
+    // Reuse the same main-app logout action, then clear PDA-only payload.
+    logout();
+    localStorage.removeItem("pda_user_info");
+    navigate("/login", { replace: true });
+  };
 
   useEffect(() => {
     if (!displayName) return;
@@ -93,35 +108,71 @@ export default function PdaMe() {
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {/* Profile card */}
       <Card variant="outlined">
-        <CardContent
-          sx={{ display: "flex", alignItems: "center", gap: 2, p: 2 }}
-        >
-          <Avatar
-            sx={{
-              width: 56,
-              height: 56,
-              bgcolor: "primary.main",
-              flexShrink: 0,
-            }}
-          >
-            <PersonIcon fontSize="large" />
-          </Avatar>
+        <CardContent sx={{ p: 2 }}>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Avatar
+              sx={{
+                width: 56,
+                height: 56,
+                bgcolor: "primary.main",
+                flexShrink: 0,
+              }}
+            >
+              <PersonIcon fontSize="large" />
+            </Avatar>
 
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="subtitle1" fontWeight={600} noWrap>
-              {displayName}
-            </Typography>
-            {user.mobileNumber && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                <PhoneAndroidIcon
-                  sx={{ fontSize: 14, color: "text.secondary" }}
-                />
-                <Typography variant="caption" color="text.secondary">
-                  {user.mobileNumber}
-                </Typography>
-              </Box>
-            )}
-          </Box>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: "block", mb: 0.25 }}
+              >
+                {t("pda.me.nameLabel")}
+              </Typography>
+              <Typography variant="subtitle1" fontWeight={700} noWrap>
+                {displayName}
+              </Typography>
+
+              {user.mobileNumber && (
+                <Box
+                  sx={{
+                    mt: 0.75,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.75,
+                  }}
+                >
+                  <PhoneAndroidIcon
+                    sx={{
+                      fontSize: 15,
+                      color: "text.secondary",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    noWrap
+                    sx={{ minWidth: 0 }}
+                  >
+                    {t("pda.me.mobileLabel")}: {user.mobileNumber}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Stack>
+
+          <Divider sx={{ my: 1.5 }} />
+
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<LogoutIcon />}
+            onClick={handleLogout}
+            fullWidth
+          >
+            {t("pda.me.logout")}
+          </Button>
         </CardContent>
       </Card>
 

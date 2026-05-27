@@ -94,10 +94,15 @@
     "appTitle": "Business Management Platform",
     "appSubtitle": "Secure access for authorised users",
     "footer": "© {{year}} BMP System. All rights reserved.",
-    "orSignInWithOtp": "Or sign in with OTP",
+    "orSignInWithOtp": "Alternate sign in methods",
     "otpLabel": "One-Time Password (OTP)",
     "signInWithOtp": "Sign in with OTP",
-    "otpFailed": "OTP verification failed. Please try again."
+    "otpFailed": "OTP verification failed. Please try again.",
+    "qrLoginHint": "Or scan a login URL QR code",
+    "scanQrLogin": "Scan QR Code to login",
+    "qrLoginPlaceholder": "Scan or enter login QR URL",
+    "qrLoginInvalidUrl": "Invalid QR login URL. Please scan a valid http(s) URL.",
+    "qrLoginDomainMismatch": "This QR login link is not valid for this app. Please scan a QR code from the same domain."
   },
   "pda": {
     "login": {
@@ -123,6 +128,9 @@
       "comingSoonDesc": "Project task schedules and shift assignments will appear here."
     },
     "me": {
+      "nameLabel": "User",
+      "mobileLabel": "Mobile",
+      "logout": "Logout",
       "assets": "Assigned Assets",
       "assetsPlaceholder": "No assets currently assigned to this location.",
       "assetsLoading": "Loading assets…",
