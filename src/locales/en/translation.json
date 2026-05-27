@@ -98,9 +98,9 @@
     "otpLabel": "One-Time Password (OTP)",
     "signInWithOtp": "Sign in with OTP",
     "otpFailed": "OTP verification failed. Please try again.",
-    "qrLoginHint": "Or scan a login URL QR code",
+    "qrLoginHint": "Or scan a login QR code",
     "scanQrLogin": "Scan QR Code to login",
-    "qrLoginPlaceholder": "Scan or enter login QR URL",
+    "qrLoginPlaceholder": "Scan login QR code",
     "qrLoginInvalidUrl": "Invalid QR login URL. Please scan a valid http(s) URL.",
     "qrLoginDomainMismatch": "This QR login link is not valid for this app. Please scan a QR code from the same domain."
   },

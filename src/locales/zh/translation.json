@@ -98,9 +98,9 @@
     "otpLabel": "一次性密码（OTP）",
     "signInWithOtp": "使用 OTP 登录",
     "otpFailed": "OTP 验证失败，请重试。",
-    "qrLoginHint": "或扫描登录链接二维码",
+    "qrLoginHint": "或扫描登录二维码",
     "scanQrLogin": "扫描二维码登录",
-    "qrLoginPlaceholder": "扫描或输入登录二维码链接",
+    "qrLoginPlaceholder": "扫描登录二维码",
     "qrLoginInvalidUrl": "二维码登录链接无效，请扫描有效的 http(s) 链接。",
     "qrLoginDomainMismatch": "二维码登录链接无效，链接域名必须与当前系统一致。"
   },

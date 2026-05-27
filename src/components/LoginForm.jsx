@@ -288,7 +288,7 @@ export default function LoginForm({
                   margin="none"
                   placeholder={t(
                     "auth.qrLoginPlaceholder",
-                    "Scan or enter login QR URL",
+                    "Scan login QR code",
                   )}
                   disabled={loading}
                   InputProps={{
