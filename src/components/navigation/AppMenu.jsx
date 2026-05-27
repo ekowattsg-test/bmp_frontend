@@ -29,6 +29,7 @@ import {
   Warehouse,
   EngineeringOutlined as EngineeringIcon,
   ManageAccounts,
+  WhatsApp,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 
@@ -117,6 +118,11 @@ const AppMenu = () => {
             to: "/operationrole",
             label: t("menu.operationRole", "Operation Roles"),
             icon: <ManageAccounts />,
+          },
+          {
+            to: "/wa-simulator",
+            label: t("menu.waSimulator", "WA Simulator"),
+            icon: <WhatsApp />,
           },
         ],
       },

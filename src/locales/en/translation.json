@@ -285,7 +285,8 @@
     "workOrderList": "Work Orders",
     "vehicle": "Vehicles",
     "operationRole": "Operation Roles",
-    "qrGenerator": "QR Generator"
+    "qrGenerator": "QR Generator",
+    "waSimulator": "WA Simulator"
   },
   "qrGenerator": {
     "title": "QR Code Generator",
@@ -303,6 +304,32 @@
     "helpTitle": "QR Code Generator Help",
     "helpBody": "Generate encrypted QR codes to paste on locations, vehicles, or staff ID cards.\n\nThe QR code encodes a signed token derived from the entity ID. When scanned by the PDA during work order execution, the token is verified and the original ID is recovered for comparison.\n\nIMPORTANT: If the signing secret (VITE_QR_SIGNING_SECRET) changes, all previously printed QR codes will become invalid and must be reprinted.",
     "noEntityId": "Please enter an Entity ID"
+  },
+  "waSimulator": {
+    "title": "WA Simulator",
+    "subtitle": "Simulate the WhatsApp login flow for PDA, web, or OTP replies",
+    "helpTitle": "WA Simulator Help",
+    "helpBody": "1. Select a staff member with a mobile number.\n2. Enter one of these commands exactly: pda, web, otp.\n3. Click Send.\n4. The system posts the staff mobile number to the mobile-login request endpoint and returns the matching reply.\n\nBehavior:\n• pda — generates a PDA login QR code from the login URL.\n• web — returns the full login URL as plain text.\n• otp — returns the OTP value from the backend response.\n\nAny other text will be rejected with a reminder that only pda, web, or otp are accepted.",
+    "staffLabel": "Staff",
+    "staffPlaceholder": "Select a staff member",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Type pda, web, or otp",
+    "sendButton": "Send",
+    "resetButton": "Reset",
+    "phrasesHint": "Accepted commands: pda, web, otp",
+    "welcome": "Select a staff member and send pda, web, or otp.",
+    "invalidCommand": "Only pda, web, or otp are accepted.",
+    "noStaffSelected": "Please select a staff member first.",
+    "noMobileNumber": "The selected staff member does not have a mobile number.",
+    "loadingStaff": "Loading staff list...",
+    "staffCount": "{{count}} staff",
+    "requestFailed": "Unable to request the mobile login details.",
+    "missingResponse": "The backend response did not include login details.",
+    "replyOtp": "OTP",
+    "replyWeb": "Login URL",
+    "replyPda": "PDA QR Code",
+    "urlLabel": "Login URL",
+    "otpLabel": "OTP"
   },
   "operationRole": {
     "title": "Operation Roles",

@@ -285,7 +285,8 @@
     "workOrderList": "工单",
     "vehicle": "车辆",
     "operationRole": "操作角色",
-    "qrGenerator": "QR码生成器"
+    "qrGenerator": "QR码生成器",
+    "waSimulator": "WA 模拟器"
   },
   "qrGenerator": {
     "title": "QR码生成器",
@@ -303,6 +304,32 @@
     "helpTitle": "QR码生成器帮助",
     "helpBody": "生成加密QR码，用于張贴在地点、车辆或员工证上。\n\nQR码包含根据实体编号生成的签名令牌。PDA在工单执行时扫描后，会验证令牌并恢复原始编号进行比对。\n\n重要：如果签名密鑰（VITE_QR_SIGNING_SECRET）更改，之前打印的所有QR码将失效，需重新打印。",
     "noEntityId": "请输入实体编号"
+  },
+  "waSimulator": {
+    "title": "WA 模拟器",
+    "subtitle": "模拟 PDA、网页或 OTP 的 WhatsApp 登录流程",
+    "helpTitle": "WA 模拟器帮助",
+    "helpBody": "1. 先选择一个有手机号码的员工。\n2. 请输入以下命令之一：pda、web、otp。\n3. 点击发送。\n4. 系统会把员工手机号提交到 mobile-login 请求接口，并返回对应结果。\n\n行为说明：\n• pda — 根据登录链接生成 PDA 登录 QR 码。\n• web — 直接返回完整登录链接文本。\n• otp — 返回后端响应中的 OTP 值。\n\n输入其他内容时，系统会提示仅接受 pda、web 或 otp。",
+    "staffLabel": "员工",
+    "staffPlaceholder": "请选择员工",
+    "messageLabel": "消息",
+    "messagePlaceholder": "请输入 pda、web 或 otp",
+    "sendButton": "发送",
+    "resetButton": "重置",
+    "phrasesHint": "可接受的命令：pda、web、otp",
+    "welcome": "请选择员工并发送 pda、web 或 otp。",
+    "invalidCommand": "仅接受 pda、web 或 otp。",
+    "noStaffSelected": "请先选择员工。",
+    "noMobileNumber": "所选员工没有手机号。",
+    "loadingStaff": "正在加载员工列表...",
+    "staffCount": "{{count}} 名员工",
+    "requestFailed": "无法请求移动登录详情。",
+    "missingResponse": "后端响应未包含登录信息。",
+    "replyOtp": "OTP",
+    "replyWeb": "登录链接",
+    "replyPda": "PDA 二维码",
+    "urlLabel": "登录链接",
+    "otpLabel": "OTP"
   },
   "operationRole": {
     "title": "操作角色",

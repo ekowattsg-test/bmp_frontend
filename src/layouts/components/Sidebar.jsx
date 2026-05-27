@@ -41,6 +41,7 @@ import {
   ManageAccounts as ManageAccountsIcon,
   LocalShipping as LocalShippingIcon,
   QrCode2 as QrCode2Icon,
+  WhatsApp as WhatsAppIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -163,6 +164,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               label: t("menu.operationRole", "Operation Roles"),
               icon: <ManageAccountsIcon fontSize="small" />,
               path: "/operationrole",
+            },
+            {
+              key: "waSimulator",
+              label: t("menu.waSimulator", "WA Simulator"),
+              icon: <WhatsAppIcon fontSize="small" />,
+              path: "/wa-simulator",
             },
           ],
         },

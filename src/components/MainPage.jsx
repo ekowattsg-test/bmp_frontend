@@ -38,6 +38,7 @@ import VehicleModern from "./information/VehicleModern";
 import WorkOrderModern from "./workorder/WorkOrderModern";
 import OperationRoleModern from "./baseInformation/OperationRoleModern";
 import QrGenerator from "./baseInformation/QrGenerator";
+import WASimulator from "./baseInformation/WASimulator";
 
 function MainPage() {
   return (
@@ -81,6 +82,7 @@ function MainPage() {
         <Route path="/workorder" element={<WorkOrderModern />} />
         <Route path="/operationrole" element={<OperationRoleModern />} />
         <Route path="/qr-generator" element={<QrGenerator />} />
+        <Route path="/wa-simulator" element={<WASimulator />} />
       </Routes>
     </AdminLayout>
   );
