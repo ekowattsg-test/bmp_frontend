@@ -12,12 +12,12 @@ import {
 } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { request } from "../../../helpers/axios_helper";
+import { request, setAuthHeader } from "../../../helpers/axios_helper";
 import { getPdaDisplayName } from "../common/pda_user_helper";
 import PdaBottomNav from "./PdaBottomNav";
 
 // Tab root paths — no back button shown on these
-const TAB_ROOTS = ["/pda/orders", "/pda/schedule", "/pda/me"];
+const TAB_ROOTS = ["/pda/orders", "/pda/stockcard", "/pda/me"];
 
 /**
  * PdaLayout — mobile shell for all /pda/* routes (except /pda/login).
@@ -30,7 +30,7 @@ const TAB_ROOTS = ["/pda/orders", "/pda/schedule", "/pda/me"];
  * Renders:
  *   - Fixed AppBar (with back button on sub-pages, user name on right)
  *   - Scrollable content area
- *   - Fixed bottom navigation (Orders | Schedule | Me)
+ *   - Fixed bottom navigation (Orders | Inventory Card | Me)
  */
 export default function PdaLayout() {
   const { t } = useTranslation();
@@ -42,7 +42,11 @@ export default function PdaLayout() {
   // Hide back button on the three tab root pages
   const isTabRoot = TAB_ROOTS.includes(location.pathname);
 
-  const pageTitle = location.state?.title ?? t("pda.layout.title");
+  const pageTitle =
+    location.state?.title ??
+    (location.pathname.startsWith("/pda/stockcard")
+      ? t("pda.nav.stockCard", t("menu.stockCard", "Inventory Card"))
+      : t("pda.layout.title"));
 
   // ── Session expired: fired by axios_helper when PDA token is rejected ───
   useEffect(() => {
@@ -93,6 +97,40 @@ export default function PdaLayout() {
     [enriched], // re-read after enrichment writes staffName to localStorage
   );
 
+  const clearAccessibleCookies = () => {
+    if (typeof document === "undefined") return;
+    const raw = document.cookie;
+    if (!raw) return;
+    raw.split(";").forEach((part) => {
+      const name = part.split("=")[0]?.trim();
+      if (!name) return;
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/pda`;
+    });
+  };
+
+  const clearPdaSessionAndGoLogin = async () => {
+    setAuthHeader(null);
+    localStorage.removeItem("pda_user_info");
+    localStorage.removeItem("user_info");
+    clearAccessibleCookies();
+
+    // Best-effort server-side cookie/session cleanup.
+    await Promise.allSettled([
+      request("POST", "/auth/logout", null, { skipAuthRedirect: true }),
+      request("POST", "/api/mobile-logins/logout", null, {
+        skipAuthRedirect: true,
+      }),
+    ]);
+
+    setSessionExpired(false);
+    if (typeof window !== "undefined") {
+      window.location.href = window.location.origin;
+      return;
+    }
+    navigate("/", { replace: true });
+  };
+
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "background.default" }}>
       {/* Session-expired overlay — shown when token is rejected by backend */}
@@ -121,13 +159,7 @@ export default function PdaLayout() {
               "Please scan the QR code again to continue.",
             )}
           </Typography>
-          <Button
-            variant="contained"
-            onClick={() => {
-              setSessionExpired(false);
-              navigate("/pda/orders");
-            }}
-          >
+          <Button variant="contained" onClick={clearPdaSessionAndGoLogin}>
             {t("pda.session.dismiss", "Dismiss")}
           </Button>
         </Box>

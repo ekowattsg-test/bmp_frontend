@@ -51,6 +51,14 @@ import WorkOrderIssueDialog from "./WorkOrderIssueDialog";
 
 const ALL_TYPES = "__ALL__";
 
+const normalizeEntityType = (entityType) =>
+  String(entityType || "")
+    .trim()
+    .toLowerCase();
+
+const isNoActEntityType = (entityType) =>
+  normalizeEntityType(entityType) === "noact";
+
 const WorkOrderModern = () => {
   const { t } = useTranslation();
   const { shouldUseBlockLayout } = useResponsiveLayout();
@@ -211,9 +219,12 @@ const WorkOrderModern = () => {
         const tmpl = templates.find((t) => t.stepNumber === s.stepNumber);
         const fromOk =
           tmpl?.fromEntity === "worker" ||
+          isNoActEntityType(tmpl?.fromEntity) ||
           !!String(s.fromLocation || "").trim();
         const toOk =
-          tmpl?.toEntity === "worker" || !!String(s.toLocation || "").trim();
+          tmpl?.toEntity === "worker" ||
+          isNoActEntityType(tmpl?.toEntity) ||
+          !!String(s.toLocation || "").trim();
         return fromOk && toOk;
       });
     },

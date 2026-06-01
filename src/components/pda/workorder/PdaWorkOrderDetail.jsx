@@ -37,27 +37,19 @@ import {
   ThumbnailImg,
   ImageCarousel,
 } from "../../../helpers/file_helper";
+import {
+  PHASE,
+  STATUS_COLOR,
+  buildInitialStepPhases,
+  getNextPhaseAfterScan,
+  getNextPhaseAfterTo,
+} from "./stepControl/stepSubstepModules";
+import { createStepCentralControl } from "./stepControl/stepCentralControl";
 import { getPdaStaffId, getPdaDisplayName } from "../common/pda_user_helper";
 import PdaScanInput from "../common/PdaScanInput";
 import { decodeToken } from "../../../helpers/qr_token_helper";
 
-// â”€â”€ Phase constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const PHASE = {
-  FROM: "FROM", // fromLocation action  â†’ advances step to INPROGRESS
-  SCAN: "SCAN", // scanData confirmation
-  PHOTO: "PHOTO", // photo capture
-  TO: "TO", // toLocation action    â†’ advances step to DONE
-};
-
-const STATUS_COLOR = {
-  OPEN: "default",
-  ISSUED: "info",
-  INPROGRESS: "warning",
-  CLOSED: "success",
-  CANCELLED: "error",
-};
-
-// â”€â”€ EntityScan: scan / confirm widget per entity type â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// EntityScan: scan / confirm widget per entity type
 function EntityScan({
   entity,
   expected,
@@ -144,7 +136,7 @@ function EntityScan({
       <Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
           {t("pda.workorder.detail.expectedPO")}:{" "}
-          <strong>{expected || "â€”"}</strong>
+          <strong>{expected || "-"}</strong>
         </Typography>
         <Button
           variant="contained"
@@ -219,7 +211,7 @@ function EntityScan({
         color="text.secondary"
         sx={{ mb: isWorker ? 0.5 : 1 }}
       >
-        {label} â€” {t("pda.workorder.detail.expected")}:{" "}
+        {label} - {t("pda.workorder.detail.expected")}:{" "}
         <strong>{(isWorker ? workerName : null) || expected || "—"}</strong>
       </Typography>
       {isWorker && (
@@ -261,7 +253,7 @@ function EntityScan({
   );
 }
 
-// â”€â”€ PhotoPanel: camera capture + thumbnail strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// PhotoPanel: camera capture + thumbnail strip
 function PhotoPanel({ photos, onAdd, onRemove, uploading }) {
   const [carouselOpen, setCarouselOpen] = useState(false);
   const [carouselStart, setCarouselStart] = useState(0);
@@ -370,7 +362,7 @@ function PhotoPanel({ photos, onAdd, onRemove, uploading }) {
   );
 }
 
-// â”€â”€ SectionLabel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// SectionLabel
 function SectionLabel({ children }) {
   return (
     <Typography
@@ -941,7 +933,6 @@ function ScanDataPanel({
           scanning={scanning}
           error={!!scanError}
           helperText={scanError || undefined}
-          showActionButton
           cameraContainerId="scan-panel-global"
         />
       )}
@@ -1236,7 +1227,6 @@ function ScanDataPanel({
             disabled={scanning}
             scanning={scanning}
             error={!!scanError}
-            showActionButton
             sx={{ mb: scanError ? 0.5 : 1.5 }}
             cameraContainerId="scan-panel-dialog"
           />
@@ -1483,7 +1473,7 @@ function ScanDataPanel({
   );
 }
 
-// â”€â”€ Main component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Main component
 export default function PdaWorkOrderDetail() {
   const { workOrderId } = useParams();
   const { t } = useTranslation();
@@ -1497,9 +1487,9 @@ export default function PdaWorkOrderDetail() {
   const [saving, setSaving] = useState(false);
   const [staffNameMap, setStaffNameMap] = useState({}); // staffId → staffName
 
-  // Phase per step: workStepsId â†’ PHASE constant
+  // Phase per step: workStepsId -> PHASE constant
   const [stepPhases, setStepPhases] = useState({});
-  // Photos per step: workStepsId â†’ [{ localUrl, metadata }]
+  // Photos per step: workStepsId -> [{ localUrl, metadata }]
   const [stepPhotos, setStepPhotos] = useState({});
   const [photoUploading, setPhotoUploading] = useState(false);
   const [carouselOpen, setCarouselOpen] = useState(false);
@@ -1521,7 +1511,7 @@ export default function PdaWorkOrderDetail() {
     setCarouselOpen(true);
   };
 
-  // â”€â”€ Load â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Load
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -1573,14 +1563,8 @@ export default function PdaWorkOrderDetail() {
       });
       setSteps(enriched);
 
-      // Init phases from persisted step status
-      const phases = {};
-      enriched.forEach((s) => {
-        if (s.stepStatus === "OPEN") phases[s.workStepsId] = PHASE.FROM;
-        else if (s.stepStatus === "INPROGRESS")
-          phases[s.workStepsId] = PHASE.SCAN;
-      });
-      setStepPhases(phases);
+      // Init sub-step phases from persisted status through central control rules
+      setStepPhases(buildInitialStepPhases(enriched));
 
       // Init photos from persisted step.photos (JSON array string)
       const photos = {};
@@ -1611,7 +1595,7 @@ export default function PdaWorkOrderDetail() {
     load();
   }, [load]);
 
-  // â”€â”€ Save step to server â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Save step to server
   const saveStep = useCallback(async (step) => {
     await request("PUT", `/api/worksteps/${step.workStepsId}`, {
       workStepsId: step.workStepsId,
@@ -1722,16 +1706,15 @@ export default function PdaWorkOrderDetail() {
     ],
   );
 
-  // â”€â”€ Phase: SCAN confirmed â†’ advance to PHOTO or TO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Phase: SCAN confirmed -> advance to PHOTO or TO
   const handleScanConfirmed = useCallback((step) => {
-    const takePhoto = step._typeConfig?.takePhoto ?? 0;
     setStepPhases((prev) => ({
       ...prev,
-      [step.workStepsId]: takePhoto > 0 ? PHASE.PHOTO : PHASE.TO,
+      [step.workStepsId]: getNextPhaseAfterScan(step._typeConfig),
     }));
   }, []);
 
-  // â”€â”€ Phase: Photo added â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Phase: Photo added
   const handlePhotoAdd = useCallback(
     async (step, file) => {
       const localUrl = URL.createObjectURL(file);
@@ -1765,7 +1748,7 @@ export default function PdaWorkOrderDetail() {
     });
   }, []);
 
-  // â”€â”€ Phase: PHOTO confirmed â†’ advance to TO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Phase: PHOTO confirmed -> advance to TO
   // ── Phase: PHOTO confirmed → persist photos to backend, then advance to TO ──────────────
   const handlePhotoConfirmed = useCallback(
     async (step) => {
@@ -1781,7 +1764,7 @@ export default function PdaWorkOrderDetail() {
             ),
           );
         } catch {
-          // non-fatal — photos remain in memory and will be saved again in handleToConfirmed
+          // non-fatal — photos remain in memory and will be saved again in handleFinalConfirmed
         }
       }
       setStepPhases((prev) => ({ ...prev, [step.workStepsId]: PHASE.TO }));
@@ -1789,8 +1772,8 @@ export default function PdaWorkOrderDetail() {
     [stepPhotos, saveStep],
   );
 
-  // â”€â”€ Phase: TO confirmed â†’ set step DONE, close WO if all done â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const handleToConfirmed = useCallback(
+  // Phase: TO completed -> advance to final CONFIRM phase
+  const handleToCompleted = useCallback(
     async (step) => {
       setSaving(true);
       try {
@@ -1803,6 +1786,24 @@ export default function PdaWorkOrderDetail() {
           await populateWorkOrderDataFromDO(step.toLocation);
         }
 
+        setStepPhases((prev) => ({
+          ...prev,
+          [step.workStepsId]: getNextPhaseAfterTo(),
+        }));
+      } catch {
+        setError(t("pda.workorder.detail.saveError"));
+      } finally {
+        setSaving(false);
+      }
+    },
+    [populateWorkOrderDataFromPO, populateWorkOrderDataFromDO, t],
+  );
+
+  // Phase: CONFIRM completed -> execute step and close WO if all done
+  const handleFinalConfirmed = useCallback(
+    async (step) => {
+      setSaving(true);
+      try {
         // Persist photos to step record (keep INPROGRESS so execute can find it)
         const photos = stepPhotos[step.workStepsId] || [];
         const photoJson =
@@ -1841,26 +1842,58 @@ export default function PdaWorkOrderDetail() {
         setSaving(false);
       }
     },
-    [
-      saveStep,
-      steps,
-      stepPhotos,
-      workOrderId,
-      navigate,
-      populateWorkOrderDataFromPO,
-      populateWorkOrderDataFromDO,
-      t,
-    ],
+    [saveStep, steps, stepPhotos, workOrderId, navigate, t],
   );
 
-  // â”€â”€ Derived â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const activeStepId = (() => {
-    const active = steps.find((s) => s.stepStatus !== "DONE");
-    return active?.workStepsId ?? null;
-  })();
+  // Derived (central step control)
+  const stepControl = createStepCentralControl({
+    steps,
+    stepPhases,
+    stepPhotos,
+    contentType,
+    workByStaffId: workOrder?.workBy,
+    currentStaffId: getPdaStaffId(),
+  });
+  const activeStepId = stepControl.getActiveStepId();
   const isClosed = ["CLOSED", "CANCELLED"].includes(workOrder?.workOrderStatus);
 
-  // â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  useEffect(() => {
+    if (loading || saving || isClosed) return;
+    const active = stepControl.getActiveStep();
+    if (!active) return;
+
+    const runtime = stepControl.getRuntimeModel(active);
+    if (runtime.phase === PHASE.FROM && runtime.fromEntityModule.autoExecute) {
+      handleFromConfirmed(active);
+      return;
+    }
+    if (runtime.phase === PHASE.TO && runtime.toEntityModule.autoExecute) {
+      handleToCompleted(active);
+      return;
+    }
+    if (runtime.phase === PHASE.SCAN && runtime.effectiveScanData === 0) {
+      handleScanConfirmed(active);
+      return;
+    }
+    if (runtime.phase === PHASE.CONFIRM && runtime.noConfirm) {
+      handleFinalConfirmed(active);
+    }
+  }, [
+    loading,
+    saving,
+    isClosed,
+    steps,
+    stepPhases,
+    stepPhotos,
+    contentType,
+    workOrder?.workBy,
+    handleFromConfirmed,
+    handleToCompleted,
+    handleScanConfirmed,
+    handleFinalConfirmed,
+  ]);
+
+  // Render
   if (loading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 6 }}>
@@ -1903,7 +1936,7 @@ export default function PdaWorkOrderDetail() {
             />
           </Box>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-            {workOrder.workDescription || "â€”"}
+            {workOrder.workDescription || "-"}
           </Typography>
           <Typography variant="caption" color="text.secondary">
             {t("pda.workorder.detail.type")}: {workOrder.workOrderType}
@@ -1931,25 +1964,16 @@ export default function PdaWorkOrderDetail() {
           const isDone = step.stepStatus === "DONE";
           const isActive = step.workStepsId === activeStepId;
           const isLocked = !isDone && !isActive;
-          const phase = stepPhases[step.workStepsId];
-          const tc = step._typeConfig;
-          const photos = stepPhotos[step.workStepsId] || [];
-          const scanData = tc?.scanData ?? 0;
-          const takePhoto = tc?.takePhoto ?? 0;
-          // For worker content type, scanData=0 (no scan) only applies when the
-          // worker assigned to this work order is the same as the one executing it.
-          // If they differ, a scan is still required regardless of scanData.
-          const effectiveScanData =
-            contentType === "worker" &&
-            scanData === 0 &&
-            String(workOrder?.workBy || "")
-              .trim()
-              .toLowerCase() !==
-              String(getPdaStaffId() || "")
-                .trim()
-                .toLowerCase()
-              ? 1
-              : scanData;
+          const {
+            tc,
+            phase,
+            photos,
+            takePhoto,
+            effectiveScanData,
+            noConfirm,
+            fromEntityModule,
+            toEntityModule,
+          } = stepControl.getRuntimeModel(step);
 
           return (
             <Card
@@ -1983,7 +2007,7 @@ export default function PdaWorkOrderDetail() {
                     )}
                     <Typography variant="body2" fontWeight={600}>
                       {t("pda.workorder.detail.step")} {step.stepNumber}
-                      {tc?.stepDescription ? ` â€” ${tc.stepDescription}` : ""}
+                      {tc?.stepDescription ? ` - ${tc.stepDescription}` : ""}
                     </Typography>
                   </Box>
                   <Chip
@@ -2009,18 +2033,22 @@ export default function PdaWorkOrderDetail() {
                   >
                     {phase === PHASE.FROM && (
                       <Box>
-                        <SectionLabel>
-                          {t("pda.workorder.detail.fromLocation")}
-                          {tc?.fromEntity ? ` (${tc.fromEntity})` : ""}
-                        </SectionLabel>
-                        <EntityScan
-                          entity={tc?.fromEntity}
-                          expected={step.fromLocation}
-                          onConfirm={() => handleFromConfirmed(step)}
-                          disabled={saving}
-                          t={t}
-                          label={t("pda.workorder.detail.fromLocation")}
-                        />
+                        {fromEntityModule.renderEntityUi && (
+                          <>
+                            <SectionLabel>
+                              {t("pda.workorder.detail.fromLocation")}
+                              {tc?.fromEntity ? ` (${tc.fromEntity})` : ""}
+                            </SectionLabel>
+                            <EntityScan
+                              entity={tc?.fromEntity}
+                              expected={step.fromLocation}
+                              onConfirm={() => handleFromConfirmed(step)}
+                              disabled={saving}
+                              t={t}
+                              label={t("pda.workorder.detail.fromLocation")}
+                            />
+                          </>
+                        )}
                       </Box>
                     )}
 
@@ -2105,15 +2133,6 @@ export default function PdaWorkOrderDetail() {
                               t={t}
                               readOnly
                             />
-                            <Button
-                              variant="contained"
-                              fullWidth
-                              disabled={saving}
-                              onClick={() => handleScanConfirmed(step)}
-                              sx={{ py: 1.2, mt: 1 }}
-                            >
-                              {t("pda.workorder.detail.confirm")}
-                            </Button>
                           </>
                         ) : (
                           <ScanDataPanel
@@ -2292,19 +2311,39 @@ export default function PdaWorkOrderDetail() {
                           </Box>
                         )}
 
-                        <SectionLabel>
-                          {t("pda.workorder.detail.toLocation")}
-                          {tc?.toEntity ? ` (${tc.toEntity})` : ""}
-                        </SectionLabel>
-                        <EntityScan
-                          entity={tc?.toEntity}
-                          expected={step.toLocation}
-                          onConfirm={() => handleToConfirmed(step)}
-                          disabled={saving}
-                          t={t}
-                          label={t("pda.workorder.detail.toLocation")}
-                          staffNameMap={staffNameMap}
-                        />
+                        {toEntityModule.renderEntityUi && (
+                          <>
+                            <SectionLabel>
+                              {t("pda.workorder.detail.toLocation")}
+                              {tc?.toEntity ? ` (${tc.toEntity})` : ""}
+                            </SectionLabel>
+                            <EntityScan
+                              entity={tc?.toEntity}
+                              expected={step.toLocation}
+                              onConfirm={() => handleToCompleted(step)}
+                              disabled={saving}
+                              t={t}
+                              label={t("pda.workorder.detail.toLocation")}
+                              staffNameMap={staffNameMap}
+                            />
+                          </>
+                        )}
+                      </Box>
+                    )}
+
+                    {phase === PHASE.CONFIRM && (
+                      <Box>
+                        {!noConfirm && (
+                          <Button
+                            variant="contained"
+                            fullWidth
+                            disabled={saving}
+                            onClick={() => handleFinalConfirmed(step)}
+                            sx={{ py: 1.2 }}
+                          >
+                            {t("pda.workorder.detail.confirm")}
+                          </Button>
+                        )}
                       </Box>
                     )}
 

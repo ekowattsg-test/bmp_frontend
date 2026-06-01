@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
 import {
@@ -31,6 +31,7 @@ export default function LoginForm({
   const [otp, setOtp] = useState("");
   const [qrLoginUrl, setQrLoginUrl] = useState("");
   const [qrInputOpen, setQrInputOpen] = useState(false);
+  const qrRedirectingRef = useRef(false);
 
   const onChangeHandler = (event) => {
     const name = event.target.name;
@@ -70,6 +71,8 @@ export default function LoginForm({
   const hasOtp = otp.trim() !== "";
 
   const openScannedLoginUrl = (scannedValue) => {
+    if (qrRedirectingRef.current) return;
+
     const rawValue = String(scannedValue || "").trim();
     if (!rawValue) return;
 
@@ -91,18 +94,9 @@ export default function LoginForm({
       return;
     }
 
-    const popup = window.open(
-      parsedUrl.toString(),
-      "_blank",
-      "noopener,noreferrer",
-    );
-
-    if (!popup) {
-      window.location.assign(parsedUrl.toString());
-      return;
-    }
-
-    popup.focus();
+    // Always use same-tab navigation for QR login to avoid duplicate tab opens.
+    qrRedirectingRef.current = true;
+    window.location.assign(parsedUrl.toString());
   };
 
   const { openScanner: openQrUrlScanner, scannerOverlay: qrUrlScannerOverlay } =

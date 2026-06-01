@@ -28,6 +28,14 @@ import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import { HeaderBar } from "../common";
 
+const normalizeEntityType = (entityType) =>
+  String(entityType || "")
+    .trim()
+    .toLowerCase();
+
+const isNoActEntityType = (entityType) =>
+  normalizeEntityType(entityType) === "noact";
+
 /**
  * Smart input cell for a step's from/to location.
  * Renders different UI based on the workorderentity type code.
@@ -43,6 +51,14 @@ const EntityInput = ({
   staffList,
 }) => {
   const { t } = useTranslation();
+
+  if (isNoActEntityType(entityType)) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        -
+      </Typography>
+    );
+  }
 
   if (entityType === "worker") {
     const displayName =
@@ -295,14 +311,22 @@ const WorkOrderStepsForm = ({
               // Always sync worker entity fields to current workOrder.workBy
               let fromLoc = s.fromLocation;
               let toLoc = s.toLocation;
+              const fromNoAct = isNoActEntityType(tmpl?.fromEntity);
+              const toNoAct = isNoActEntityType(tmpl?.toEntity);
               if (tmpl?.fromEntity === "worker")
                 fromLoc = workOrder.workBy || "";
+              if (fromNoAct) fromLoc = null;
               if (tmpl?.toEntity === "worker") toLoc = workOrder.workBy || "";
+              if (toNoAct) toLoc = null;
+              const fromCleared =
+                fromNoAct && s.fromLocation != null && s.fromLocation !== "";
+              const toCleared =
+                toNoAct && s.toLocation != null && s.toLocation !== "";
               return {
                 ...s,
                 fromLocation: fromLoc,
                 toLocation: toLoc,
-                _dirty: false,
+                _dirty: fromCleared || toCleared,
                 _description: tmpl?.stepDescription || "",
                 _fromEntity: tmpl?.fromEntity || "",
                 _toEntity: tmpl?.toEntity || "",
@@ -335,9 +359,17 @@ const WorkOrderStepsForm = ({
           const tmpl =
             templates.find((t) => t.stepNumber === i + 1) || templates[i];
           const fromLoc =
-            tmpl?.fromEntity === "worker" ? workOrder.workBy || "" : "";
+            tmpl?.fromEntity === "worker"
+              ? workOrder.workBy || ""
+              : isNoActEntityType(tmpl?.fromEntity)
+                ? null
+                : "";
           const toLoc =
-            tmpl?.toEntity === "worker" ? workOrder.workBy || "" : "";
+            tmpl?.toEntity === "worker"
+              ? workOrder.workBy || ""
+              : isNoActEntityType(tmpl?.toEntity)
+                ? null
+                : "";
           const payload = {
             workOrderId: workOrder.workOrderId,
             stepNumber: i + 1,
@@ -352,8 +384,12 @@ const WorkOrderStepsForm = ({
       setSteps(
         created.map((s) => {
           const tmpl = templates.find((t) => t.stepNumber === s.stepNumber);
+          const fromNoAct = isNoActEntityType(tmpl?.fromEntity);
+          const toNoAct = isNoActEntityType(tmpl?.toEntity);
           return {
             ...s,
+            fromLocation: fromNoAct ? null : s.fromLocation,
+            toLocation: toNoAct ? null : s.toLocation,
             _dirty: false,
             _description: tmpl?.stepDescription || "",
             _fromEntity: tmpl?.fromEntity || "",
@@ -502,8 +538,15 @@ const WorkOrderStepsForm = ({
     // Validate all entity fields are filled
     const unfilled = steps.filter((s) => {
       const fromEmpty =
-        s._fromEntity && s._fromEntity !== "worker" && !s.fromLocation;
-      const toEmpty = s._toEntity && s._toEntity !== "worker" && !s.toLocation;
+        s._fromEntity &&
+        s._fromEntity !== "worker" &&
+        !isNoActEntityType(s._fromEntity) &&
+        !s.fromLocation;
+      const toEmpty =
+        s._toEntity &&
+        s._toEntity !== "worker" &&
+        !isNoActEntityType(s._toEntity) &&
+        !s.toLocation;
       return fromEmpty || toEmpty;
     });
     if (unfilled.length > 0) {
@@ -531,12 +574,16 @@ const WorkOrderStepsForm = ({
           request("PUT", `/api/worksteps/${s.workStepsId}`, {
             workOrderId: s.workOrderId,
             stepNumber: s.stepNumber,
-            fromLocation:
-              s._fromEntity === "worker"
+            fromLocation: isNoActEntityType(s._fromEntity)
+              ? null
+              : s._fromEntity === "worker"
                 ? workOrder.workBy || ""
                 : s.fromLocation,
-            toLocation:
-              s._toEntity === "worker" ? workOrder.workBy || "" : s.toLocation,
+            toLocation: isNoActEntityType(s._toEntity)
+              ? null
+              : s._toEntity === "worker"
+                ? workOrder.workBy || ""
+                : s.toLocation,
             stepStatus: s.stepStatus,
           }),
         ),

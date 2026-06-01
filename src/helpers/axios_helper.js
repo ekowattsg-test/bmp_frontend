@@ -19,6 +19,10 @@ export const getAuthToken = () => {
 const isPdaPath = () =>
   typeof window !== "undefined" && window.location.pathname.startsWith("/pda/");
 
+const isPdaRefreshEnabled = () =>
+  String(import.meta.env.VITE_PDA_USE_REFRESH || "false").toLowerCase() ===
+  "true";
+
 const redirectToLogin = () => {
   if (isPdaPath()) {
     window.dispatchEvent(new CustomEvent("pda:auth:expired"));
@@ -119,11 +123,13 @@ api.interceptors.response.use(
     // Fire and wait for UI acknowledgement before proceeding with recovery
     await tryShowBlockingError(backendMessage);
 
-    // PDA users have no refresh token — skip refresh cycle, notify layout directly
+    // PDA default behavior: no refresh cycle unless explicitly enabled.
+    // When enabled, PDA follows the same refresh flow as web users.
     if (
       error.response?.status === 401 &&
       isPdaPath() &&
-      !originalRequest.skipAuthRedirect
+      !originalRequest.skipAuthRedirect &&
+      !isPdaRefreshEnabled()
     ) {
       setAuthHeader(null);
       window.dispatchEvent(new CustomEvent("pda:auth:expired"));

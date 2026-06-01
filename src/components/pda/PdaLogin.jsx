@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Alert, Box, CircularProgress, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Typography,
+} from "@mui/material";
 import { request, setAuthHeader } from "../../helpers/axios_helper";
 
 export default function PdaLogin() {
@@ -9,6 +15,77 @@ export default function PdaLogin() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [error, setError] = useState("");
+  const [expiredLinkError, setExpiredLinkError] = useState(false);
+  const [dismissing, setDismissing] = useState(false);
+
+  const resolveLoginError = (err) => {
+    const status = err?.response?.status;
+    const backendMessage = String(err?.response?.data?.message || "").trim();
+    const axiosMessage = String(err?.message || "").trim();
+    const combined = `${backendMessage} ${axiosMessage}`.toLowerCase();
+
+    if (status === 401 || status === 403 || status === 410) {
+      return {
+        message: t(
+          "pda.login.expired",
+          "This PDA login link is expired or invalid. Please scan a new QR code.",
+        ),
+        isExpired: true,
+      };
+    }
+
+    if (
+      combined.includes("expired") ||
+      combined.includes("invalid") ||
+      combined.includes("unauthorized")
+    ) {
+      return {
+        message: t(
+          "pda.login.expired",
+          "This PDA login link is expired or invalid. Please scan a new QR code.",
+        ),
+        isExpired: true,
+      };
+    }
+
+    return {
+      message: backendMessage || axiosMessage || t("pda.login.failed"),
+      isExpired: false,
+    };
+  };
+
+  const clearAccessibleCookies = () => {
+    if (typeof document === "undefined") return;
+    const raw = document.cookie;
+    if (!raw) return;
+    raw.split(";").forEach((part) => {
+      const name = part.split("=")[0]?.trim();
+      if (!name) return;
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/pda`;
+    });
+  };
+
+  const handleDismissExpired = async () => {
+    setDismissing(true);
+    setAuthHeader(null);
+    localStorage.removeItem("pda_user_info");
+    localStorage.removeItem("user_info");
+    clearAccessibleCookies();
+
+    await Promise.allSettled([
+      request("POST", "/auth/logout", null, { skipAuthRedirect: true }),
+      request("POST", "/api/mobile-logins/logout", null, {
+        skipAuthRedirect: true,
+      }),
+    ]);
+
+    if (typeof window !== "undefined") {
+      window.location.href = window.location.origin;
+      return;
+    }
+    navigate("/", { replace: true });
+  };
 
   useEffect(() => {
     console.log("[PdaLogin] Component mounted");
@@ -40,8 +117,9 @@ export default function PdaLogin() {
       .catch((err) => {
         console.error("[PdaLogin] Login failed:", err);
         console.error("[PdaLogin] Response data:", err?.response?.data);
-        const msg =
-          err?.response?.data?.message || err?.message || t("pda.login.failed");
+        const { message, isExpired } = resolveLoginError(err);
+        setExpiredLinkError(isExpired);
+        const msg = message;
         console.error("[PdaLogin] Displaying error to user:", msg);
         setError(msg);
       });
@@ -62,6 +140,18 @@ export default function PdaLogin() {
         <Alert severity="error" sx={{ maxWidth: 480, width: "100%" }}>
           <Typography variant="body1">{error}</Typography>
         </Alert>
+        {expiredLinkError && (
+          <Button
+            variant="contained"
+            sx={{ mt: 2 }}
+            onClick={handleDismissExpired}
+            disabled={dismissing}
+          >
+            {dismissing
+              ? t("auth.signingIn", "Signing in...")
+              : t("pda.session.dismiss", "Dismiss")}
+          </Button>
+        )}
       </Box>
     );
   }

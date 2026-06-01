@@ -29,14 +29,18 @@ import {
   Warehouse,
   EngineeringOutlined as EngineeringIcon,
   ManageAccounts,
+  Tune,
   WhatsApp,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 
 const AppMenu = () => {
-  const { roles, menus, logout, currMenu, setOpenMenu, setCurrMenu } =
+  const { roles, menus, param, logout, currMenu, setOpenMenu, setCurrMenu } =
     useContext(AuthContext);
   const { t } = useTranslation();
+
+  const getParamValue = (key) => param?.[key];
+  const isParamEnabled = (key) => Number(getParamValue(key) ?? 0) === 1;
 
   const menuSections = useMemo(
     () => [
@@ -90,6 +94,11 @@ const AppMenu = () => {
             to: "/userlogin",
             label: t("menu.userLoginList", "Login Enquiry"),
             icon: <History />,
+          },
+          {
+            to: "/parameter",
+            label: t("menu.parameter", "Parameter"),
+            icon: <Tune />,
           },
         ],
       },
@@ -178,26 +187,34 @@ const AppMenu = () => {
         label: t("menu.inventory", "Inventory"),
         icon: <Store />,
         items: [
-          {
-            to: "/stocktakeon",
-            label: t("menu.stockTake", "Stock Take On"),
-            icon: <Store />,
-          },
-          {
-            to: "/stockin",
-            label: t("menu.stockIn", "Stock In"),
-            icon: <Store />,
-          },
-          {
-            to: "/stockout",
-            label: t("menu.stockOut", "Stock Out"),
-            icon: <Store />,
-          },
-          {
-            to: "/stocktransfer",
-            label: t("menu.stockTransfer", "Stock Transfer"),
-            icon: <CompareArrows />,
-          },
+          isParamEnabled("stockTakeOn")
+            ? {
+                to: "/stocktakeon",
+                label: t("menu.stockTake", "Stock Take On"),
+                icon: <Store />,
+              }
+            : null,
+          isParamEnabled("manualStockEntry")
+            ? {
+                to: "/stockin",
+                label: t("menu.stockIn", "Stock In"),
+                icon: <Store />,
+              }
+            : null,
+          isParamEnabled("manualStockEntry")
+            ? {
+                to: "/stockout",
+                label: t("menu.stockOut", "Stock Out"),
+                icon: <Store />,
+              }
+            : null,
+          isParamEnabled("manualStockEntry")
+            ? {
+                to: "/stocktransfer",
+                label: t("menu.stockTransfer", "Stock Transfer"),
+                icon: <CompareArrows />,
+              }
+            : null,
           {
             to: "/stockadjustment",
             label: t("menu.stockAdjustment", "Stock Adjustment"),
@@ -208,7 +225,12 @@ const AppMenu = () => {
             label: t("menu.stockEnquiry", "Stock Enquiry"),
             icon: <History />,
           },
-        ],
+          {
+            to: "/stockcard",
+            label: t("menu.stockCard", "Inventory Card"),
+            icon: <History />,
+          },
+        ].filter(Boolean),
       },
       {
         key: "Projects",
@@ -247,6 +269,10 @@ const AppMenu = () => {
   );
 
   const visibleSections = menuSections.filter((section) => {
+    if (section.items && section.items.length === 0) {
+      return false;
+    }
+
     if (section.role) {
       if (Array.isArray(section.role)) {
         return section.role.some((r) => hasRole(r, roles));

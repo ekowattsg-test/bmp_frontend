@@ -46,6 +46,7 @@ const StockCodeScanInput = ({
   label,
   placeholder,
   submitLabel,
+  showSubmitButton = true,
   allowProductSearch = false,
 }) => {
   const { t } = useTranslation();
@@ -236,13 +237,15 @@ const StockCodeScanInput = ({
             }
           }}
         />
-        <Button
-          variant="contained"
-          onClick={() => onSubmit(value)}
-          disabled={busy || !String(value || "").trim()}
-        >
-          {submitLabel || t("stockTake.scan", "Scan")}
-        </Button>
+        {showSubmitButton && (
+          <Button
+            variant="contained"
+            onClick={() => onSubmit(value)}
+            disabled={busy || !String(value || "").trim()}
+          >
+            {submitLabel || t("stockTake.scan", "Scan")}
+          </Button>
+        )}
       </Box>
 
       {scannerOpen && (

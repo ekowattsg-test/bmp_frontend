@@ -107,7 +107,13 @@
   "pda": {
     "login": {
       "missingKey": "Login key is missing. Please use a valid PDA login URL.",
+      "expired": "This PDA login link is expired or invalid. Please scan a new QR code.",
       "failed": "PDA login failed. Please contact your administrator."
+    },
+    "session": {
+      "expired": "Session Expired",
+      "expiredHint": "Please scan the QR code again to continue.",
+      "dismiss": "Dismiss"
     },
     "menu": {
       "title": "PDA Menu",
@@ -121,6 +127,7 @@
     "nav": {
       "orders": "Orders",
       "schedule": "Schedule",
+      "stockCard": "Inventory",
       "me": "Me"
     },
     "schedule": {
@@ -263,6 +270,7 @@
     "stockTransfer": "Stock Transfer",
     "stockAdjustment": "Stock Adjustment",
     "stockEnquiry": "Stock Enquiry",
+    "stockCard": "Inventory Card",
     "uomHierarchy": "Product Hierarchy",
     "productBundle": "Product Bundles",
     "languageSettings": "Language Settings",
@@ -286,7 +294,23 @@
     "vehicle": "Vehicles",
     "operationRole": "Operation Roles",
     "qrGenerator": "QR Generator",
-    "waSimulator": "WA Simulator"
+    "waSimulator": "WA Simulator",
+    "parameter": "Parameter"
+  },
+  "parameter": {
+    "title": "Parameter",
+    "subtitle": "Maintain parameter values",
+    "helpTitle": "Parameter Help",
+    "helpBody": "Edit Value in each row. Update button appears when the value changes.",
+    "loading": "Loading parameters...",
+    "noData": "No parameters found",
+    "noDataDescription": "No parameter records are available.",
+    "keyLabel": "Key",
+    "valueLabel": "Value",
+    "update": "Update",
+    "updateSuccess": "Updated {{key}} successfully.",
+    "updateFailed": "Failed to update parameter.",
+    "loadFailed": "Failed to load parameters."
   },
   "qrGenerator": {
     "title": "QR Code Generator",
@@ -1360,6 +1384,12 @@
       "movementCount": "Movements",
       "lastMovement": "Last Movement"
     }
+  },
+  "stockCard": {
+    "title": "Inventory Card",
+    "subtitle": "Enquire stock level by product, stock location, and movement",
+    "helpTitle": "Inventory Card - User Manual",
+    "helpBody": "OVERVIEW\nInventory Card is a read-only screen that displays current stock levels and the full movement history for all stock items. Data is loaded automatically when the page opens. Use the filters to narrow the results by stock code, product, location, reference, or movement type, and switch between Summary and Detail views to see the level of information you need."
   },
   "workOrder": {
     "title": "Work Orders",

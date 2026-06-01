@@ -41,6 +41,7 @@ import {
   ManageAccounts as ManageAccountsIcon,
   LocalShipping as LocalShippingIcon,
   QrCode2 as QrCode2Icon,
+  Tune as TuneIcon,
   WhatsApp as WhatsAppIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -56,9 +57,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
-  const { roles, menus } = useContext(AuthContext);
+  const { roles, menus, param } = useContext(AuthContext);
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [expandedItems, setExpandedItems] = React.useState({});
+
+  const getParamValue = (key) => param?.[key];
+  const isParamEnabled = (key) => Number(getParamValue(key) ?? 0) === 1;
 
   const navigationItems = useMemo(
     () =>
@@ -132,6 +136,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               label: t("menu.qrGenerator", "QR Generator"),
               icon: <QrCode2Icon fontSize="small" />,
               path: "/qr-generator",
+            },
+            {
+              key: "parameter",
+              label: t("menu.parameter", "Parameter"),
+              icon: <TuneIcon fontSize="small" />,
+              path: "/parameter",
             },
           ],
         },
@@ -248,30 +258,38 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
           label: t("menu.inventory", "Inventory"),
           icon: <StoreIcon />,
           children: [
-            {
-              key: "stockTakeOn",
-              label: t("menu.stockTake", "Stock Take On"),
-              icon: <AutoStoriesIcon fontSize="small" />,
-              path: "/stocktakeon",
-            },
-            {
-              key: "stockIn",
-              label: t("menu.stockIn", "Stock In"),
-              icon: <AutoStoriesIcon fontSize="small" />,
-              path: "/stockin",
-            },
-            {
-              key: "stockOut",
-              label: t("menu.stockOut", "Stock Out"),
-              icon: <AutoStoriesIcon fontSize="small" />,
-              path: "/stockout",
-            },
-            {
-              key: "stockTransfer",
-              label: t("menu.stockTransfer", "Stock Transfer"),
-              icon: <CompareArrowsIcon fontSize="small" />,
-              path: "/stocktransfer",
-            },
+            isParamEnabled("stockTakeOn")
+              ? {
+                  key: "stockTakeOn",
+                  label: t("menu.stockTake", "Stock Take On"),
+                  icon: <AutoStoriesIcon fontSize="small" />,
+                  path: "/stocktakeon",
+                }
+              : null,
+            isParamEnabled("manualStockEntry")
+              ? {
+                  key: "stockIn",
+                  label: t("menu.stockIn", "Stock In"),
+                  icon: <AutoStoriesIcon fontSize="small" />,
+                  path: "/stockin",
+                }
+              : null,
+            isParamEnabled("manualStockEntry")
+              ? {
+                  key: "stockOut",
+                  label: t("menu.stockOut", "Stock Out"),
+                  icon: <AutoStoriesIcon fontSize="small" />,
+                  path: "/stockout",
+                }
+              : null,
+            isParamEnabled("manualStockEntry")
+              ? {
+                  key: "stockTransfer",
+                  label: t("menu.stockTransfer", "Stock Transfer"),
+                  icon: <CompareArrowsIcon fontSize="small" />,
+                  path: "/stocktransfer",
+                }
+              : null,
             {
               key: "stockAdjustment",
               label: t("menu.stockAdjustment", "Stock Adjustment"),
@@ -284,7 +302,13 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               icon: <HistoryIcon fontSize="small" />,
               path: "/stockenquiry",
             },
-          ],
+            {
+              key: "stockCard",
+              label: t("menu.stockCard", "Inventory Card"),
+              icon: <HistoryIcon fontSize="small" />,
+              path: "/stockcard",
+            },
+          ].filter(Boolean),
         },
         {
           key: "Projects",
@@ -333,23 +357,32 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
             },
           ],
         },
-      ].filter((section) => {
-        if (section.role) {
-          if (Array.isArray(section.role)) {
-            return section.role.some((r) => hasRole(r, roles));
+      ]
+        .map((section) => ({
+          ...section,
+          children: section.children?.filter(Boolean),
+        }))
+        .filter((section) => {
+          if (section.children && section.children.length === 0) {
+            return false;
           }
-          return hasRole(section.role, roles);
-        }
 
-        if (!section.menu) return true;
+          if (section.role) {
+            if (Array.isArray(section.role)) {
+              return section.role.some((r) => hasRole(r, roles));
+            }
+            return hasRole(section.role, roles);
+          }
 
-        if (Array.isArray(section.menu)) {
-          return section.menu.some((menuKey) => hasMenu(menuKey, menus));
-        }
+          if (!section.menu) return true;
 
-        return hasMenu(section.menu, menus);
-      }),
-    [roles, menus, t],
+          if (Array.isArray(section.menu)) {
+            return section.menu.some((menuKey) => hasMenu(menuKey, menus));
+          }
+
+          return hasMenu(section.menu, menus);
+        }),
+    [roles, menus, param, t],
   );
 
   const handleItemClick = (item) => {

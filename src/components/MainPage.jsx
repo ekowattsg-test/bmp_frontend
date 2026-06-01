@@ -19,6 +19,7 @@ import StockIn from "./stock/StockIn";
 import StockOut from "./stock/StockOut";
 import StockTransfer from "./stock/StockTransfer";
 import StockEnquiry from "./stock/StockEnquiry";
+import StockCard from "./stock/StockCard";
 import StockAdjustment from "./stock/StockAdjustment";
 import UOMHierarchy from "./stock/UOMHierarchy";
 import LanguageSettings from "./baseInformation/LanguageSettings";
@@ -39,6 +40,7 @@ import WorkOrderModern from "./workorder/WorkOrderModern";
 import OperationRoleModern from "./baseInformation/OperationRoleModern";
 import QrGenerator from "./baseInformation/QrGenerator";
 import WASimulator from "./baseInformation/WASimulator";
+import ParameterModern from "./baseInformation/ParameterModern";
 
 function MainPage() {
   return (
@@ -67,6 +69,7 @@ function MainPage() {
         <Route path="/stocktransfer" element={<StockTransfer />} />
         <Route path="/stockadjustment" element={<StockAdjustment />} />
         <Route path="/stockenquiry" element={<StockEnquiry />} />
+        <Route path="/stockcard" element={<StockCard />} />
         <Route path="/uomhierarchy" element={<UOMHierarchy />} />
         <Route path="/productbundle" element={<ProductBundleModern />} />
         <Route path="/product" element={<ProductModern />} />
@@ -83,6 +86,7 @@ function MainPage() {
         <Route path="/operationrole" element={<OperationRoleModern />} />
         <Route path="/qr-generator" element={<QrGenerator />} />
         <Route path="/wa-simulator" element={<WASimulator />} />
+        <Route path="/parameter" element={<ParameterModern />} />
       </Routes>
     </AdminLayout>
   );

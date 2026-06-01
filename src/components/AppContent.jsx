@@ -1,6 +1,12 @@
 import React from "react";
 import { useContext, useState } from "react";
-import { useNavigate, useLocation, Routes, Route, Navigate } from "react-router-dom";
+import {
+  useNavigate,
+  useLocation,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { request, setAuthHeader } from "../helpers/axios_helper";
@@ -25,6 +31,7 @@ import PdaWorkOrderList from "./pda/workorder/PdaWorkOrderList.jsx";
 import PdaWorkOrderDetail from "./pda/workorder/PdaWorkOrderDetail.jsx";
 import PdaSchedule from "./pda/schedule/PdaSchedule.jsx";
 import PdaMe from "./pda/me/PdaMe.jsx";
+import StockCard from "./stock/StockCard.jsx";
 
 export default function AppContent() {
   const { isAuthenticated, setIsAuthenticated, setUserInfo, loading } =
@@ -231,12 +238,19 @@ export default function AppContent() {
       {location.pathname.startsWith("/pda") ? (
         <Routes>
           <Route path="/pda/login" element={<PdaLogin />} />
-          <Route path="/pda/menu" element={<Navigate to="/pda/orders" replace />} />
+          <Route
+            path="/pda/menu"
+            element={<Navigate to="/pda/orders" replace />}
+          />
           <Route path="/pda" element={<Navigate to="/pda/orders" replace />} />
           <Route element={<PdaLayout />}>
             <Route path="/pda/orders" element={<PdaWorkOrderList />} />
-            <Route path="/pda/orders/:workOrderId" element={<PdaWorkOrderDetail />} />
+            <Route
+              path="/pda/orders/:workOrderId"
+              element={<PdaWorkOrderDetail />}
+            />
             <Route path="/pda/schedule" element={<PdaSchedule />} />
+            <Route path="/pda/stockcard" element={<StockCard />} />
             <Route path="/pda/me" element={<PdaMe />} />
           </Route>
         </Routes>

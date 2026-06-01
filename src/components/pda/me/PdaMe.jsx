@@ -16,6 +16,7 @@ import {
 import PersonIcon from "@mui/icons-material/Person";
 import PhoneAndroidIcon from "@mui/icons-material/PhoneAndroid";
 import InventoryIcon from "@mui/icons-material/Inventory";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { QRCodeSVG } from "qrcode.react";
 import { getPdaUser } from "../common/pda_user_helper";
@@ -129,9 +130,28 @@ export default function PdaMe() {
               >
                 {t("pda.me.nameLabel")}
               </Typography>
-              <Typography variant="subtitle1" fontWeight={700} noWrap>
-                {displayName}
-              </Typography>
+
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                justifyContent="space-between"
+              >
+                <Typography variant="subtitle1" fontWeight={700} noWrap>
+                  {displayName}
+                </Typography>
+
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  size="small"
+                  startIcon={<LogoutIcon />}
+                  onClick={handleLogout}
+                  sx={{ flexShrink: 0 }}
+                >
+                  {t("pda.me.logout")}
+                </Button>
+              </Stack>
 
               {user.mobileNumber && (
                 <Box
@@ -161,18 +181,6 @@ export default function PdaMe() {
               )}
             </Box>
           </Stack>
-
-          <Divider sx={{ my: 1.5 }} />
-
-          <Button
-            variant="outlined"
-            color="primary"
-            startIcon={<LogoutIcon />}
-            onClick={handleLogout}
-            fullWidth
-          >
-            {t("pda.me.logout")}
-          </Button>
         </CardContent>
       </Card>
 
@@ -221,6 +229,30 @@ export default function PdaMe() {
           </CardContent>
         </Card>
       )}
+
+      {/* Schedule placeholder */}
+      <Card variant="outlined">
+        <CardContent sx={{ p: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+            <CalendarMonthIcon sx={{ color: "text.secondary" }} />
+            <Typography variant="subtitle2" fontWeight={600}>
+              {t("pda.nav.schedule")}
+            </Typography>
+          </Box>
+
+          <Divider sx={{ mb: 1.5 }} />
+
+          <Box sx={{ textAlign: "center", py: 2, color: "text.secondary" }}>
+            <CalendarMonthIcon sx={{ fontSize: 40, opacity: 0.35, mb: 1 }} />
+            <Typography variant="body2" sx={{ mb: 0.5 }}>
+              {t("pda.schedule.comingSoon")}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {t("pda.schedule.comingSoonDesc")}
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
 
       {/* Assigned assets */}
       <Card variant="outlined">

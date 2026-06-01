@@ -107,7 +107,13 @@
   "pda": {
     "login": {
       "missingKey": "登录密匙缺失，请使用有效的 PDA 登录链接。",
+      "expired": "此 PDA 登录链接已过期或无效，请重新扫描新的二维码。",
       "failed": "PDA 登录失败，请联系系统管理员。"
+    },
+    "session": {
+      "expired": "会话已过期",
+      "expiredHint": "请重新扫描二维码以继续。",
+      "dismiss": "关闭"
     },
     "menu": {
       "title": "PDA 菜单",
@@ -121,6 +127,7 @@
     "nav": {
       "orders": "工单",
       "schedule": "日程",
+      "stockCard": "库存",
       "me": "我的"
     },
     "schedule": {
@@ -263,6 +270,7 @@
     "stockTransfer": "库存调拨",
     "stockAdjustment": "库存调整",
     "stockEnquiry": "库存查询",
+    "stockCard": "库存卡",
     "uomHierarchy": "产品层级",
     "productBundle": "产品捆绑",
     "languageSettings": "语言设置",
@@ -286,7 +294,23 @@
     "vehicle": "车辆",
     "operationRole": "操作角色",
     "qrGenerator": "QR码生成器",
-    "waSimulator": "WA 模拟器"
+    "waSimulator": "WA 模拟器",
+    "parameter": "参数"
+  },
+  "parameter": {
+    "title": "参数",
+    "subtitle": "维护参数值",
+    "helpTitle": "参数帮助",
+    "helpBody": "可逐行编辑数值。值发生变更时会显示更新按钮。",
+    "loading": "正在加载参数...",
+    "noData": "未找到参数",
+    "noDataDescription": "当前没有可用的参数记录。",
+    "keyLabel": "Key",
+    "valueLabel": "Value",
+    "update": "更新",
+    "updateSuccess": "已成功更新 {{key}}。",
+    "updateFailed": "更新参数失败。",
+    "loadFailed": "加载参数失败。"
   },
   "qrGenerator": {
     "title": "QR码生成器",
@@ -1358,6 +1382,12 @@
       "movementCount": "变动次数",
       "lastMovement": "最近变动"
     }
+  },
+  "stockCard": {
+    "title": "库存卡",
+    "subtitle": "按产品、库存地点与变动查询库存水平",
+    "helpTitle": "库存卡 - 用户手册",
+    "helpBody": "概述\n库存卡是只读页面，显示所有库存项目的当前库存水平及完整变动历史。打开页面后数据自动加载。可通过筛选条件按库存编码、产品、地点、参考编号或变动类型缩小范围，并在汇总与明细视图之间切换以查看所需详情。"
   },
   "workOrder": {
     "title": "工单",
