@@ -176,7 +176,7 @@
         "workerAuto": "Your ID",
         "scanPlaceholder": "Scan or type code",
         "scanMismatch": "Value does not match expected",
-        "invalidQr": "Invalid QR code — please scan the printed label",
+        "invalidQr": "Invalid QR code. Please scan a valid QR code for this item.",
         "qrScanHint": "Scan the QR label — manual entry not accepted",
         "confirmScan": "Done Scanning",
         "continueWithPhotos": "Continue",
@@ -326,7 +326,7 @@
     "tokenLabel": "Token (embedded in QR)",
     "scanHint": "Scan this QR code with the PDA app during work order execution.",
     "helpTitle": "QR Code Generator Help",
-    "helpBody": "Generate encrypted QR codes to paste on locations, vehicles, or staff ID cards.\n\nThe QR code encodes a signed token derived from the entity ID. When scanned by the PDA during work order execution, the token is verified and the original ID is recovered for comparison.\n\nIMPORTANT: If the signing secret (VITE_QR_SIGNING_SECRET) changes, all previously printed QR codes will become invalid and must be reprinted.",
+    "helpBody": "Generate encrypted QR codes for locations, vehicles, or staff.\n\nThe QR code encodes a signed token derived from the entity ID and the current hour. When scanned by the PDA during work order execution, the token timestamp is validated first, then the original ID is recovered for comparison.\n\nIMPORTANT: These QR codes now expire based on the QR token validity window. If the signing secret (VITE_QR_SIGNING_SECRET) changes, or the token age exceeds VITE_QR_TOKEN_MAX_AGE_MINUTES (default 30), the QR code becomes invalid and must be regenerated.",
     "noEntityId": "Please enter an Entity ID"
   },
   "waSimulator": {
