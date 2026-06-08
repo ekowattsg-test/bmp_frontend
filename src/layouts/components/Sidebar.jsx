@@ -57,7 +57,7 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
-  const { roles, menus, param } = useContext(AuthContext);
+  const { roles, menus, param, userInfo } = useContext(AuthContext);
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [expandedItems, setExpandedItems] = React.useState({});
 
@@ -321,12 +321,14 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               label: t("menu.projectList", "Project List"),
               icon: <AssignmentIcon fontSize="small" />,
               path: "/project",
+              minLevel: 3,
             },
             {
               key: "projectPlanning",
               label: t("menu.projectPlanning", "Project Planning"),
               icon: <AccountTreeIcon fontSize="small" />,
               path: "/projectplanning",
+              minLevel: 1,
             },
           ],
         },
@@ -360,7 +362,13 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
       ]
         .map((section) => ({
           ...section,
-          children: section.children?.filter(Boolean),
+          children: section.children
+            ?.filter(Boolean)
+            .filter((child) =>
+              child.minLevel === undefined
+                ? true
+                : (userInfo?.level ?? 0) >= child.minLevel
+            ),
         }))
         .filter((section) => {
           if (section.children && section.children.length === 0) {

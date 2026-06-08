@@ -12,7 +12,19 @@ const StaffDelete = ({ staff, onCancel, onDeleted }) => {
     setLoading(true);
     setErrorMsg("");
     try {
-      await request("DELETE", `/api/staffs/${staff.staffName}`);
+      const deleteKey = String(staff?.staffId || "").trim();
+      if (!deleteKey) {
+        setErrorMsg(
+          t(
+            "staffList.idRequiredForDelete",
+            "Staff ID is required for delete.",
+          ),
+        );
+        setLoading(false);
+        return;
+      }
+
+      await request("DELETE", `/api/staffs/${deleteKey}`);
       if (onDeleted) onDeleted();
     } catch (err) {
       setErrorMsg(err?.response?.data?.message || t("basic.false"));

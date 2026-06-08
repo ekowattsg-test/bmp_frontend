@@ -10,8 +10,8 @@ import { DataGrid } from "@mui/x-data-grid";
 import {
   Search as SearchIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
   Assignment as AssignmentIcon,
+  Visibility as ViewIcon,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
@@ -26,7 +26,7 @@ import HelpDialog from "../common/HelpDialog";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 import ProjectAdd from "./ProjectAdd";
 import ProjectEdit from "./ProjectEdit";
-import ProjectDelete from "./ProjectDelete";
+import ProjectView from "./ProjectView";
 
 const ProjectModern = () => {
   const [action, setAction] = useState("view");
@@ -35,7 +35,6 @@ const ProjectModern = () => {
   const [customers, setCustomers] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [deleteMode, setDeleteMode] = useState(false);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -83,10 +82,16 @@ const ProjectModern = () => {
     setAction("edit");
   }, []);
 
-  const handleDelete = useCallback((project) => {
+  const handleDetail = useCallback((project) => {
     setSelectedProject(project);
-    setDeleteMode(true);
+    setAction("detail");
   }, []);
+
+  const handleViewCancel = (refreshNeeded) => {
+    setAction("view");
+    setSelectedProject(null);
+    if (refreshNeeded) setRefresh(true);
+  };
 
   const enrichedProjects = useMemo(() => {
     const s = search.toLowerCase();
@@ -139,30 +144,32 @@ const ProjectModern = () => {
         width: 150,
       },
       {
-        field: "mobileNumber",
-        headerName: t("project.mobileNumber"),
-        width: 130,
-      },
-      {
-        field: "streamCount",
-        headerName: t("project.streamCount"),
-        width: 90,
+        field: "status",
+        headerName: t("project.status"),
+        width: 120,
         headerAlign: "center",
         align: "center",
-      },
-      {
-        field: "active",
-        headerName: t("project.active"),
-        width: 90,
-        headerAlign: "center",
-        align: "center",
-        renderCell: (params) => (
-          <Chip
-            label={params.value ? t("basic.true") : t("basic.false")}
-            color={params.value ? "success" : "default"}
-            size="small"
-          />
-        ),
+        renderCell: (params) => {
+          const colorMap = {
+            PLAN: "info",
+            ACTIVE: "success",
+            COMPLETE: "primary",
+            CLOSE: "default",
+          };
+          const labelMap = {
+            PLAN: t("project.statusPlan"),
+            ACTIVE: t("project.statusActive"),
+            COMPLETE: t("project.statusComplete"),
+            CLOSE: t("project.statusClose"),
+          };
+          return (
+            <Chip
+              label={labelMap[params.value] || params.value}
+              color={colorMap[params.value] || "default"}
+              size="small"
+            />
+          );
+        },
       },
       {
         field: "actions",
@@ -184,45 +191,28 @@ const ProjectModern = () => {
           >
             <IconButton
               size="small"
+              color="info"
+              onClick={() => handleDetail(params.row)}
+              title={t("project.detail")}
+            >
+              <ViewIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
               color="primary"
               onClick={() => handleEdit(params.row)}
               title={t("basic.edit")}
             >
               <EditIcon fontSize="small" />
             </IconButton>
-            <IconButton
-              size="small"
-              color="error"
-              onClick={() => handleDelete(params.row)}
-              title={t("basic.delete")}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
           </Box>
         ),
       },
     ],
-    [t, handleEdit, handleDelete],
+    [t, handleEdit, handleDetail],
   );
 
   if (loading) return <LoadingState message={t("project.loading")} />;
-
-  if (deleteMode && selectedProject) {
-    return (
-      <ProjectDelete
-        project={selectedProject}
-        onCancel={() => {
-          setDeleteMode(false);
-          setSelectedProject(null);
-        }}
-        onDeleted={() => {
-          setDeleteMode(false);
-          setSelectedProject(null);
-          setRefresh(true);
-        }}
-      />
-    );
-  }
 
   if (action === "edit" && selectedProject) {
     return (
@@ -304,6 +294,7 @@ const ProjectModern = () => {
               key={item.projectCode || idx}
               columnDefs={blockColumnDefs}
               item={item}
+              onView={handleDetail}
               onEdit={handleEdit}
               onDelete={handleDelete}
               enableActions
@@ -388,6 +379,18 @@ const ProjectModern = () => {
             }}
           />
         </Box>
+      )}
+
+      {action === "detail" && selectedProject && (
+        <ProjectView
+          project={selectedProject}
+          customerName={
+            selectedProject.customerName ||
+            customerMap[selectedProject.customerId] ||
+            t("project.noCustomer")
+          }
+          onClose={() => handleViewCancel(false)}
+        />
       )}
     </Box>
   );

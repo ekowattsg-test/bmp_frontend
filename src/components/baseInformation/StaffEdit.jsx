@@ -211,7 +211,19 @@ const StaffEdit = ({ staff, onCancel }) => {
     setErrorMsg("");
     setSuccess(false);
     try {
-      await request("PUT", `/api/staffs/${form.staffName}`, {
+      const updateKey = String(form.staffId || staff.staffId || "").trim();
+      if (!updateKey) {
+        setErrorMsg(
+          t(
+            "staffList.idRequiredForUpdate",
+            "Staff ID is required for update.",
+          ),
+        );
+        setLoading(false);
+        return;
+      }
+
+      await request("PUT", `/api/staffs/${updateKey}`, {
         ...form,
         serviceStartDate: form.serviceStartDate || null,
         serviceEndDate: form.serviceEndDate || null,
