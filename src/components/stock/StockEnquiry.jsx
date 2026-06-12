@@ -1055,7 +1055,9 @@ const StockEnquiry = () => {
             size="small"
             fullWidth
           >
-            <MenuItem value={ALL_MOVEMENTS_VALUE}>All</MenuItem>
+            <MenuItem value={ALL_MOVEMENTS_VALUE}>
+              {t("basic.all", "All")}
+            </MenuItem>
             {movementOptions.map((option) => (
               <MenuItem key={option.movementType} value={option.movementType}>
                 {option.movementDescription || option.movementType}

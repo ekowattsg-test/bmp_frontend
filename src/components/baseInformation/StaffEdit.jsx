@@ -211,7 +211,7 @@ const StaffEdit = ({ staff, onCancel }) => {
     setErrorMsg("");
     setSuccess(false);
     try {
-      const updateKey = String(form.staffId || staff.staffId || "").trim();
+      const updateKey = String(staff.staffId || "").trim();
       if (!updateKey) {
         setErrorMsg(
           t(
@@ -324,6 +324,7 @@ const StaffEdit = ({ staff, onCancel }) => {
         onChange={handleChange}
         fullWidth
         margin="normal"
+        InputProps={{ readOnly: true }}
       />
       <TextField
         label={t("staffList.mobileNumber", "Mobile Number")}

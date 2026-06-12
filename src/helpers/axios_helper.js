@@ -58,6 +58,67 @@ export const isTokenExpired = (token) => {
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
+const MESSAGE_KEYS = [
+  "cause",
+  "error",
+  "errors",
+  "detail",
+  "details",
+  "exception",
+  "response",
+  "data",
+  "message",
+  "msg",
+  "reason",
+];
+
+const extractDeepestMessage = (value, visited = new Set()) => {
+  if (value === null || value === undefined) return "";
+
+  if (typeof value === "string") return value.trim();
+
+  if (Array.isArray(value)) {
+    for (let i = value.length - 1; i >= 0; i -= 1) {
+      const nested = extractDeepestMessage(value[i], visited);
+      if (nested) return nested;
+    }
+    return "";
+  }
+
+  if (typeof value !== "object") return "";
+  if (visited.has(value)) return "";
+  visited.add(value);
+
+  for (const key of MESSAGE_KEYS) {
+    if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+    const nested = extractDeepestMessage(value[key], visited);
+    if (nested) return nested;
+  }
+
+  for (const nestedValue of Object.values(value)) {
+    const nested = extractDeepestMessage(nestedValue, visited);
+    if (nested) return nested;
+  }
+
+  return "";
+};
+
+const normalizeAxiosErrorMessage = (error) => {
+  const fromPayload = extractDeepestMessage(error?.response?.data);
+  const fromError = extractDeepestMessage(error);
+  const message = fromPayload || fromError || "Server error";
+
+  if (error && typeof error === "object") {
+    error.userMessage = message;
+
+    if (error.response?.data && typeof error.response.data === "object") {
+      error.response.data.message = message;
+    }
+  }
+
+  return message;
+};
+
 // Create an axios instance we control
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -117,9 +178,8 @@ api.interceptors.response.use(
       }
     };
 
-    // Try to extract meaningful message for the user
-    const backendMessage =
-      error?.response?.data?.message || error?.message || "Server error";
+    // Use the deepest backend message so users see the actual root cause.
+    const backendMessage = normalizeAxiosErrorMessage(error);
     // Fire and wait for UI acknowledgement before proceeding with recovery
     await tryShowBlockingError(backendMessage);
 

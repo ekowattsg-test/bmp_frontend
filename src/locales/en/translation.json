@@ -20,7 +20,8 @@
     "roles": "Roles",
     "userRoles": "User Roles",
     "customers": "Customers",
-    "vendors": "Vendors"
+    "vendors": "Vendors",
+    "openDrawer": "Open drawer"
   },
   "topbar": {
     "notifications": "Notifications",
@@ -31,6 +32,17 @@
     "about": "About",
     "eula": "End User License Agreement",
     "privacy": "Privacy Policy"
+  },
+  "legacy": {
+    "rightbar": "Rightbar",
+    "homepage": "Homepage",
+    "borrowBooks": "Borrow Books",
+    "returnBooks": "Return Books",
+    "renewBooks": "Renew Books",
+    "payLateFees": "Pay Late Fees",
+    "termsAndConditions": "Terms and Conditions",
+    "booksInformation": "Books Information",
+    "feesPayment": "Fees Payment"
   },
   "notifications": {
     "sample1": "New user registered",
@@ -181,7 +193,8 @@
         "confirmScan": "Done Scanning",
         "continueWithPhotos": "Continue",
         "summary": "Summary",
-        "allDone": "Work order completed"
+        "allDone": "Work order completed",
+        "workerScanHint": "Scan worker badge to continue"
       },
       "scan": {
         "noItems": "No items to scan",
@@ -219,7 +232,9 @@
   },
   "content": {
     "backendResponse": "Backend response",
-    "content": "Content:"
+    "content": "Content:",
+    "languages": "Languages",
+    "roles": "Roles"
   },
   "error": {
     "serverError": "Server error",
@@ -242,9 +257,29 @@
     "cancel": "Cancel",
     "ok": "OK",
     "back": "Back",
-    "none": "\u2014 None \u2014",
+    "none": "— None —",
     "noSearchResults": "No results found",
-    "failed": "Action Failed"
+    "failed": "Action Failed",
+    "all": "All",
+    "new": "New",
+    "clear": "Clear",
+    "close": "Close",
+    "comingSoon": "Coming soon",
+    "confirm": "Confirm",
+    "deleting": "Deleting...",
+    "edit": "Edit",
+    "hide": "Hide",
+    "loading": "Loading...",
+    "processing": "Processing...",
+    "requiredFields": "All fields are required.",
+    "reset": "Reset",
+    "show": "Show",
+    "underConstruction": "Under construction",
+    "view": "View",
+    "error": "Error",
+    "success": "Success",
+    "errorOccurred": "An error occurred",
+    "operationCompleted": "Operation completed successfully"
   },
   "menu": {
     "dashboard": "Dashboard",
@@ -295,7 +330,8 @@
     "operationRole": "Operation Roles",
     "qrGenerator": "QR Generator",
     "waSimulator": "WA Simulator",
-    "parameter": "Parameter"
+    "parameter": "Parameter",
+    "delete": "Delete"
   },
   "parameter": {
     "title": "Parameter",
@@ -378,7 +414,7 @@
     "title": "Vehicles",
     "subtitle": "Manage vehicles",
     "helpTitle": "Vehicles — User Manual",
-    "helpBody": "OVERVIEW\nThe Vehicles page lets you add, edit, and delete vehicle records used across work orders and stock operations.\n\nFIELDS\n\u2022 Vehicle No. \u2014 unique identifier for the vehicle. Required. Cannot be changed after creation.\n\u2022 Driver (Mobile) \u2014 mobile number of the default driver assigned to this vehicle.\n\u2022 Active \u2014 indicates whether the vehicle is currently in service.\n\nHOW TO ADD\n1. Click Add Vehicle.\n2. Enter a unique Vehicle No.\n3. Optionally enter the driver\u2019s mobile number.\n4. Set Active status.\n5. Click Save.\n\nHOW TO EDIT\n1. Click the edit icon on a row.\n2. Update Driver or Active fields as needed.\n3. Click Save.\n\nHOW TO DELETE\n1. Click the delete icon on a row.\n2. Confirm the vehicle number shown in the prompt.\n3. Click Delete to permanently remove the record.",
+    "helpBody": "OVERVIEW\nThe Vehicles page lets you add, edit, and delete vehicle records used across work orders and stock operations.\n\nFIELDS\n• Vehicle No. — unique identifier for the vehicle. Required. Cannot be changed after creation.\n• Driver (Mobile) — mobile number of the default driver assigned to this vehicle.\n• Active — indicates whether the vehicle is currently in service.\n\nHOW TO ADD\n1. Click Add Vehicle.\n2. Enter a unique Vehicle No.\n3. Optionally enter the driver’s mobile number.\n4. Set Active status.\n5. Click Save.\n\nHOW TO EDIT\n1. Click the edit icon on a row.\n2. Update Driver or Active fields as needed.\n3. Click Save.\n\nHOW TO DELETE\n1. Click the delete icon on a row.\n2. Confirm the vehicle number shown in the prompt.\n3. Click Delete to permanently remove the record.",
     "addTitle": "Add Vehicle",
     "editTitle": "Edit Vehicle",
     "deleteTitle": "Delete Vehicle",
@@ -411,7 +447,7 @@
     "title": "Product Excel Upload",
     "subtitle": "Upload a product Excel file for backend processing.",
     "helpTitle": "Product Excel Upload — User Manual",
-    "helpBody": "OVERVIEW\nProduct Excel Upload lets you bulk-import or update product data by uploading a formatted Excel spreadsheet. The file is transmitted to the processing system together with your company ID and applied automatically.\n\n\u26a0 WARNING — WRONG FORMAT CAN CAUSE DATA PROBLEMS\nUploading an incorrectly formatted file may create corrupt records, overwrite valid data, or trigger processing errors that are difficult to reverse. Always verify your file against the required template before uploading.\n\nFILE REQUIREMENTS\n\u2022 Accepted formats: .xls or .xlsx only.\n\u2022 The spreadsheet must follow the exact column layout defined in the official product upload template.\n\u2022 Column headers must match exactly — do not rename, reorder, or remove columns.\n\u2022 Do not include blank rows in the middle of the data.\n\u2022 Ensure all required fields are populated for every row.\n\nHOW TO UPLOAD\n1. Prepare your Excel file using the official product upload template.\n2. Double-check all data and column headers before proceeding.\n3. Click Select File and choose your .xls or .xlsx file.\n4. The selected filename is shown next to the button — confirm it is the correct file.\n5. Click Upload. Do not close the page while the upload is in progress.\n6. A success message confirms the file was received and processed.\n7. If an error message appears, check the file format and try again.\n\nAFTER UPLOADING\n\u2022 Verify the imported product records in the Product list to confirm data is correct.\n\u2022 If incorrect data was imported, contact your system administrator immediately.",
+    "helpBody": "OVERVIEW\nProduct Excel Upload lets you bulk-import or update product data by uploading a formatted Excel spreadsheet. The file is transmitted to the processing system together with your company ID and applied automatically.\n\n⚠ WARNING — WRONG FORMAT CAN CAUSE DATA PROBLEMS\nUploading an incorrectly formatted file may create corrupt records, overwrite valid data, or trigger processing errors that are difficult to reverse. Always verify your file against the required template before uploading.\n\nFILE REQUIREMENTS\n• Accepted formats: .xls or .xlsx only.\n• The spreadsheet must follow the exact column layout defined in the official product upload template.\n• Column headers must match exactly — do not rename, reorder, or remove columns.\n• Do not include blank rows in the middle of the data.\n• Ensure all required fields are populated for every row.\n\nHOW TO UPLOAD\n1. Prepare your Excel file using the official product upload template.\n2. Double-check all data and column headers before proceeding.\n3. Click Select File and choose your .xls or .xlsx file.\n4. The selected filename is shown next to the button — confirm it is the correct file.\n5. Click Upload. Do not close the page while the upload is in progress.\n6. A success message confirms the file was received and processed.\n7. If an error message appears, check the file format and try again.\n\nAFTER UPLOADING\n• Verify the imported product records in the Product list to confirm data is correct.\n• If incorrect data was imported, contact your system administrator immediately.",
     "fileHint": "Accepted file format: .csv",
     "selectFile": "Select File",
     "upload": "Upload",
@@ -507,7 +543,8 @@
     "columnTimeLogin": "Login Time",
     "errorLoading": "Failed to load user login records.",
     "emptyTitle": "No login records found",
-    "emptyDescription": "Try adjusting filters or check data availability."
+    "emptyDescription": "Try adjusting filters or check data availability.",
+    "columnName": "Name"
   },
   "uomHierarchy": {
     "title": "Product Hierarchy",
@@ -538,13 +575,14 @@
     "sameProductError": "Parent and child cannot be the same product.",
     "quantityRequired": "Please enter a quantity greater than zero.",
     "saveFailed": "Failed to save hierarchy definition.",
-    "deleteConfirm": "Are you sure you want to delete this hierarchy definition?"
+    "deleteConfirm": "Are you sure you want to delete this hierarchy definition?",
+    "productPlaceholder": "Select product"
   },
   "productBundle": {
     "title": "Product Bundles",
     "subtitle": "Group products that serve the same purpose into bundles",
     "helpTitle": "Product Bundle — User Manual",
-    "helpBody": "OVERVIEW\nProduct Bundle lets you group products that serve the same purpose so they can be treated as a set. For example, a spare parts kit or a set of tools that are always issued together. Each bundle has a unique code, a name, and at least two member products.\n\nRULES\n\u2022 Bundle Code and Bundle Name are both mandatory.\n\u2022 A bundle must have at least 2 member products.\n\u2022 Each product can only belong to one bundle at a time. Products already in another bundle are excluded from the selection list.\n\u2022 Products that share a parent/child relationship in the Product Hierarchy cannot be placed in the same bundle (e.g. if \"Box\" is the parent of \"Unit\", they cannot both be bundle members).\n\nHOW TO ADD A BUNDLE\n1. Click Add Bundle.\n2. Enter a Bundle Code (unique identifier).\n3. Enter a Bundle Name (descriptive label).\n4. In the Bundle Members field, type to search and select at least 2 products. Products already bundled or linked via hierarchy to a selected member are automatically excluded.\n5. Click Save.\n\nHOW TO EDIT A BUNDLE\n1. Click the pencil (Edit) icon on the bundle row.\n2. Update the code, name, or member products as needed.\n3. When editing members, the current bundle's own members remain selectable; other already-bundled products remain excluded.\n4. Click Save.\n\nHOW TO DELETE A BUNDLE\n1. Click the delete icon on the bundle row.\n2. A confirmation dialog shows the bundle code, name, and current members.\n3. Click Delete to permanently remove the bundle definition. Member products are released and can be added to new bundles.",
+    "helpBody": "OVERVIEW\nProduct Bundle lets you group products that serve the same purpose so they can be treated as a set. For example, a spare parts kit or a set of tools that are always issued together. Each bundle has a unique code, a name, and at least two member products.\n\nRULES\n• Bundle Code and Bundle Name are both mandatory.\n• A bundle must have at least 2 member products.\n• Each product can only belong to one bundle at a time. Products already in another bundle are excluded from the selection list.\n• Products that share a parent/child relationship in the Product Hierarchy cannot be placed in the same bundle (e.g. if \"Box\" is the parent of \"Unit\", they cannot both be bundle members).\n\nHOW TO ADD A BUNDLE\n1. Click Add Bundle.\n2. Enter a Bundle Code (unique identifier).\n3. Enter a Bundle Name (descriptive label).\n4. In the Bundle Members field, type to search and select at least 2 products. Products already bundled or linked via hierarchy to a selected member are automatically excluded.\n5. Click Save.\n\nHOW TO EDIT A BUNDLE\n1. Click the pencil (Edit) icon on the bundle row.\n2. Update the code, name, or member products as needed.\n3. When editing members, the current bundle's own members remain selectable; other already-bundled products remain excluded.\n4. Click Save.\n\nHOW TO DELETE A BUNDLE\n1. Click the delete icon on the bundle row.\n2. A confirmation dialog shows the bundle code, name, and current members.\n3. Click Delete to permanently remove the bundle definition. Member products are released and can be added to new bundles.",
     "add": "Add Bundle",
     "edit": "Edit Bundle",
     "delete": "Delete Bundle",
@@ -603,7 +641,12 @@
     "deleteTitle": "Delete Product",
     "confirmDelete": "Are you sure you want to delete this product?",
     "searchPlaceholder": "Search products...",
-    "photoRequired": "At least 1 photo is required"
+    "photoRequired": "At least 1 photo is required",
+    "imageRequired": "Please attach at least one photo",
+    "loading": "Loading products...",
+    "noProductsDescription": "No products are available.",
+    "noSearchResults": "No products match your search.",
+    "productId": "Product ID"
   },
   "list": {
     "product": "Product",
@@ -614,7 +657,9 @@
     "productClass": "Class"
   },
   "messages": {
-    "noProducts": "No products found."
+    "noProducts": "No products found.",
+    "noCompanies": "No companies found.",
+    "noUsers": "No users found."
   },
   "companyList": {
     "title": "Company List",
@@ -627,7 +672,13 @@
     "companyId": "Company ID",
     "companyName": "Company Name",
     "showCompany": "Show Company",
-    "active": "Active"
+    "active": "Active",
+    "confirmDelete": "Are you sure you want to delete this company?",
+    "loading": "Loading companies...",
+    "noCompanies": "No companies found",
+    "noCompaniesDescription": "No company records are available.",
+    "noSearchResults": "No companies match your search.",
+    "searchPlaceholder": "Search companies..."
   },
   "roleList": {
     "title": "Role List",
@@ -641,7 +692,13 @@
     "menu": "Menu",
     "menuPlaceholder": "Menu (Optional)",
     "description": "Role Description",
-    "level": "Level"
+    "level": "Level",
+    "confirmDelete": "Are you sure you want to delete this role?",
+    "loading": "Loading roles...",
+    "noRoles": "No roles found",
+    "noRolesDescription": "No role records are available.",
+    "noSearchResults": "No roles match your search.",
+    "searchPlaceholder": "Search roles..."
   },
   "userList": {
     "title": "User List",
@@ -663,7 +720,10 @@
     "lastPasswordChanged": "PW Last Changed",
     "companyId": "Company ID",
     "searchPlaceholder": "Search...",
-    "noUsers": "No users found."
+    "noUsers": "No users found.",
+    "loading": "Loading users...",
+    "noSearchResults": "No users match your search.",
+    "noUsersDescription": "No users are available."
   },
   "userRole": {
     "title": "UserRole List",
@@ -678,7 +738,11 @@
     "user_id": "User",
     "role_id": "Role",
     "searchPlaceholder": "Search...",
-    "noUserRoles": "No user roles found."
+    "noUserRoles": "No user roles found.",
+    "loading": "Loading user-role mappings...",
+    "noMappings": "No user-role mappings found",
+    "noSearchResults": "No mappings match your search.",
+    "noUserRolesDescription": "No user-role mappings are available."
   },
   "forcedPassword": {
     "title": "Forced Password",
@@ -734,7 +798,10 @@
     "latitude": "Latitude",
     "longitude": "Longitude",
     "searchPlaceholder": "Search...",
-    "noCustomers": "No customers found."
+    "noCustomers": "No customers found.",
+    "loading": "Loading customers...",
+    "noCustomersDescription": "No customers have been added yet.",
+    "noSearchResults": "No customers match your search."
   },
   "vendorList": {
     "title": "Vendor List",
@@ -753,7 +820,10 @@
     "latitude": "Latitude",
     "longitude": "Longitude",
     "searchPlaceholder": "Search...",
-    "noVendors": "No vendors found."
+    "noVendors": "No vendors found.",
+    "loading": "Loading vendors...",
+    "noSearchResults": "No vendors match your search.",
+    "noVendorsDescription": "No vendors have been added yet."
   },
   "purchaseOrderList": {
     "title": "Purchase Orders",
@@ -778,7 +848,10 @@
     "noItems": "No items found",
     "lineNo": "#",
     "productCode": "Product Code",
-    "itemType": "Item Type",
+    "itemType": {
+      "assets": "Assets",
+      "inventory": "Inventory"
+    },
     "internalProductCode": "Internal Product Code",
     "internalOrderId": "Internal Order ID",
     "quantity": "Quantity",
@@ -802,7 +875,15 @@
       "addFailed": "Failed to add purchase order",
       "updateFailed": "Failed to update purchase order",
       "deleteFailed": "Failed to delete purchase order"
-    }
+    },
+    "action": {
+      "failed": "Action failed",
+      "loadFailed": "Failed to load actions",
+      "noActions": "No actions available",
+      "title": "Actions"
+    },
+    "product": "Product",
+    "selectProduct": "Select product"
   },
   "deliveryOrderList": {
     "title": "Delivery Orders",
@@ -905,7 +986,9 @@
     "noStaff": "No staff found",
     "noSearchResults": "Try adjusting your search terms",
     "noStaffDescription": "Get started by adding your first staff member",
-    "loading": "Loading staff..."
+    "loading": "Loading staff...",
+    "idRequiredForDelete": "Staff ID is required for delete.",
+    "idRequiredForUpdate": "Staff ID is required for update."
   },
   "staffProfile": {
     "title": "Staff Profile",
@@ -957,7 +1040,7 @@
     "skillSets": "Skill Sets",
     "overallMerit": "Overall Merit",
     "overallDemerit": "Overall Demerit",
-    "actions": "Staff Profile Actions",
+    "actions": "Actions",
     "staffSkillProfile": "Staff Skill Profile",
     "staffMeritProfile": "Staff Merit Profile",
     "staffSkillAnalysis": "Staff Skill Analysis",
@@ -1000,13 +1083,16 @@
     "errorSavingSkill": "Error saving skill profile. Please try again.",
     "errorCreatingSkill": "Error creating new skill. Please try again.",
     "errorLoadingSkills": "Error loading staff skills. Please try again.",
-    "actions": "Actions",
     "edit": "Edit",
     "delete": "Delete",
     "confirmDelete": "Confirm Delete",
     "deleteSkillMessage": "Are you sure you want to delete the skill '{{skillName}}'? This action cannot be undone.",
     "errorUpdatingSkill": "Error updating skill profile. Please try again.",
-    "errorDeletingSkill": "Error deleting skill profile. Please try again."
+    "errorDeletingSkill": "Error deleting skill profile. Please try again.",
+    "confirmDeleteSkill": "Are you sure you want to delete this skill?",
+    "searchStaff": "Search staff...",
+    "staffSkillProfileSubtitle": "Manage staff skill profiles",
+    "issuedByPlaceholder": "e.g., Company Training Center"
   },
   "common": {
     "back": "Back",
@@ -1025,7 +1111,12 @@
     "close": "Close",
     "backToTop": "Back to top",
     "loadMore": "Load More ({{count}})",
-    "showingCount": "Showing {{shown}} of {{total}}"
+    "showingCount": "Showing {{shown}} of {{total}}",
+    "create": "Create",
+    "saving": "Saving...",
+    "skills": "Skills",
+    "confirmDelete": "Confirm Delete",
+    "confirmDeleteMessage": "Are you sure you want to delete this item? This action cannot be undone."
   },
   "eula": {
     "scrollToEnd": "Scroll to end to enable"
@@ -1118,7 +1209,8 @@
     "movementType": "Movement Type",
     "movementDescription": "Description",
     "stockModifier": "Stock Modifier",
-    "holdModifier": "Hold Modifier"
+    "holdModifier": "Hold Modifier",
+    "loading": "Loading stock movement codes..."
   },
   "stockTake": {
     "title": "Stock Take On",
@@ -1146,7 +1238,10 @@
     "searchPlaceholder": "Search products...",
     "noProducts": "No products found",
     "createProduct": "Create product",
-    "lastRecorded": "Last recorded stock"
+    "lastRecorded": "Last recorded stock",
+    "cameraFailed": "Failed to open camera",
+    "cameraNotSupported": "Camera not supported",
+    "openScannerHtml5": "Open scanner"
   },
   "stockAdjustment": {
     "title": "Stock Adjustment",
@@ -1208,9 +1303,9 @@
     "noMatchButton": "No Product Matches",
     "createProductTitle": "Create New Product",
     "saveProductAndContinue": "Save Product And Continue",
-    "fetchingImage": "Fetching product image\u2026",
+    "fetchingImage": "Fetching product image…",
     "matchLinked": "Product has been linked to the scanned stock code.",
-    "matchLinkedNoStock": "Product linked. No existing stock movements found \u2014 scan again to record the first take-on.",
+    "matchLinkedNoStock": "Product linked. No existing stock movements found — scan again to record the first take-on.",
     "matchError": "Failed to load match candidates.",
     "suggestError": "Failed to get suggested product name.",
     "createFailed": "Failed to create product.",
@@ -1233,7 +1328,8 @@
       "location": "Location",
       "current": "Current",
       "available": "Available"
-    }
+    },
+    "getAiImage": "Get AI image"
   },
   "stockTransfer": {
     "title": "Stock Transfer",
@@ -1304,9 +1400,9 @@
     "noMatchButton": "No Product Matches",
     "createProductTitle": "Create New Product",
     "saveProductAndContinue": "Save Product And Continue",
-    "fetchingImage": "Fetching product image\u2026",
+    "fetchingImage": "Fetching product image…",
     "matchLinked": "Product has been linked to the scanned stock code.",
-    "matchLinkedNoStock": "Product linked. No existing stock movements found \u2014 scan again to record the first stock-in.",
+    "matchLinkedNoStock": "Product linked. No existing stock movements found — scan again to record the first stock-in.",
     "matchError": "Failed to load match candidates.",
     "suggestError": "Failed to get suggested product name.",
     "createFailed": "Failed to create product.",
@@ -1327,7 +1423,9 @@
       "location": "Location",
       "current": "Current",
       "available": "Available"
-    }
+    },
+    "aiProductSearch": "AI product search",
+    "getAiImage": "Get AI image"
   },
   "stockOut": {
     "title": "Stock Out",
@@ -1361,13 +1459,14 @@
     "title": "Stock Enquiry",
     "subtitle": "Enquire stock level by product, stock location, and movement",
     "helpTitle": "Stock Enquiry — User Manual",
-    "helpBody": "OVERVIEW\nStock Enquiry is a read-only screen that displays current stock levels and the full movement history for all stock items. Data is loaded automatically when the page opens. Use the filters to narrow the results by stock code, product, location, reference, or movement type, and switch between Summary and Detail views to see the level of information you need.\n\nPAGE LAYOUT\n\nFilters panel\nFive filter fields appear at the top of the screen:\n\u2022 Stock Code — type part or all of a stock code to show only matching records.\n\u2022 Product — type part of a product name to filter by product.\n\u2022 Stock Location — type part of a location name to show only that location.\n\u2022 Reference — type part of a reference value to find specific movements.\n\u2022 Movement — select a movement type from the dropdown (e.g. Stock In, Stock Out, Take-On, Transfer). Select All to clear this filter.\n\nAll filters work instantly as you type — no need to click Enquire after changing a filter.\n\nView Mode toggle\nUse the Summary / Detail toggle to switch how the results are displayed.\n\nRefresh button\nClick the refresh icon to reload all stock data from the server.\n\nSUMMARY VIEW\nSummary view shows one row per stock code grouped by product. Each row contains:\n\u2022 Stock Code — the unique identifier for the stock item.\n\u2022 Product — the product name linked to the stock code.\n\u2022 Location — the storage location for this stock line.\n\u2022 Unit — unit of measure.\n\u2022 Movements — total number of recorded movements for this stock line.\n\u2022 Last Movement — date of the most recent movement.\n\u2022 Baseline — the reference quantity from which movements are calculated.\n\u2022 Current — the current stock balance (Baseline plus net stock movements).\n\u2022 Available — the quantity available for use (Current plus held/reserved movements).\n\nDETAIL VIEW\nDetail view uses a hierarchical layout to show every individual movement:\n\n1. Product header row (shown with a bold or highlighted background)\n   Shows the product name and the total Current and Available quantities across all stock lines for that product.\n\n2. Stock line total row (indented under the product)\n   Shows the stock code and the cumulative totals for that stock line: net quantity moved, held quantity, Current, and Available.\n\n3. Movement rows (indented under the stock line total)\n   One row per individual movement, ordered from newest to oldest. Columns:\n   \u2022 Date — when the movement was recorded.\n   \u2022 Reference — the reference entered at the time of the transaction.\n   \u2022 Location — storage location for this movement.\n   \u2022 Movement — the movement type description (e.g. Stock In, Stock Out, Take-On, Transfer Out, Transfer In, In Adjustment, Out Adjustment).\n   \u2022 Moved — the quantity that changed stock balance in this movement.\n   \u2022 Held — the quantity that affected the hold/reserved balance.\n\nFILTERED TOTALS NOTE\nWhen one or more filters are active, all totals shown (Current, Available) reflect only the filtered rows, not the full stock position. Clear all filters to see the true overall stock balance.\n\nCOMMON TASKS\n\nCheck current stock for a product\nType the product name in the Product filter. Switch to Summary view to see each stock line with its current and available quantity.\n\nView all movements for a stock code\nType the stock code in the Stock Code filter and switch to Detail view. All movements are listed in reverse chronological order under the stock line total row.\n\nFind movements by reference number\nType all or part of the reference (e.g. a purchase order number or audit reference) in the Reference filter. Detail view will show the matching movement rows.\n\nFilter by movement type\nOpen the Movement dropdown and select the type you need (e.g. Stock In to see all receipts, Stock Out to see all issues).\n\nReset all filters\nClear each filter field manually, or reload the page to return to the full unfiltered view.\n\nQuick paste: double-click a product, stock code, location, or reference in the table or list to paste it into the matching filter.",
+    "helpBody": "OVERVIEW\nStock Enquiry is a read-only screen that displays current stock levels and the full movement history for all stock items. Data is loaded automatically when the page opens. Use the filters to narrow the results by stock code, product, location, reference, or movement type, and switch between Summary and Detail views to see the level of information you need.\n\nPAGE LAYOUT\n\nFilters panel\nFive filter fields appear at the top of the screen:\n• Stock Code — type part or all of a stock code to show only matching records.\n• Product — type part of a product name to filter by product.\n• Stock Location — type part of a location name to show only that location.\n• Reference — type part of a reference value to find specific movements.\n• Movement — select a movement type from the dropdown (e.g. Stock In, Stock Out, Take-On, Transfer). Select All to clear this filter.\n\nAll filters work instantly as you type — no need to click Enquire after changing a filter.\n\nView Mode toggle\nUse the Summary / Detail toggle to switch how the results are displayed.\n\nRefresh button\nClick the refresh icon to reload all stock data from the server.\n\nSUMMARY VIEW\nSummary view shows one row per stock code grouped by product. Each row contains:\n• Stock Code — the unique identifier for the stock item.\n• Product — the product name linked to the stock code.\n• Location — the storage location for this stock line.\n• Unit — unit of measure.\n• Movements — total number of recorded movements for this stock line.\n• Last Movement — date of the most recent movement.\n• Baseline — the reference quantity from which movements are calculated.\n• Current — the current stock balance (Baseline plus net stock movements).\n• Available — the quantity available for use (Current plus held/reserved movements).\n\nDETAIL VIEW\nDetail view uses a hierarchical layout to show every individual movement:\n\n1. Product header row (shown with a bold or highlighted background)\n   Shows the product name and the total Current and Available quantities across all stock lines for that product.\n\n2. Stock line total row (indented under the product)\n   Shows the stock code and the cumulative totals for that stock line: net quantity moved, held quantity, Current, and Available.\n\n3. Movement rows (indented under the stock line total)\n   One row per individual movement, ordered from newest to oldest. Columns:\n   • Date — when the movement was recorded.\n   • Reference — the reference entered at the time of the transaction.\n   • Location — storage location for this movement.\n   • Movement — the movement type description (e.g. Stock In, Stock Out, Take-On, Transfer Out, Transfer In, In Adjustment, Out Adjustment).\n   • Moved — the quantity that changed stock balance in this movement.\n   • Held — the quantity that affected the hold/reserved balance.\n\nFILTERED TOTALS NOTE\nWhen one or more filters are active, all totals shown (Current, Available) reflect only the filtered rows, not the full stock position. Clear all filters to see the true overall stock balance.\n\nCOMMON TASKS\n\nCheck current stock for a product\nType the product name in the Product filter. Switch to Summary view to see each stock line with its current and available quantity.\n\nView all movements for a stock code\nType the stock code in the Stock Code filter and switch to Detail view. All movements are listed in reverse chronological order under the stock line total row.\n\nFind movements by reference number\nType all or part of the reference (e.g. a purchase order number or audit reference) in the Reference filter. Detail view will show the matching movement rows.\n\nFilter by movement type\nOpen the Movement dropdown and select the type you need (e.g. Stock In to see all receipts, Stock Out to see all issues).\n\nReset all filters\nClear each filter field manually, or reload the page to return to the full unfiltered view.\n\nQuick paste: double-click a product, stock code, location, or reference in the table or list to paste it into the matching filter.",
     "loading": "Loading stock records...",
     "errorLoading": "Failed to load stock records.",
     "emptyTitle": "No stock records found",
     "emptyDescription": "Try adjusting your filters or run a new enquiry.",
     "actions": {
-      "enquire": "Enquire"
+      "pasteMenuTitle": "Paste into filter",
+      "openPasteMenu": "Open paste menu"
     },
     "viewMode": {
       "label": "View mode",
@@ -1395,10 +1494,6 @@
     "hint": {
       "doubleClick": "Tip: double-click a table or list value to paste it into the matching filter.",
       "placeholderDoubleClick": "Double-click table/list value to paste"
-    },
-    "actions": {
-      "pasteMenuTitle": "Paste into filter",
-      "openPasteMenu": "Open paste menu"
     },
     "columns": {
       "movementAt": "Date",
@@ -1496,7 +1591,8 @@
       "iconTitle": "Issue",
       "button": "Issue Work Order",
       "failed": "Failed to issue work order."
-    }
+    },
+    "cancel": "Cancel"
   },
   "workOrderData": {
     "title": "Work Order Details",

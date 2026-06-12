@@ -86,7 +86,7 @@ const Vendor = () => {
                   {enableActions && (
                     <IconButton
                       color="primary"
-                      aria-label="add vendor"
+                      aria-label={t("vendorList.addTitle", "Add vendor")}
                       onClick={() => setShowAdd(true)}
                     >
                       <AddIcon />
@@ -120,7 +120,7 @@ const Vendor = () => {
                           textAlign: key === "active" ? "center" : undefined,
                         }}
                       >
-                        {t("vendorList." + key)}
+                        {t(`vendorList.${key}`)}
                       </th>
                     ))}
                     {enableActions && (

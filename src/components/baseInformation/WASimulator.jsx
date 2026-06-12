@@ -27,6 +27,46 @@ import HelpDialog from "../common/HelpDialog";
 
 const ALLOWED_PHRASES = ["pda", "web", "otp"];
 
+const isActiveStaff = (value) => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (!normalized) return false;
+
+  const falseValues = new Set([
+    "false",
+    "0",
+    "no",
+    "n",
+    "inactive",
+    "i",
+    "disabled",
+    "d",
+    "off",
+    "f",
+  ]);
+  if (falseValues.has(normalized)) return false;
+
+  const trueValues = new Set([
+    "true",
+    "1",
+    "yes",
+    "y",
+    "active",
+    "a",
+    "enabled",
+    "on",
+    "t",
+  ]);
+  if (trueValues.has(normalized)) return true;
+
+  return true;
+};
+
 const createMessage = (message) => ({
   id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
   ...message,
@@ -68,6 +108,7 @@ const WASimulator = () => {
               (staff) => String(staff.companyId) === String(userCompanyId),
             );
         const sortedStaff = filteredStaff
+          .filter((staff) => isActiveStaff(staff.active))
           .filter((staff) => String(staff.mobileNumber || "").trim())
           .sort((a, b) =>
             String(a.staffName || "").localeCompare(String(b.staffName || "")),

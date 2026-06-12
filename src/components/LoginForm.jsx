@@ -23,6 +23,10 @@ export default function LoginForm({
 }) {
   const { t, i18n } = useTranslation();
   const lang = (i18n?.language || "en").split("-")[0];
+  const showCredentialLoginBlock =
+    String(import.meta.env.VITE_SHOW_CREDENTIAL_LOGIN_BLOCK || "true")
+      .toLowerCase()
+      .trim() !== "false";
   const [active, setActive] = useState("login");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -148,85 +152,54 @@ export default function LoginForm({
             )}
             id="pills-login"
           >
-            <form onSubmit={onSubmitLogin}>
-              <TextField
-                label={t("auth.username")}
-                type="text"
-                id="loginName"
-                name="login"
-                fullWidth
-                margin="normal"
-                onChange={onChangeHandler}
-                disabled={hasOtp || loading}
-              />
+            {showCredentialLoginBlock && (
+              <Box sx={{ mb: 2 }}>
+                <form onSubmit={onSubmitLogin}>
+                  <TextField
+                    label={t("auth.username")}
+                    type="text"
+                    id="loginName"
+                    name="login"
+                    fullWidth
+                    margin="normal"
+                    onChange={onChangeHandler}
+                    disabled={hasOtp || loading}
+                  />
 
-              <TextField
-                label={t("auth.password")}
-                type="password"
-                id="loginPassword"
-                name="password"
-                fullWidth
-                margin="normal"
-                onChange={onChangeHandler}
-                disabled={hasOtp || loading}
-              />
+                  <TextField
+                    label={t("auth.password")}
+                    type="password"
+                    id="loginPassword"
+                    name="password"
+                    fullWidth
+                    margin="normal"
+                    onChange={onChangeHandler}
+                    disabled={hasOtp || loading}
+                  />
 
-              <div
-                style={{
-                  marginBottom: 12,
-                  fontSize: "0.9rem",
-                  color: "var(--color-text-secondary)",
-                }}
-              >
-                {t("auth.legalPrefix")}{" "}
-                <a
-                  href={`/eula_${lang}.html`}
-                  onClick={(event) =>
-                    openPolicyPopup(event, `/eula_${lang}.html`, "bmp-eula")
-                  }
-                  rel="noopener noreferrer"
-                >
-                  {t("auth.eula")}
-                </a>{" "}
-                {t("auth.and")}{" "}
-                <a
-                  href={`/privacy_${lang}.html`}
-                  onClick={(event) =>
-                    openPolicyPopup(
-                      event,
-                      `/privacy_${lang}.html`,
-                      "bmp-privacy-policy",
-                    )
-                  }
-                  rel="noopener noreferrer"
-                >
-                  {t("auth.privacy")}
-                </a>
-                .
-              </div>
-
-              <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                fullWidth
-                disabled={loading || hasOtp}
-                sx={{ mb: 4 }}
-              >
-                {loading
-                  ? t("auth.signingIn", "Signing in...")
-                  : t("auth.signIn")}
-              </Button>
-            </form>
-
-            <Divider sx={{ mb: 1.5 }}>
-              <Typography
-                variant="body2"
-                sx={{ color: "text.secondary", px: 1 }}
-              >
-                {t("auth.orSignInWithOtp")}
-              </Typography>
-            </Divider>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    disabled={loading || hasOtp}
+                    sx={{ mb: 2 }}
+                  >
+                    {loading
+                      ? t("auth.signingIn", "Signing in...")
+                      : t("auth.signIn")}
+                  </Button>
+                </form>
+                <Divider sx={{ mb: 1.5 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ color: "text.secondary", px: 1 }}
+                  >
+                    {t("auth.orSignInWithOtp")}
+                  </Typography>
+                </Divider>
+              </Box>
+            )}
 
             <form onSubmit={onSubmitOtp}>
               <div
@@ -351,6 +324,40 @@ export default function LoginForm({
                 </IconButton>
               </Box>
             )}
+
+            <Box
+              sx={{
+                mt: 1.5,
+                fontSize: "0.9rem",
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              {t("auth.legalPrefix")}{" "}
+              <a
+                href={`/eula_${lang}.html`}
+                onClick={(event) =>
+                  openPolicyPopup(event, `/eula_${lang}.html`, "bmp-eula")
+                }
+                rel="noopener noreferrer"
+              >
+                {t("auth.eula")}
+              </a>{" "}
+              {t("auth.and")}{" "}
+              <a
+                href={`/privacy_${lang}.html`}
+                onClick={(event) =>
+                  openPolicyPopup(
+                    event,
+                    `/privacy_${lang}.html`,
+                    "bmp-privacy-policy",
+                  )
+                }
+                rel="noopener noreferrer"
+              >
+                {t("auth.privacy")}
+              </a>
+              .
+            </Box>
             {qrUrlScannerOverlay}
           </div>
           <div

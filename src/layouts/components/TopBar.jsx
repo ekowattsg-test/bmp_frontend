@@ -131,7 +131,7 @@ const TopBar = ({ onMenuClick, collapsed }) => {
             <IconButton
               edge="start"
               color="inherit"
-              aria-label="open drawer"
+              aria-label={t("navigation.openDrawer", "Open drawer")}
               onClick={onMenuClick}
               sx={{ mr: 1 }}
             >

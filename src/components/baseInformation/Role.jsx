@@ -89,7 +89,7 @@ const Role = () => {
                   />
                   <IconButton
                     color="primary"
-                    aria-label="add role"
+                    aria-label={t("roleList.addTitle", "Add role")}
                     onClick={() => setShowAdd(true)}
                   >
                     <AddIcon />
@@ -267,7 +267,7 @@ const Role = () => {
               </table>
             </div>
           ) : (
-            <div>No roles found.</div>
+            <div>{t("roleList.noRoles", "No roles found.")}</div>
           )}
         </div>
       )}

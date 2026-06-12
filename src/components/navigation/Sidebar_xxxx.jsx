@@ -129,7 +129,12 @@ const Sidebar = () => {
                                         <ListItemIcon>
                                           <Home />
                                         </ListItemIcon>
-                                        <ListItemText primary="Homepage" />
+                                        <ListItemText
+                                          primary={t(
+                                            "legacy.homepage",
+                                            "Homepage",
+                                          )}
+                                        />
                                       </ListItemButton>
                                     </ListItem>
                                     <ListItem disablePadding>
@@ -140,7 +145,12 @@ const Sidebar = () => {
                                         <ListItemIcon>
                                           <LocalLibrary />
                                         </ListItemIcon>
-                                        <ListItemText primary="Borrow Books" />
+                                        <ListItemText
+                                          primary={t(
+                                            "legacy.borrowBooks",
+                                            "Borrow Books",
+                                          )}
+                                        />
                                       </ListItemButton>
                                     </ListItem>
                                     <ListItem disablePadding>
@@ -151,7 +161,12 @@ const Sidebar = () => {
                                         <ListItemIcon>
                                           <ReplyAll />
                                         </ListItemIcon>
-                                        <ListItemText primary="Return Books" />
+                                        <ListItemText
+                                          primary={t(
+                                            "legacy.returnBooks",
+                                            "Return Books",
+                                          )}
+                                        />
                                       </ListItemButton>
                                     </ListItem>
                                     <ListItem disablePadding>
@@ -162,7 +177,12 @@ const Sidebar = () => {
                                         <ListItemIcon>
                                           <Refresh />
                                         </ListItemIcon>
-                                        <ListItemText primary="Renew Books" />
+                                        <ListItemText
+                                          primary={t(
+                                            "legacy.renewBooks",
+                                            "Renew Books",
+                                          )}
+                                        />
                                       </ListItemButton>
                                     </ListItem>
                                     <ListItem disablePadding>
@@ -173,7 +193,12 @@ const Sidebar = () => {
                                         <ListItemIcon>
                                           <Paid />
                                         </ListItemIcon>
-                                        <ListItemText primary="Pay Lete Fees" />
+                                        <ListItemText
+                                          primary={t(
+                                            "legacy.payLateFees",
+                                            "Pay Late Fees",
+                                          )}
+                                        />
                                       </ListItemButton>
                                     </ListItem>
                                     <ListItem disablePadding>
@@ -184,7 +209,12 @@ const Sidebar = () => {
                                         <ListItemIcon>
                                           <Gavel />
                                         </ListItemIcon>
-                                        <ListItemText primary="Terms and Conditions" />
+                                        <ListItemText
+                                          primary={t(
+                                            "legacy.termsAndConditions",
+                                            "Terms and Conditions",
+                                          )}
+                                        />
                                       </ListItemButton>
                                     </ListItem>
                                   </>
@@ -198,7 +228,12 @@ const Sidebar = () => {
                                     <ListItemIcon>
                                       <Logout />
                                     </ListItemIcon>
-                                    <ListItemText primary="Log Out" />
+                                    <ListItemText
+                                      primary={t(
+                                        "navigation.logout",
+                                        "Log Out",
+                                      )}
+                                    />
                                   </ListItemButton>
                                 </ListItem>
                                 <ListItem
@@ -234,7 +269,9 @@ const Sidebar = () => {
                         <ListItemIcon>
                           <Home />
                         </ListItemIcon>
-                        <ListItemText primary="Homepage" />
+                        <ListItemText
+                          primary={t("legacy.homepage", "Homepage")}
+                        />
                       </ListItemButton>
                     </ListItem>
                     <ListItem disablePadding>
@@ -242,7 +279,12 @@ const Sidebar = () => {
                         <ListItemIcon>
                           <Article />
                         </ListItemIcon>
-                        <ListItemText primary="Books Information" />
+                        <ListItemText
+                          primary={t(
+                            "legacy.booksInformation",
+                            "Books Information",
+                          )}
+                        />
                       </ListItemButton>
                     </ListItem>
                     <ListItem disablePadding>
@@ -250,7 +292,9 @@ const Sidebar = () => {
                         <ListItemIcon>
                           <Payments />
                         </ListItemIcon>
-                        <ListItemText primary="Fees Payment" />
+                        <ListItemText
+                          primary={t("legacy.feesPayment", "Fees Payment")}
+                        />
                       </ListItemButton>
                     </ListItem>
                   </>
@@ -262,7 +306,9 @@ const Sidebar = () => {
                         <ListItemIcon>
                           <Home />
                         </ListItemIcon>
-                        <ListItemText primary="Homepage" />
+                        <ListItemText
+                          primary={t("legacy.homepage", "Homepage")}
+                        />
                       </ListItemButton>
                     </ListItem>
                     <ListItem disablePadding>
@@ -270,7 +316,9 @@ const Sidebar = () => {
                         <ListItemIcon>
                           <LocalLibrary />
                         </ListItemIcon>
-                        <ListItemText primary="Borrow Books" />
+                        <ListItemText
+                          primary={t("legacy.borrowBooks", "Borrow Books")}
+                        />
                       </ListItemButton>
                     </ListItem>
                     <ListItem disablePadding>
@@ -278,7 +326,9 @@ const Sidebar = () => {
                         <ListItemIcon>
                           <ReplyAll />
                         </ListItemIcon>
-                        <ListItemText primary="Return Books" />
+                        <ListItemText
+                          primary={t("legacy.returnBooks", "Return Books")}
+                        />
                       </ListItemButton>
                     </ListItem>
                     <ListItem disablePadding>
@@ -286,7 +336,9 @@ const Sidebar = () => {
                         <ListItemIcon>
                           <Refresh />
                         </ListItemIcon>
-                        <ListItemText primary="Renew Books" />
+                        <ListItemText
+                          primary={t("legacy.renewBooks", "Renew Books")}
+                        />
                       </ListItemButton>
                     </ListItem>
                     <ListItem disablePadding>
@@ -294,7 +346,9 @@ const Sidebar = () => {
                         <ListItemIcon>
                           <Paid />
                         </ListItemIcon>
-                        <ListItemText primary="Pay Lete Fees" />
+                        <ListItemText
+                          primary={t("legacy.payLateFees", "Pay Late Fees")}
+                        />
                       </ListItemButton>
                     </ListItem>
                     <ListItem disablePadding>
@@ -302,7 +356,12 @@ const Sidebar = () => {
                         <ListItemIcon>
                           <Gavel />
                         </ListItemIcon>
-                        <ListItemText primary="Terms and Conditions" />
+                        <ListItemText
+                          primary={t(
+                            "legacy.termsAndConditions",
+                            "Terms and Conditions",
+                          )}
+                        />
                       </ListItemButton>
                     </ListItem>
                   </>
@@ -313,7 +372,7 @@ const Sidebar = () => {
                     <ListItemIcon>
                       <Logout />
                     </ListItemIcon>
-                    <ListItemText primary="Log Out" />
+                    <ListItemText primary={t("navigation.logout", "Log Out")} />
                   </ListItemButton>
                 </ListItem>
                 <ListItem disablePadding sx={{ display: "none" }}>

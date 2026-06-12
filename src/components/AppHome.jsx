@@ -252,7 +252,11 @@ const AppHome = () => {
                       secondary={activity.time}
                       primaryTypographyProps={{ fontWeight: 500 }}
                     />
-                    <Chip label="New" size="small" color={activity.color} />
+                    <Chip
+                      label={t("basic.new", "New")}
+                      size="small"
+                      color={activity.color}
+                    />
                   </ListItem>
                 ))}
               </List>

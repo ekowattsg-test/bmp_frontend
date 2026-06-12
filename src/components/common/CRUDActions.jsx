@@ -15,12 +15,21 @@ import { useTranslation } from "react-i18next";
  */
 export const DeleteConfirmationDialog = ({
   open = false,
-  title = "Confirm Delete",
-  message = "Are you sure you want to delete this item? This action cannot be undone.",
+  title,
+  message,
   onConfirm,
   onCancel,
   loading = false,
 }) => {
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t("common.confirmDelete", "Confirm Delete");
+  const resolvedMessage =
+    message ??
+    t(
+      "common.confirmDeleteMessage",
+      "Are you sure you want to delete this item? This action cannot be undone.",
+    );
+
   return (
     <Dialog
       open={open}
@@ -42,10 +51,10 @@ export const DeleteConfirmationDialog = ({
         }}
       >
         <WarningIcon />
-        {title}
+        {resolvedTitle}
       </DialogTitle>
       <DialogContent>
-        <Box sx={{ py: 2 }}>{message}</Box>
+        <Box sx={{ py: 2 }}>{resolvedMessage}</Box>
       </DialogContent>
       <DialogActions>
         <Button
@@ -62,7 +71,7 @@ export const DeleteConfirmationDialog = ({
             },
           }}
         >
-          Cancel
+          {t("basic.cancel", "Cancel")}
         </Button>
         <Button
           onClick={onConfirm}
@@ -75,7 +84,9 @@ export const DeleteConfirmationDialog = ({
             },
           }}
         >
-          {loading ? "Deleting..." : "Delete"}
+          {loading
+            ? t("basic.deleting", "Deleting...")
+            : t("menu.delete", "Delete")}
         </Button>
       </DialogActions>
     </Dialog>
@@ -85,21 +96,21 @@ export const DeleteConfirmationDialog = ({
 /**
  * Common Error Dialog
  */
-export const ErrorDialog = ({
-  open = false,
-  title = "Error",
-  message = "An error occurred",
-  onClose,
-}) => {
+export const ErrorDialog = ({ open = false, title, message, onClose }) => {
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t("basic.error", "Error");
+  const resolvedMessage =
+    message ?? t("basic.errorOccurred", "An error occurred");
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle sx={{ color: "error.main" }}>{title}</DialogTitle>
+      <DialogTitle sx={{ color: "error.main" }}>{resolvedTitle}</DialogTitle>
       <DialogContent>
-        <Box sx={{ py: 2, color: "error.main" }}>{message}</Box>
+        <Box sx={{ py: 2, color: "error.main" }}>{resolvedMessage}</Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} variant="contained" color="error">
-          Close
+          {t("basic.close", "Close")}
         </Button>
       </DialogActions>
     </Dialog>
@@ -109,21 +120,22 @@ export const ErrorDialog = ({
 /**
  * Common Success Dialog
  */
-export const SuccessDialog = ({
-  open = false,
-  title = "Success",
-  message = "Operation completed successfully",
-  onClose,
-}) => {
+export const SuccessDialog = ({ open = false, title, message, onClose }) => {
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t("basic.success", "Success");
+  const resolvedMessage =
+    message ??
+    t("basic.operationCompleted", "Operation completed successfully");
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle sx={{ color: "success.main" }}>{title}</DialogTitle>
+      <DialogTitle sx={{ color: "success.main" }}>{resolvedTitle}</DialogTitle>
       <DialogContent>
-        <Box sx={{ py: 2, color: "success.main" }}>{message}</Box>
+        <Box sx={{ py: 2, color: "success.main" }}>{resolvedMessage}</Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} variant="contained" color="success">
-          OK
+          {t("basic.ok", "OK")}
         </Button>
       </DialogActions>
     </Dialog>

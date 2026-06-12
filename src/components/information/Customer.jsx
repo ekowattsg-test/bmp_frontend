@@ -89,7 +89,7 @@ const Customer = () => {
                   {enableActions && (
                     <IconButton
                       color="primary"
-                      aria-label="add customer"
+                      aria-label={t("customerList.addTitle", "Add customer")}
                       onClick={() => setShowAdd(true)}
                     >
                       <AddIcon />
@@ -123,7 +123,7 @@ const Customer = () => {
                           textAlign: key === "active" ? "center" : undefined,
                         }}
                       >
-                        {t("customerList." + key)}
+                        {t(`customerList.${key}`)}
                       </th>
                     ))}
                     {enableActions && (

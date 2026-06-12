@@ -263,7 +263,10 @@ const StaffSkillAdd = ({ staff, onCancel, onSuccess }) => {
             label={t("staffManagement.issuedBy")}
             value={skillFormData.issuedBy}
             onChange={(e) => handleSkillFormChange("issuedBy", e.target.value)}
-            placeholder="e.g., Company Training Center"
+            placeholder={t(
+              "staffManagement.issuedByPlaceholder",
+              "e.g., Company Training Center",
+            )}
             fullWidth
             size="small"
           />

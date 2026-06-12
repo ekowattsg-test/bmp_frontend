@@ -97,7 +97,7 @@ const UserRole = () => {
                   />
                   <IconButton
                     color="primary"
-                    aria-label="add userrole"
+                    aria-label={t("userRole.addTitle", "Add user role")}
                     onClick={() => setShowAdd(true)}
                   >
                     <AddIcon />

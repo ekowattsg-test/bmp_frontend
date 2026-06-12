@@ -1,7 +1,9 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 const Rightbar = () => {
-  return <div>Rightbar</div>;
+  const { t } = useTranslation();
+  return <div>{t("legacy.rightbar", "Rightbar")}</div>;
 };
 
 export default Rightbar;
