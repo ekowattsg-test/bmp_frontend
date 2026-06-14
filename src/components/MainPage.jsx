@@ -33,8 +33,9 @@ import StaffExcelUpload from "./baseInformation/StaffExcelUpload";
 import ProductExcelUpload from "./baseInformation/ProductExcelUpload";
 import UserLoginList from "./baseInformation/UserLoginList";
 import ForcedPassword from "./baseInformation/ForcedPassword";
-import ProjectModern from "./information/ProjectModern";
-import ProjectPlanningModern from "./information/ProjectPlanningModern";
+import ProjectModern from "./project/ProjectModern";
+import ProjectPlanningModern from "./project/ProjectPlanningModern";
+import ProjectWorkbench from "./project/ProjectWorkbench";
 import VehicleModern from "./information/VehicleModern";
 import WorkOrderModern from "./workorder/WorkOrderModern";
 import OperationRoleModern from "./baseInformation/OperationRoleModern";
@@ -81,6 +82,10 @@ function MainPage() {
         <Route path="/about/privacy" element={<PrivacyPage />} />
         <Route path="/project" element={<ProjectModern />} />
         <Route path="/projectplanning" element={<ProjectPlanningModern />} />
+        <Route
+          path="/projectplanning/:projectCode/workbench"
+          element={<ProjectWorkbench />}
+        />
         <Route path="/vehicle" element={<VehicleModern />} />
         <Route path="/workorder" element={<WorkOrderModern />} />
         <Route path="/operationrole" element={<OperationRoleModern />} />
