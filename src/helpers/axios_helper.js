@@ -105,8 +105,10 @@ const extractDeepestMessage = (value, visited = new Set()) => {
 
 const normalizeAxiosErrorMessage = (error) => {
   const fromPayload = extractDeepestMessage(error?.response?.data);
-  const fromError = extractDeepestMessage(error);
-  const message = fromPayload || fromError || "Server error";
+  const fromStatusText = extractDeepestMessage(error?.response?.statusText);
+  const fromMessage = extractDeepestMessage(error?.message);
+  const message =
+    fromPayload || fromStatusText || fromMessage || "Server error";
 
   if (error && typeof error === "object") {
     error.userMessage = message;

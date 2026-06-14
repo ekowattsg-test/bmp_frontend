@@ -304,12 +304,25 @@ const ProjectWorkbench = () => {
     setRows(buildRowsFromData(nextStreams, nextTasks, nextCollapsed));
   };
 
-  const syncTasksFromServer = async (targetStreams = streams) => {
+  const syncWorkbenchFromServer = async () => {
     const scrollEl = ganttScrollRef.current;
     const prevScrollLeft = scrollEl?.scrollLeft || 0;
 
+    const streamsRes = await request(
+      "GET",
+      `/api/projectstreams/project/${projectCode}`,
+    ).catch(() => ({ data: [] }));
+    const nextStreams = Array.isArray(streamsRes?.data) ? streamsRes.data : [];
+
+    const streamIdSet = new Set(
+      nextStreams.map((stream) => String(stream?.projectStreamId || "")),
+    );
+    const nextCollapsed = new Set(
+      [...collapsedStreamIds].filter((id) => streamIdSet.has(String(id))),
+    );
+
     const taskChunks = await Promise.all(
-      targetStreams.map((stream) =>
+      nextStreams.map((stream) =>
         request("GET", `/api/projecttasks/stream/${stream.projectStreamId}`)
           .then((res) =>
             Array.isArray(res?.data)
@@ -325,8 +338,10 @@ const ProjectWorkbench = () => {
     );
 
     const allTasks = taskChunks.flat();
+    setStreams(nextStreams);
     setTasks(allTasks);
-    refreshRows(targetStreams, allTasks);
+    setCollapsedStreamIds(nextCollapsed);
+    refreshRows(nextStreams, allTasks, nextCollapsed);
 
     requestAnimationFrame(() => {
       if (ganttScrollRef.current) {
@@ -790,17 +805,12 @@ const ProjectWorkbench = () => {
         payload,
       );
 
-      const nextStreams = streams.map((stream) =>
-        String(stream?.projectStreamId) ===
-        String(settingsTarget.raw.projectStreamId)
-          ? payload
-          : stream,
-      );
-      setStreams(nextStreams);
-      refreshRows(nextStreams, tasks);
+      await syncWorkbenchFromServer();
       setSettingsOpen(false);
-    } catch {
-      setSettingsError(t("basic.saveFailed", "Save failed"));
+    } catch (err) {
+      setSettingsError(
+        err?.userMessage || t("basic.saveFailed", "Save failed"),
+      );
     } finally {
       setSaving(false);
     }
@@ -832,11 +842,8 @@ const ProjectWorkbench = () => {
         streamName,
         streamDescription: String(formData.streamDescription || "").trim(),
       };
-      const res = await request("POST", "/api/projectstreams", payload);
-      const created = res?.data || payload;
-      const nextStreams = [...streams, created];
-      setStreams(nextStreams);
-      refreshRows(nextStreams, tasks);
+      await request("POST", "/api/projectstreams", payload);
+      await syncWorkbenchFromServer();
       setSettingsOpen(false);
     } catch {
       const message = t("basic.saveFailed", "Save failed");
@@ -868,14 +875,7 @@ const ProjectWorkbench = () => {
     setSettingsError("");
     try {
       await request("DELETE", `/api/projectstreams/${streamId}`);
-      const nextStreams = streams.filter(
-        (stream) => String(stream?.projectStreamId || "") !== String(streamId),
-      );
-      const nextCollapsed = new Set(collapsedStreamIds);
-      nextCollapsed.delete(String(streamId));
-      setCollapsedStreamIds(nextCollapsed);
-      setStreams(nextStreams);
-      refreshRows(nextStreams, tasks, nextCollapsed);
+      await syncWorkbenchFromServer();
       setSettingsOpen(false);
     } catch {
       setSettingsError(t("basic.deleteFailed", "Delete failed"));
@@ -951,7 +951,7 @@ const ProjectWorkbench = () => {
         ...(calcRes?.data || {}),
       };
       await request("PUT", `/api/projecttasks/${taskId}`, calculatedPayload);
-      await syncTasksFromServer(streams);
+      await syncWorkbenchFromServer();
       setSettingsOpen(false);
     } catch {
       setSettingsError(t("basic.saveFailed", "Save failed"));
@@ -988,11 +988,7 @@ const ProjectWorkbench = () => {
         milestoneTaskId: milestoneTaskId ? Number(milestoneTaskId) : null,
       };
       await request("PUT", `/api/projecttasks/${taskId}`, payload);
-      const nextTasks = tasks.map((task) =>
-        String(task?.projectTaskId || "") === String(taskId) ? payload : task,
-      );
-      setTasks(nextTasks);
-      refreshRows(streams, nextTasks);
+      await syncWorkbenchFromServer();
       setSettingsOpen(false);
     } catch {
       setSettingsError(t("basic.saveFailed", "Save failed"));
@@ -1013,11 +1009,7 @@ const ProjectWorkbench = () => {
         milestoneTaskId: null,
       };
       await request("PUT", `/api/projecttasks/${taskId}`, payload);
-      const nextTasks = tasks.map((task) =>
-        String(task?.projectTaskId || "") === String(taskId) ? payload : task,
-      );
-      setTasks(nextTasks);
-      refreshRows(streams, nextTasks);
+      await syncWorkbenchFromServer();
       setSettingsOpen(false);
     } catch {
       setSettingsError(t("basic.saveFailed", "Save failed"));
@@ -1137,14 +1129,8 @@ const ProjectWorkbench = () => {
         ...(calcRes?.data || {}),
       };
 
-      const res = await request("POST", "/api/projecttasks", calculatedPayload);
-      const created = {
-        ...(res?.data || calculatedPayload),
-        projectStreamId: streamId,
-      };
-      if (created) {
-        await syncTasksFromServer(streams);
-      }
+      await request("POST", "/api/projecttasks", calculatedPayload);
+      await syncWorkbenchFromServer();
       setSettingsOpen(false);
     } catch {
       setSettingsError(t("basic.saveFailed", "Save failed"));
@@ -1396,7 +1382,7 @@ const ProjectWorkbench = () => {
         `/api/projecttasks/${source.projectTaskId}`,
         calculatedPayload,
       );
-      await syncTasksFromServer(streams);
+      await syncWorkbenchFromServer();
       clearMoveMode();
     } catch {
       setError(t("basic.saveFailed", "Save failed"));
@@ -1562,8 +1548,7 @@ const ProjectWorkbench = () => {
                   {t("projectPlanning.ganttTitle", "Streams & Tasks Timeline")}
                 </Typography>
                 <Button
-                  size="small"
-                  variant="outlined"
+                  variant="contained"
                   startIcon={<AddIcon fontSize="small" />}
                   onClick={() =>
                     openAddStreamDialog({
@@ -1571,6 +1556,7 @@ const ProjectWorkbench = () => {
                       raw: { streamType: "S" },
                     })
                   }
+                  sx={{ minWidth: 140, fontWeight: 600 }}
                 >
                   {t("projectPlanning.addStream", "Add Stream")}
                 </Button>
@@ -2680,10 +2666,17 @@ const ProjectWorkbench = () => {
                     </Stack>
 
                     <Button
-                      size="small"
-                      variant="outlined"
+                      variant="contained"
+                      color="primary"
+                      size="medium"
+                      startIcon={<AddIcon fontSize="small" />}
                       onClick={createChildTask}
                       disabled={saving}
+                      sx={{
+                        alignSelf: "flex-end",
+                        minWidth: 180,
+                        fontWeight: 600,
+                      }}
                     >
                       {settingsTarget?.type === "task"
                         ? t(
@@ -2697,7 +2690,17 @@ const ProjectWorkbench = () => {
               )}
             </DialogContent>
             <DialogActions>
-              <Button onClick={closeSettings} disabled={saving}>
+              <Button
+                onClick={closeSettings}
+                disabled={saving}
+                variant="outlined"
+                sx={{
+                  color: "text.primary",
+                  borderColor: "divider",
+                  backgroundColor: "background.default",
+                  "&:hover": { backgroundColor: "action.hover" },
+                }}
+              >
                 {t("basic.cancel", "Cancel")}
               </Button>
               {dialogMode === "add-stream" ? (
@@ -2705,6 +2708,7 @@ const ProjectWorkbench = () => {
                   variant="contained"
                   onClick={addNewStream}
                   disabled={saving}
+                  sx={{ minWidth: 120, fontWeight: 600 }}
                 >
                   {t("basic.save", "Save")}
                 </Button>
@@ -2713,6 +2717,7 @@ const ProjectWorkbench = () => {
                   variant="contained"
                   onClick={saveStreamInfo}
                   disabled={saving}
+                  sx={{ minWidth: 120, fontWeight: 600 }}
                 >
                   {t("basic.save", "Save")}
                 </Button>
@@ -2721,6 +2726,7 @@ const ProjectWorkbench = () => {
                   variant="contained"
                   onClick={saveTaskInfo}
                   disabled={saving}
+                  sx={{ minWidth: 120, fontWeight: 600 }}
                 >
                   {t("basic.save", "Save")}
                 </Button>
@@ -2740,6 +2746,7 @@ const ProjectWorkbench = () => {
                     variant="contained"
                     onClick={saveMilestoneLink}
                     disabled={saving || milestoneCandidates.length === 0}
+                    sx={{ minWidth: 120, fontWeight: 600 }}
                   >
                     {t("basic.save", "Save")}
                   </Button>
@@ -2873,12 +2880,7 @@ const ProjectWorkbench = () => {
                     }
                     try {
                       await request("DELETE", `/api/projecttasks/${taskId}`);
-                      const nextTasks = tasks.filter(
-                        (task) =>
-                          String(task?.projectTaskId || "") !== String(taskId),
-                      );
-                      setTasks(nextTasks);
-                      refreshRows(streams, nextTasks);
+                      await syncWorkbenchFromServer();
                     } catch {
                       setError(t("basic.deleteFailed", "Delete failed"));
                     } finally {
