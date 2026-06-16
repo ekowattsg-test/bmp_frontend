@@ -40,6 +40,10 @@ import VerticalAlignBottomIcon from "@mui/icons-material/VerticalAlignBottom";
 import ArrowForwardOutlinedIcon from "@mui/icons-material/ArrowForwardOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
+import AllInboxOutlinedIcon from "@mui/icons-material/AllInboxOutlined";
+import HandymanOutlinedIcon from "@mui/icons-material/HandymanOutlined";
+import Groups2OutlinedIcon from "@mui/icons-material/Groups2Outlined";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { request } from "../../helpers/axios_helper";
@@ -226,6 +230,10 @@ const ProjectWorkbench = () => {
         minimumDays: taskType?.minimumDays,
         maximumDays: taskType?.maximumDays,
         alignWith: taskType?.alignWith,
+        inventoryType: String(taskType?.inventoryType || "")
+          .trim()
+          .toLowerCase(),
+        manpowerRequired: Number(taskType?.manpowerRequired || 0),
       });
     });
     return Array.from(map.values());
@@ -1238,6 +1246,55 @@ const ProjectWorkbench = () => {
     return String(typeMeta.projectTaskDescription || "").trim() || code;
   };
 
+  const getInventoryIconMeta = (inventoryType) => {
+    const normalized = String(inventoryType || "")
+      .trim()
+      .toLowerCase();
+    if (!normalized || normalized === "none") return null;
+
+    if (normalized === "asset") {
+      return {
+        icon: HandymanOutlinedIcon,
+        color: "warning.main",
+        label: t("projectPlanning.inventoryAsset", "Asset required"),
+      };
+    }
+
+    if (normalized === "stock") {
+      return {
+        icon: Inventory2OutlinedIcon,
+        color: "info.main",
+        label: t("projectPlanning.inventoryStock", "Stock required"),
+      };
+    }
+
+    return {
+      icon: AllInboxOutlinedIcon,
+      color: "secondary.main",
+      label: t("projectPlanning.inventoryAny", "Any inventory type"),
+    };
+  };
+
+  const getRowInventoryType = (row) => {
+    if (row?.type === "stream") return "asset";
+    const taskTypeCode = String(row?.raw?.taskType || "")
+      .trim()
+      .toUpperCase();
+    const typeMeta = taskTypeMetaByCode[taskTypeCode];
+    return String(typeMeta?.inventoryType || "")
+      .trim()
+      .toLowerCase();
+  };
+
+  const getRowManpowerRequired = (row) => {
+    if (row?.type === "stream") return 0;
+    const taskTypeCode = String(row?.raw?.taskType || "")
+      .trim()
+      .toUpperCase();
+    const typeMeta = taskTypeMetaByCode[taskTypeCode];
+    return Number(typeMeta?.manpowerRequired || 0);
+  };
+
   const onTaskIconHoverStart = (task) => {
     const currentTaskId = String(task?.projectTaskId || "").trim();
     if (!currentTaskId) return;
@@ -1612,7 +1669,10 @@ const ProjectWorkbench = () => {
                 </Alert>
               </Box>
             ) : (
-              <Box sx={{ overflowX: "auto" }} ref={ganttScrollRef}>
+              <Box
+                sx={{ overflow: "auto", maxHeight: "58vh" }}
+                ref={ganttScrollRef}
+              >
                 <Box sx={{ minWidth: 420 + timelineWidth }}>
                   {/* Upper header: month (day/week) or year (month) */}
                   <Box
@@ -1621,6 +1681,9 @@ const ProjectWorkbench = () => {
                       gridTemplateColumns: `420px ${timelineWidth}px`,
                       borderBottom: "1px solid",
                       borderColor: "divider",
+                      position: "sticky",
+                      top: 0,
+                      zIndex: 6,
                     }}
                   >
                     <Box
@@ -1635,7 +1698,7 @@ const ProjectWorkbench = () => {
                         justifyContent: "center",
                         position: "sticky",
                         left: 0,
-                        zIndex: 4,
+                        zIndex: 7,
                       }}
                     >
                       <Typography variant="caption" fontWeight={700}>
@@ -1676,6 +1739,9 @@ const ProjectWorkbench = () => {
                       gridTemplateColumns: `420px ${timelineWidth}px`,
                       borderBottom: "1px solid",
                       borderColor: "divider",
+                      position: "sticky",
+                      top: 30,
+                      zIndex: 5,
                     }}
                   >
                     <Box
@@ -1684,11 +1750,11 @@ const ProjectWorkbench = () => {
                         py: 0.75,
                         bgcolor: "background.default",
                         display: "grid",
-                        gridTemplateColumns: "1.7fr 48px 0.55fr 0.55fr",
+                        gridTemplateColumns: "minmax(0, 1fr) 54px 84px 84px",
                         gap: 1,
                         position: "sticky",
                         left: 0,
-                        zIndex: 3,
+                        zIndex: 6,
                         borderRight: "1px solid",
                         borderColor: "divider",
                       }}
@@ -1754,6 +1820,10 @@ const ProjectWorkbench = () => {
                     const validMoveTarget = isValidMoveTarget(row);
                     const taskTypeIconMeta =
                       row.type === "task" ? getTaskTypeIcon(row.raw) : null;
+                    const inventoryIconMeta = getInventoryIconMeta(
+                      getRowInventoryType(row),
+                    );
+                    const manpowerRequired = getRowManpowerRequired(row);
                     const rowTaskId = String(
                       row?.raw?.projectTaskId || "",
                     ).trim();
@@ -1785,7 +1855,8 @@ const ProjectWorkbench = () => {
                             px: 1,
                             py: 0.6,
                             display: "grid",
-                            gridTemplateColumns: "1.7fr 48px 0.55fr 0.55fr",
+                            gridTemplateColumns:
+                              "minmax(0, 1fr) 54px 84px 84px",
                             gap: 1,
                             alignItems: "center",
                             bgcolor: isParentHighlight
@@ -1965,24 +2036,112 @@ const ProjectWorkbench = () => {
                             </Typography>
                           </Box>
                           <Box
-                            sx={{ display: "flex", justifyContent: "center" }}
+                            sx={{
+                              display: "grid",
+                              gridTemplateColumns: "18px 18px 18px",
+                              justifyItems: "center",
+                              alignItems: "center",
+                              width: 54,
+                            }}
                           >
-                            <IconButton
-                              size="small"
-                              onClick={(event) => openSettingsMenu(event, row)}
-                              aria-label={t("basic.settings", "Settings")}
+                            <Box
                               sx={{
-                                color: "text.secondary",
-                                opacity: 0.62,
-                                p: 0.35,
-                                "&:hover": {
-                                  opacity: 0.85,
-                                  bgcolor: "action.hover",
-                                },
+                                width: 18,
+                                height: 18,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
                               }}
                             >
-                              <SettingsIcon sx={{ fontSize: "0.95rem" }} />
-                            </IconButton>
+                              <IconButton
+                                size="small"
+                                onClick={(event) =>
+                                  openSettingsMenu(event, row)
+                                }
+                                aria-label={t("basic.settings", "Settings")}
+                                sx={{
+                                  width: 16,
+                                  height: 16,
+                                  color: "text.secondary",
+                                  opacity: 0.62,
+                                  p: 0,
+                                  m: "1px",
+                                  "&:hover": {
+                                    opacity: 0.85,
+                                    bgcolor: "action.hover",
+                                  },
+                                }}
+                              >
+                                <SettingsIcon sx={{ fontSize: "0.875rem" }} />
+                              </IconButton>
+                            </Box>
+
+                            {inventoryIconMeta ? (
+                              <Box
+                                component="span"
+                                sx={{
+                                  width: 18,
+                                  height: 18,
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  color: inventoryIconMeta.color,
+                                  flexShrink: 0,
+                                  m: "1px",
+                                }}
+                              >
+                                {(() => {
+                                  const InventoryIcon = inventoryIconMeta.icon;
+                                  return (
+                                    <InventoryIcon
+                                      sx={{ fontSize: "0.875rem" }}
+                                    />
+                                  );
+                                })()}
+                              </Box>
+                            ) : (
+                              <Box
+                                component="span"
+                                sx={{
+                                  width: 18,
+                                  height: 18,
+                                  display: "inline-flex",
+                                  flexShrink: 0,
+                                  m: "1px",
+                                }}
+                              />
+                            )}
+
+                            {manpowerRequired > 0 ? (
+                              <Box
+                                component="span"
+                                sx={{
+                                  width: 18,
+                                  height: 18,
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  color: "error.main",
+                                  flexShrink: 0,
+                                  m: "1px",
+                                }}
+                              >
+                                <Groups2OutlinedIcon
+                                  sx={{ fontSize: "0.875rem" }}
+                                />
+                              </Box>
+                            ) : (
+                              <Box
+                                component="span"
+                                sx={{
+                                  width: 18,
+                                  height: 18,
+                                  display: "inline-flex",
+                                  flexShrink: 0,
+                                  m: "1px",
+                                }}
+                              />
+                            )}
                           </Box>
                           <Typography variant="caption">
                             {formatDate(row.startDate)}
