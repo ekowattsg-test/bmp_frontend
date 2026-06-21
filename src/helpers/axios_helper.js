@@ -44,6 +44,42 @@ export const setAuthHeader = (token) => {
   }
 };
 
+const normalizeBearerToken = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^Bearer\s+/i.test(raw)) return raw.replace(/^Bearer\s+/i, "").trim();
+  return raw;
+};
+
+const extractTokenFromPayload = (payload) => {
+  if (!payload || typeof payload !== "object") return "";
+
+  const directKeys = ["accessToken", "token", "jwt", "idToken"];
+  for (const key of directKeys) {
+    const normalized = normalizeBearerToken(payload?.[key]);
+    if (normalized) return normalized;
+  }
+
+  if (payload?.data && typeof payload.data === "object") {
+    for (const key of directKeys) {
+      const normalized = normalizeBearerToken(payload.data?.[key]);
+      if (normalized) return normalized;
+    }
+  }
+
+  return "";
+};
+
+const extractTokenFromResponse = (response) => {
+  const headerToken =
+    normalizeBearerToken(response?.headers?.authorization) ||
+    normalizeBearerToken(response?.headers?.Authorization) ||
+    normalizeBearerToken(response?.headers?.["x-access-token"]);
+  if (headerToken) return headerToken;
+
+  return extractTokenFromPayload(response?.data);
+};
+
 export const isTokenExpired = (token) => {
   if (!token) return true;
   try {
@@ -154,7 +190,13 @@ api.interceptors.request.use(
 
 // Response interceptor: handle 401 by attempting refresh
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const responseToken = extractTokenFromResponse(response);
+    if (responseToken) {
+      setAuthHeader(responseToken);
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
     if (!originalRequest) return Promise.reject(error);

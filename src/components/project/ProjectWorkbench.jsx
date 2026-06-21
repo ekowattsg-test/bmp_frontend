@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Chip,
@@ -20,6 +21,8 @@ import {
   Stack,
   TextField,
   Tooltip,
+  Tab,
+  Tabs,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
@@ -101,10 +104,20 @@ const buildRows = (streams, tasksByStream) => {
     );
 
     const streamTaskStarts = streamTasks
-      .map((task) => parseDate(task?.taskStartDate))
+      .map((task) => {
+        const s = String(task?.taskStatus || "").trim();
+        return s === "Not Started"
+          ? parseDate(task?.taskStartDate)
+          : parseDate(task?.actualStartDate) || parseDate(task?.taskStartDate);
+      })
       .filter(Boolean);
     const streamTaskEnds = streamTasks
-      .map((task) => parseDate(task?.taskEndDate))
+      .map((task) => {
+        const s = String(task?.taskStatus || "").trim();
+        return s === "Completed"
+          ? parseDate(task?.actualEndDate) || parseDate(task?.taskEndDate)
+          : parseDate(task?.taskEndDate);
+      })
       .filter(Boolean);
 
     const streamStart =
@@ -129,12 +142,21 @@ const buildRows = (streams, tasksByStream) => {
     });
 
     streamTasks.forEach((task) => {
+      const status = String(task?.taskStatus || "").trim();
+      const displayStart =
+        status === "Not Started"
+          ? parseDate(task?.taskStartDate)
+          : parseDate(task?.actualStartDate) || parseDate(task?.taskStartDate);
+      const displayEnd =
+        status === "Completed"
+          ? parseDate(task?.actualEndDate) || parseDate(task?.taskEndDate)
+          : parseDate(task?.taskEndDate);
       rows.push({
         id: `task-${task?.projectTaskId}`,
         type: "task",
         name: task?.taskName || `Task ${task?.projectTaskId || ""}`,
-        startDate: parseDate(task?.taskStartDate),
-        endDate: parseDate(task?.taskEndDate),
+        startDate: displayStart,
+        endDate: displayEnd,
         raw: task,
         streamId,
       });
@@ -159,6 +181,27 @@ const addDays = (value, days) => {
   const duration = Math.max(1, Number(days || 1));
   return new Date(date.getTime() + (duration - 1) * DAY_MS);
 };
+
+const toRoleCode = (row) => {
+  const raw = String(
+    row?.projectRole || row?.role || row?.roleName || row?.leaderRole || "",
+  )
+    .trim()
+    .toUpperCase();
+
+  if (raw === "M" || raw === "L" || raw === "C") return raw;
+  if (raw === "MANAGER") return "M";
+  if (raw === "LEADER") return "L";
+  if (raw === "CO-LEADER" || raw === "COLEADER") return "C";
+  return "";
+};
+
+const getLeaderStaffId = (row) =>
+  row?.projectLeaderStaffId ||
+  row?.staffId ||
+  row?.leaderId ||
+  row?.staffID ||
+  "";
 
 const buildRowsFromData = (streams, tasks, collapsedStreamIds) => {
   const taskMap = new Map();
@@ -201,6 +244,7 @@ const ProjectWorkbench = () => {
   const [settingsError, setSettingsError] = useState("");
   const [formData, setFormData] = useState({});
   const [taskTypes, setTaskTypes] = useState([]);
+  const [taskAssigneeOptions, setTaskAssigneeOptions] = useState([]);
   const [hoveredParentTaskId, setHoveredParentTaskId] = useState("");
   const [hoveredLinkedTaskIds, setHoveredLinkedTaskIds] = useState(new Set());
   const ganttScrollRef = useRef(null);
@@ -211,6 +255,25 @@ const ProjectWorkbench = () => {
     durationDays: 1,
     attachToParentTaskId: "",
     milestoneTaskId: "",
+  });
+  const [inventoryPlanningOpen, setInventoryPlanningOpen] = useState(false);
+  const [inventoryPlanningTarget, setInventoryPlanningTarget] = useState(null);
+  const [inventoryPlanningTab, setInventoryPlanningTab] = useState("stock");
+  const [inventoryPlanningLoading, setInventoryPlanningLoading] =
+    useState(false);
+  const [inventoryPlanningError, setInventoryPlanningError] = useState("");
+  const [inventoryProducts, setInventoryProducts] = useState([]);
+  const [inventoryBundles, setInventoryBundles] = useState([]);
+  const [inventoryPlanningRows, setInventoryPlanningRows] = useState({
+    stock: {},
+    asset: {},
+    bundle: {},
+  });
+  const [inventoryDraft, setInventoryDraft] = useState({
+    productId: "",
+    quantity: 1,
+    bundleId: "",
+    bundleQuantity: 1,
   });
 
   const taskTypeOptions = useMemo(() => {
@@ -247,6 +310,50 @@ const ProjectWorkbench = () => {
       }, {}),
     [taskTypeOptions],
   );
+
+  const buildTaskAssigneeOptions = (leaderRows, staffRows) => {
+    const staffNameMap = new Map();
+    staffRows.forEach((item) => {
+      const staffId = String(item?.staffId || "").trim();
+      if (!staffId) return;
+      const displayName =
+        String(item?.staffName || "").trim() ||
+        [item?.firstName, item?.lastName].filter(Boolean).join(" ").trim() ||
+        staffId;
+      staffNameMap.set(staffId, displayName);
+    });
+
+    const roleLabelMap = {
+      M: t("projectLeader.roleManager", "Manager"),
+      L: t("projectLeader.roleLeader", "Leader"),
+      C: t("projectLeader.roleCoLeader", "Co-Leader"),
+    };
+
+    const map = new Map();
+    leaderRows
+      .filter((row) => !row?.roleEndDate && String(row?.active ?? 1) !== "0")
+      .forEach((row) => {
+        const roleCode = toRoleCode(row);
+        if (!["M", "L", "C"].includes(roleCode)) return;
+
+        const staffId = String(getLeaderStaffId(row) || "").trim();
+        if (!staffId || map.has(staffId)) return;
+
+        const name =
+          String(row?.staffName || row?.leaderName || "").trim() ||
+          staffNameMap.get(staffId) ||
+          staffId;
+
+        map.set(staffId, {
+          staffId,
+          name,
+          roleCode,
+          roleLabel: roleLabelMap[roleCode] || roleCode,
+        });
+      });
+
+    return Array.from(map.values());
+  };
 
   const creatableTaskTypeOptions = useMemo(
     () =>
@@ -351,6 +458,19 @@ const ProjectWorkbench = () => {
     setCollapsedStreamIds(nextCollapsed);
     refreshRows(nextStreams, allTasks, nextCollapsed);
 
+    const [leadersRes, staffRes] = await Promise.all([
+      request("GET", `/api/projectleaders/project/${projectCode}`).catch(
+        () => ({
+          data: [],
+        }),
+      ),
+      request("GET", "/api/staffs").catch(() => ({ data: [] })),
+    ]);
+
+    const leaderRows = Array.isArray(leadersRes?.data) ? leadersRes.data : [];
+    const staffRows = Array.isArray(staffRes?.data) ? staffRes.data : [];
+    setTaskAssigneeOptions(buildTaskAssigneeOptions(leaderRows, staffRows));
+
     requestAnimationFrame(() => {
       if (ganttScrollRef.current) {
         ganttScrollRef.current.scrollLeft = prevScrollLeft;
@@ -366,13 +486,23 @@ const ProjectWorkbench = () => {
       setError("");
 
       try {
-        const [projectsRes, streamsRes, customersRes, taskTypesRes] =
-          await Promise.all([
-            request("GET", "/api/projects"),
-            request("GET", `/api/projectstreams/project/${projectCode}`),
-            request("GET", "/api/customers").catch(() => ({ data: [] })),
-            request("GET", "/api/projecttasktypes").catch(() => ({ data: [] })),
-          ]);
+        const [
+          projectsRes,
+          streamsRes,
+          customersRes,
+          taskTypesRes,
+          leadersRes,
+          staffRes,
+        ] = await Promise.all([
+          request("GET", "/api/projects"),
+          request("GET", `/api/projectstreams/project/${projectCode}`),
+          request("GET", "/api/customers").catch(() => ({ data: [] })),
+          request("GET", "/api/projecttasktypes").catch(() => ({ data: [] })),
+          request("GET", `/api/projectleaders/project/${projectCode}`).catch(
+            () => ({ data: [] }),
+          ),
+          request("GET", "/api/staffs").catch(() => ({ data: [] })),
+        ]);
 
         const projects = Array.isArray(projectsRes?.data)
           ? projectsRes.data
@@ -414,6 +544,10 @@ const ProjectWorkbench = () => {
         const taskTypeRows = Array.isArray(taskTypesRes?.data)
           ? taskTypesRes.data
           : [];
+        const leaderRows = Array.isArray(leadersRes?.data)
+          ? leadersRes.data
+          : [];
+        const staffRows = Array.isArray(staffRes?.data) ? staffRes.data : [];
 
         if (!mounted) return;
         setProject(selectedProject || location?.state?.project || null);
@@ -421,6 +555,7 @@ const ProjectWorkbench = () => {
         setStreams(streams);
         setTasks(allTasks);
         setTaskTypes(taskTypeRows);
+        setTaskAssigneeOptions(buildTaskAssigneeOptions(leaderRows, staffRows));
         setRows(buildRowsFromData(streams, allTasks, new Set()));
       } catch {
         if (!mounted) return;
@@ -707,6 +842,9 @@ const ProjectWorkbench = () => {
         1,
       taskEndDate,
       remarks: row?.raw?.remarks || "",
+      staffId:
+        String(row?.raw?.staffId || "").trim() ||
+        String(taskAssigneeOptions[0]?.staffId || ""),
       parentTaskId: row?.raw?.parentTaskId || "",
       milestoneTaskId: row?.raw?.milestoneTaskId || "",
     });
@@ -760,6 +898,7 @@ const ProjectWorkbench = () => {
       attachToParentTaskId:
         row?.type === "task" ? String(row?.raw?.projectTaskId || "") : "",
       milestoneTaskId: "",
+      staffId: String(taskAssigneeOptions[0]?.staffId || ""),
     });
     setSettingsOpen(true);
   };
@@ -942,6 +1081,7 @@ const ProjectWorkbench = () => {
         taskDuration,
         taskEndDate: taskEndDateValue,
         remarks: String(formData.remarks || "").trim(),
+        staffId: String(formData.staffId || "").trim() || null,
         parentTaskId: formData.parentTaskId
           ? Number(formData.parentTaskId)
           : null,
@@ -1121,6 +1261,7 @@ const ProjectWorkbench = () => {
         milestoneTaskId: childTaskData.milestoneTaskId
           ? Number(childTaskData.milestoneTaskId)
           : null,
+        staffId: String(childTaskData.staffId || "").trim() || null,
         taskDuration: duration,
         taskStartDate: toApiDate(start),
         taskEndDate: toApiDate(end),
@@ -1293,6 +1434,476 @@ const ProjectWorkbench = () => {
       .toUpperCase();
     const typeMeta = taskTypeMetaByCode[taskTypeCode];
     return Number(typeMeta?.manpowerRequired || 0);
+  };
+
+  const getInventoryPlanningKey = (row) => {
+    if (row?.type === "stream") {
+      return `stream-${String(row?.raw?.projectStreamId || "")}`;
+    }
+    return `task-${String(row?.raw?.projectTaskId || "")}`;
+  };
+
+  const stockProductOptions = useMemo(
+    () =>
+      inventoryProducts.filter(
+        (product) =>
+          String(product?.category || product?.productCategory || "")
+            .trim()
+            .toUpperCase() === "C",
+      ),
+    [inventoryProducts],
+  );
+
+  const assetProductOptions = useMemo(
+    () =>
+      inventoryProducts.filter(
+        (product) =>
+          String(product?.category || product?.productCategory || "")
+            .trim()
+            .toUpperCase() === "A",
+      ),
+    [inventoryProducts],
+  );
+
+  const getBundleId = (bundle) =>
+    String(
+      bundle?.productBundleId ||
+        bundle?.bundleId ||
+        bundle?.id ||
+        bundle?.productbundleId ||
+        "",
+    ).trim();
+
+  const getBundleName = (bundle) =>
+    String(bundle?.bundleName || bundle?.productBundleName || "").trim() ||
+    getBundleId(bundle);
+
+  const getBundleMembersText = (
+    bundle,
+    productsList = inventoryProducts,
+    fallbackText = "",
+  ) => {
+    const members = Array.isArray(bundle?.bundleMembers)
+      ? bundle.bundleMembers
+      : [];
+    if (members.length === 0) return fallbackText;
+
+    return members
+      .map((member) => {
+        const productId = String(
+          member?.productId ?? member?.id ?? member ?? "",
+        ).trim();
+        if (!productId) return "";
+        const quantity = Math.max(1, Number(member?.quantity || 1));
+        const product = productsList.find(
+          (item) => String(item?.productId || "") === productId,
+        );
+        const name =
+          String(product?.productName || "").trim() ||
+          String(product?.productCode || "").trim() ||
+          productId;
+        return quantity > 1 ? `${name} x${quantity}` : name;
+      })
+      .filter(Boolean)
+      .join(", ");
+  };
+
+  const getInventoryRows = (section) => {
+    const key = getInventoryPlanningKey(inventoryPlanningTarget);
+    return inventoryPlanningRows?.[section]?.[key] || [];
+  };
+
+  const getAvailableProductOptions = (section, options) => {
+    const selectedIds = new Set(
+      getInventoryRows(section).map((item) => String(item?.productId || "")),
+    );
+    return options
+      .filter(
+        (product) =>
+          !selectedIds.has(String(product?.productId || "")) ||
+          String(product?.productId || "") ===
+            String(inventoryDraft.productId || ""),
+      )
+      .sort((a, b) => {
+        const labelA = String(
+          a?.productName || a?.productCode || a?.productId || "",
+        ).trim();
+        const labelB = String(
+          b?.productName || b?.productCode || b?.productId || "",
+        ).trim();
+        return labelA.localeCompare(labelB, undefined, { sensitivity: "base" });
+      });
+  };
+
+  const getAvailableBundleOptions = () => {
+    const selectedIds = new Set(
+      getInventoryRows("bundle").map((item) => String(item?.bundleId || "")),
+    );
+    return inventoryBundles
+      .filter((bundle) => {
+        const bundleId = getBundleId(bundle);
+        if (!bundleId) return false;
+        return (
+          !selectedIds.has(bundleId) ||
+          bundleId === String(inventoryDraft.bundleId || "")
+        );
+      })
+      .sort((a, b) =>
+        getBundleName(a).localeCompare(getBundleName(b), undefined, {
+          sensitivity: "base",
+        }),
+      );
+  };
+
+  const getPlanningTaskId = (target, section) => {
+    if (target?.type === "task") {
+      return Number(target?.raw?.projectTaskId || 0) || null;
+    }
+    if (target?.type !== "stream") return null;
+    if (section === "stock") return null;
+
+    const streamId = String(target?.raw?.projectStreamId || "").trim();
+    const streamTasks = tasks
+      .filter((task) => String(task?.projectStreamId || "").trim() === streamId)
+      .sort((a, b) => {
+        const aStart = parseDate(a?.taskStartDate);
+        const bStart = parseDate(b?.taskStartDate);
+        if (!aStart && !bStart) return 0;
+        if (!aStart) return 1;
+        if (!bStart) return -1;
+        return aStart.getTime() - bStart.getTime();
+      });
+
+    return Number(streamTasks[0]?.projectTaskId || 0) || null;
+  };
+
+  const getPlanningConfig = (section, target = inventoryPlanningTarget) => {
+    const taskId = getPlanningTaskId(target, section);
+    if (!taskId) return null;
+
+    if (section === "stock") {
+      return {
+        listEndpoint: `/api/projectstocks/task/${taskId}`,
+        createEndpoint: "/api/projectstocks",
+        updateEndpoint: (id) => `/api/projectstocks/${id}`,
+        deleteEndpoint: (id) => `/api/projectstocks/${id}`,
+        idField: "projectStockId",
+        toPayload: (row) => ({
+          projectStockId: row?.apiId || undefined,
+          projectTaskId: taskId,
+          productId: Number(row.productId),
+          quantity: Number(row.quantity || 1),
+        }),
+      };
+    }
+
+    if (section === "asset") {
+      return {
+        listEndpoint: `/api/projectassets/task/${taskId}`,
+        createEndpoint: "/api/projectassets",
+        updateEndpoint: (id) => `/api/projectassets/${id}`,
+        deleteEndpoint: (id) => `/api/projectassets/${id}`,
+        idField: "projectStockId",
+        toPayload: (row) => ({
+          projectStockId: row?.apiId || undefined,
+          projectTaskId: taskId,
+          productId: Number(row.productId),
+          quantity: Number(row.quantity || 1),
+        }),
+      };
+    }
+
+    return {
+      listEndpoint: `/api/projectbundles/task/${taskId}`,
+      createEndpoint: "/api/projectbundles",
+      updateEndpoint: (id) => `/api/projectbundles/${id}`,
+      deleteEndpoint: (id) => `/api/projectbundles/${id}`,
+      idField: "projectBundleId",
+      toPayload: (row) => ({
+        projectBundleId: row?.apiId || undefined,
+        projectTaskId: taskId,
+        bundleId: Number(row.bundleId),
+        quantity: Number(row.quantity || 1),
+      }),
+    };
+  };
+
+  const upsertInventoryRows = (section, nextRows) => {
+    const key = getInventoryPlanningKey(inventoryPlanningTarget);
+    if (!key) return;
+    setInventoryPlanningRows((prev) => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [key]: nextRows,
+      },
+    }));
+  };
+
+  const openInventoryPlanningDialog = async (row) => {
+    const target = row || null;
+    if (!target) return;
+    setInventoryPlanningTarget(target);
+    setInventoryPlanningError("");
+    setInventoryPlanningOpen(true);
+    setInventoryPlanningTab(target?.type === "stream" ? "asset" : "stock");
+    setInventoryDraft({
+      productId: "",
+      quantity: 1,
+      bundleId: "",
+      bundleQuantity: 1,
+    });
+
+    setInventoryPlanningLoading(true);
+    try {
+      const [productsRes, bundlesRes] = await Promise.all([
+        request("GET", "/api/products").catch(() => ({ data: [] })),
+        request("GET", "/api/productbundles").catch(() => ({ data: [] })),
+      ]);
+      setInventoryProducts(
+        Array.isArray(productsRes?.data) ? productsRes.data : [],
+      );
+      setInventoryBundles(
+        Array.isArray(bundlesRes?.data) ? bundlesRes.data : [],
+      );
+
+      const sectionsToLoad =
+        target?.type === "stream"
+          ? ["asset", "bundle"]
+          : ["stock", "asset", "bundle"];
+
+      for (const section of sectionsToLoad) {
+        const config = getPlanningConfig(section, target);
+        if (!config) {
+          upsertInventoryRows(section, []);
+          continue;
+        }
+        const res = await request("GET", config.listEndpoint).catch(() => ({
+          data: [],
+        }));
+        const rows = Array.isArray(res?.data) ? res.data : [];
+
+        if (section === "bundle") {
+          const fetchedBundles = Array.isArray(bundlesRes?.data)
+            ? bundlesRes.data
+            : [];
+          const fetchedProducts = Array.isArray(productsRes?.data)
+            ? productsRes.data
+            : [];
+          upsertInventoryRows(
+            "bundle",
+            rows.map((item) => ({
+              ...(item || {}),
+              apiId: item?.[config.idField],
+              bundleId: String(item?.bundleId || "").trim(),
+              bundleName:
+                getBundleName(
+                  fetchedBundles.find(
+                    (bundle) =>
+                      getBundleId(bundle) === String(item?.bundleId || ""),
+                  ),
+                ) || String(item?.bundleId || "").trim(),
+              bundleMembersText: getBundleMembersText(
+                fetchedBundles.find(
+                  (bundle) =>
+                    getBundleId(bundle) === String(item?.bundleId || ""),
+                ),
+                fetchedProducts,
+                String(item?.bundleMembersText || "").trim(),
+              ),
+              quantity: Number(item?.quantity || 1),
+            })),
+          );
+        } else {
+          upsertInventoryRows(
+            section,
+            rows.map((item) => {
+              const productId = String(item?.productId || "").trim();
+              const matched = (
+                Array.isArray(productsRes?.data) ? productsRes.data : []
+              ).find(
+                (product) => String(product?.productId || "") === productId,
+              );
+              return {
+                apiId: item?.[config.idField],
+                productId,
+                productCode: String(matched?.productCode || "").trim(),
+                productName:
+                  String(matched?.productName || "").trim() || productId,
+                quantity: Number(item?.quantity || 1),
+              };
+            }),
+          );
+        }
+      }
+    } catch {
+      setInventoryPlanningError(
+        t("projectPlanning.inventoryLoadFailed", "Failed to load inventory."),
+      );
+      setInventoryProducts([]);
+      setInventoryBundles([]);
+    } finally {
+      setInventoryPlanningLoading(false);
+    }
+  };
+
+  const addPlanningProduct = async (section, options) => {
+    const productId = String(inventoryDraft.productId || "").trim();
+    const quantity = Math.max(1, Number(inventoryDraft.quantity || 1));
+    if (!productId) return;
+
+    const picked = options.find(
+      (product) => String(product?.productId || "") === productId,
+    );
+    if (!picked) return;
+
+    const currentRows = getInventoryRows(section);
+    const existsAt = currentRows.findIndex(
+      (item) => String(item?.productId || "") === productId,
+    );
+
+    const nextRows = [...currentRows];
+    const rowData = {
+      apiId: existsAt >= 0 ? currentRows[existsAt]?.apiId : undefined,
+      productId,
+      productCode: String(picked?.productCode || "").trim(),
+      productName: String(picked?.productName || "").trim() || productId,
+      quantity,
+    };
+
+    const config = getPlanningConfig(section);
+    if (!config) {
+      setInventoryPlanningError(
+        t(
+          "projectPlanning.inventoryTaskMissing",
+          "No task is available to save this planning section.",
+        ),
+      );
+      return;
+    }
+
+    try {
+      const payload = config.toPayload(rowData);
+      if (rowData.apiId) {
+        await request("PUT", config.updateEndpoint(rowData.apiId), payload);
+      } else {
+        const createRes = await request("POST", config.createEndpoint, payload);
+        rowData.apiId =
+          createRes?.data?.[config.idField] ||
+          createRes?.data?.id ||
+          createRes?.data?.ID ||
+          undefined;
+      }
+      setInventoryPlanningError("");
+    } catch {
+      setInventoryPlanningError(
+        t("projectPlanning.inventorySaveFailed", "Failed to save inventory."),
+      );
+      return;
+    }
+
+    if (existsAt >= 0) nextRows[existsAt] = rowData;
+    else nextRows.push(rowData);
+
+    upsertInventoryRows(section, nextRows);
+    setInventoryDraft((prev) => ({ ...prev, productId: "", quantity: 1 }));
+  };
+
+  const addPlanningBundle = async () => {
+    const bundleId = String(inventoryDraft.bundleId || "").trim();
+    const quantity = Math.max(1, Number(inventoryDraft.bundleQuantity || 1));
+    if (!bundleId) return;
+
+    const picked = inventoryBundles.find(
+      (bundle) => getBundleId(bundle) === bundleId,
+    );
+    const currentRows = getInventoryRows("bundle");
+    const existsAt = currentRows.findIndex(
+      (item) => String(item?.bundleId || "") === bundleId,
+    );
+
+    const nextRows = [...currentRows];
+    const rowData = {
+      ...(picked || {}),
+      apiId: existsAt >= 0 ? currentRows[existsAt]?.apiId : undefined,
+      bundleId,
+      bundleName: picked ? getBundleName(picked) : bundleId,
+      bundleMembersText: picked
+        ? getBundleMembersText(picked, inventoryProducts)
+        : "",
+      quantity,
+    };
+
+    const config = getPlanningConfig("bundle");
+    if (!config) {
+      setInventoryPlanningError(
+        t(
+          "projectPlanning.inventoryTaskMissing",
+          "No task is available to save this planning section.",
+        ),
+      );
+      return;
+    }
+
+    try {
+      const payload = config.toPayload(rowData);
+      if (rowData.apiId) {
+        await request("PUT", config.updateEndpoint(rowData.apiId), payload);
+      } else {
+        const createRes = await request("POST", config.createEndpoint, payload);
+        rowData.apiId =
+          createRes?.data?.[config.idField] ||
+          createRes?.data?.id ||
+          createRes?.data?.ID ||
+          undefined;
+      }
+      setInventoryPlanningError("");
+    } catch {
+      setInventoryPlanningError(
+        t("projectPlanning.inventorySaveFailed", "Failed to save inventory."),
+      );
+      return;
+    }
+
+    if (existsAt >= 0) nextRows[existsAt] = rowData;
+    else nextRows.push(rowData);
+
+    upsertInventoryRows("bundle", nextRows);
+    setInventoryDraft((prev) => ({ ...prev, bundleId: "", bundleQuantity: 1 }));
+  };
+
+  const removePlanningRow = (section, keyName, keyValue) => {
+    const currentRows = getInventoryRows(section);
+    const targetRow = currentRows.find(
+      (item) => String(item?.[keyName] || "") === String(keyValue || ""),
+    );
+    const nextRows = currentRows.filter(
+      (item) => String(item?.[keyName] || "") !== String(keyValue || ""),
+    );
+
+    const deleteRemote = async () => {
+      if (!targetRow?.apiId) return true;
+      const config = getPlanningConfig(section);
+      if (!config) return false;
+      try {
+        await request("DELETE", config.deleteEndpoint(targetRow.apiId));
+        return true;
+      } catch {
+        setInventoryPlanningError(
+          t(
+            "projectPlanning.inventoryDeleteFailed",
+            "Failed to delete inventory.",
+          ),
+        );
+        return false;
+      }
+    };
+
+    deleteRemote().then((ok) => {
+      if (!ok) return;
+      setInventoryPlanningError("");
+      upsertInventoryRows(section, nextRows);
+    });
   };
 
   const onTaskIconHoverStart = (task) => {
@@ -2077,28 +2688,40 @@ const ProjectWorkbench = () => {
                             </Box>
 
                             {inventoryIconMeta ? (
-                              <Box
-                                component="span"
-                                sx={{
-                                  width: 18,
-                                  height: 18,
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  color: inventoryIconMeta.color,
-                                  flexShrink: 0,
-                                  m: "1px",
-                                }}
+                              <Tooltip
+                                title={t(
+                                  "projectPlanning.openInventoryPlanning",
+                                  "Open inventory planning",
+                                )}
                               >
-                                {(() => {
-                                  const InventoryIcon = inventoryIconMeta.icon;
-                                  return (
-                                    <InventoryIcon
-                                      sx={{ fontSize: "0.875rem" }}
-                                    />
-                                  );
-                                })()}
-                              </Box>
+                                <IconButton
+                                  size="small"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    openInventoryPlanningDialog(row);
+                                  }}
+                                  sx={{
+                                    width: 16,
+                                    height: 16,
+                                    color: inventoryIconMeta.color,
+                                    p: 0,
+                                    m: "1px",
+                                    "&:hover": {
+                                      bgcolor: "action.hover",
+                                    },
+                                  }}
+                                >
+                                  {(() => {
+                                    const InventoryIcon =
+                                      inventoryIconMeta.icon;
+                                    return (
+                                      <InventoryIcon
+                                        sx={{ fontSize: "0.875rem" }}
+                                      />
+                                    );
+                                  })()}
+                                </IconButton>
+                              </Tooltip>
                             ) : (
                               <Box
                                 component="span"
@@ -2378,24 +3001,6 @@ const ProjectWorkbench = () => {
                       multiline
                       minRows={2}
                     />
-                    <FormControl size="small" fullWidth>
-                      <InputLabel>
-                        {t("projectstream.streamType", "Stream Type")}
-                      </InputLabel>
-                      <Select
-                        label={t("projectstream.streamType", "Stream Type")}
-                        value={formData.streamType || "P"}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            streamType: e.target.value,
-                          }))
-                        }
-                      >
-                        <MenuItem value="P">P</MenuItem>
-                        <MenuItem value="S">S</MenuItem>
-                      </Select>
-                    </FormControl>
                   </Stack>
                 )}
 
@@ -2540,6 +3145,42 @@ const ProjectWorkbench = () => {
                         disabled
                       />
                     </Stack>
+
+                    <FormControl size="small" fullWidth>
+                      <InputLabel>
+                        {t("projecttask.staffId", "Person In-charge")}
+                      </InputLabel>
+                      <Select
+                        label={t("projecttask.staffId", "Person In-charge")}
+                        value={String(
+                          formData.staffId ||
+                            taskAssigneeOptions[0]?.staffId ||
+                            "",
+                        )}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            staffId: e.target.value,
+                          }))
+                        }
+                      >
+                        {taskAssigneeOptions.map((option) => (
+                          <MenuItem key={option.staffId} value={option.staffId}>
+                            {option.name} ({option.roleLabel})
+                          </MenuItem>
+                        ))}
+                        {String(formData.staffId || "") &&
+                          !taskAssigneeOptions.some(
+                            (option) =>
+                              String(option.staffId) ===
+                              String(formData.staffId || ""),
+                          ) && (
+                            <MenuItem value={String(formData.staffId || "")}>
+                              {String(formData.staffId || "")}
+                            </MenuItem>
+                          )}
+                      </Select>
+                    </FormControl>
 
                     <FormControl size="small" fullWidth>
                       <InputLabel>
@@ -2764,6 +3405,35 @@ const ProjectWorkbench = () => {
                       direction={{ xs: "column", md: "row" }}
                       spacing={1.25}
                     >
+                      <FormControl size="small" fullWidth>
+                        <InputLabel>
+                          {t("projecttask.staffId", "Person In-charge")}
+                        </InputLabel>
+                        <Select
+                          label={t("projecttask.staffId", "Person In-charge")}
+                          value={String(
+                            childTaskData.staffId ||
+                              taskAssigneeOptions[0]?.staffId ||
+                              "",
+                          )}
+                          onChange={(e) =>
+                            setChildTaskData((prev) => ({
+                              ...prev,
+                              staffId: e.target.value,
+                            }))
+                          }
+                        >
+                          {taskAssigneeOptions.map((option) => (
+                            <MenuItem
+                              key={option.staffId}
+                              value={option.staffId}
+                            >
+                              {option.name} ({option.roleLabel})
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+
                       {settingsTarget?.type === "task" ? (
                         <TextField
                           size="small"
@@ -2911,6 +3581,626 @@ const ProjectWorkbench = () => {
                   </Button>
                 </>
               ) : null}
+            </DialogActions>
+          </Dialog>
+
+          <Dialog
+            open={inventoryPlanningOpen}
+            onClose={() => setInventoryPlanningOpen(false)}
+            fullWidth
+            maxWidth="md"
+          >
+            <DialogTitle>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 2,
+                  flexWrap: "wrap",
+                }}
+              >
+                <Typography variant="h6" component="div">
+                  {t("projectPlanning.inventoryPlanning", "Inventory Planning")}{" "}
+                  -{" "}
+                  {inventoryPlanningTarget?.name ||
+                    inventoryPlanningTarget?.raw?.taskName ||
+                    inventoryPlanningTarget?.raw?.streamName ||
+                    "-"}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ ml: "auto" }}
+                >
+                  <strong>
+                    {t("projectPlanning.leftHeaderStart", "Start")}:
+                  </strong>{" "}
+                  {formatDate(inventoryPlanningTarget?.startDate)}
+                  {"  "}
+                  <strong>
+                    {t("projectPlanning.leftHeaderEnd", "End")}:
+                  </strong>{" "}
+                  {formatDate(inventoryPlanningTarget?.endDate)}
+                </Typography>
+              </Box>
+            </DialogTitle>
+            <DialogContent dividers>
+              <Stack spacing={1.5}>
+                {inventoryPlanningError && (
+                  <Alert severity="error">{inventoryPlanningError}</Alert>
+                )}
+
+                <Tabs
+                  value={inventoryPlanningTab}
+                  onChange={(_, value) => setInventoryPlanningTab(value)}
+                  variant="scrollable"
+                  allowScrollButtonsMobile
+                >
+                  <Tab
+                    value="stock"
+                    label={t("projectPlanning.stockPlanning", "Stock")}
+                    disabled={inventoryPlanningTarget?.type !== "task"}
+                  />
+                  <Tab
+                    value="asset"
+                    label={t("projectPlanning.assetPlanning", "Asset")}
+                    disabled={inventoryPlanningTarget?.type !== "stream"}
+                  />
+                  <Tab
+                    value="bundle"
+                    label={t("projectPlanning.bundlePlanning", "Bundle")}
+                  />
+                </Tabs>
+
+                {inventoryPlanningLoading ? (
+                  <Box
+                    sx={{ py: 4, display: "flex", justifyContent: "center" }}
+                  >
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : inventoryPlanningTab === "stock" ? (
+                  inventoryPlanningTarget?.type !== "task" ? (
+                    <Alert severity="warning">
+                      {t(
+                        "projectPlanning.stockOnlyForTask",
+                        "Stock planning is only available for tasks.",
+                      )}
+                    </Alert>
+                  ) : (
+                    <Stack spacing={1.25}>
+                      <Typography variant="body2">
+                        {t(
+                          "projectPlanning.stockWorkspaceHelp",
+                          "Include stock inventory required for the entire task duration.",
+                        )}
+                      </Typography>
+                      <Stack
+                        direction={{ xs: "column", md: "row" }}
+                        spacing={1}
+                      >
+                        <Autocomplete
+                          options={getAvailableProductOptions(
+                            "stock",
+                            stockProductOptions,
+                          )}
+                          fullWidth
+                          size="small"
+                          value={
+                            getAvailableProductOptions(
+                              "stock",
+                              stockProductOptions,
+                            ).find(
+                              (product) =>
+                                String(product?.productId || "") ===
+                                String(inventoryDraft.productId || ""),
+                            ) || null
+                          }
+                          onChange={(_, value) =>
+                            setInventoryDraft((prev) => ({
+                              ...prev,
+                              productId: String(value?.productId || ""),
+                            }))
+                          }
+                          getOptionLabel={(option) =>
+                            String(
+                              option?.productName ||
+                                option?.productCode ||
+                                option?.productId ||
+                                "",
+                            ).trim()
+                          }
+                          isOptionEqualToValue={(option, value) =>
+                            String(option?.productId || "") ===
+                            String(value?.productId || "")
+                          }
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              label={t("product.productName", "Product")}
+                            />
+                          )}
+                        />
+                        <TextField
+                          type="number"
+                          size="small"
+                          label={t("basic.quantity", "Quantity")}
+                          value={inventoryDraft.quantity}
+                          onChange={(e) =>
+                            setInventoryDraft((prev) => ({
+                              ...prev,
+                              quantity: e.target.value,
+                            }))
+                          }
+                          inputProps={{ min: 1 }}
+                          sx={{ width: { xs: "100%", md: 160 } }}
+                        />
+                        <Button
+                          variant="contained"
+                          disabled={
+                            !String(inventoryDraft.productId || "").trim()
+                          }
+                          onClick={() =>
+                            addPlanningProduct(
+                              "stock",
+                              getAvailableProductOptions(
+                                "stock",
+                                stockProductOptions,
+                              ),
+                            )
+                          }
+                        >
+                          {t("basic.add", "Add")}
+                        </Button>
+                      </Stack>
+                      {getInventoryRows("stock").length === 0 ? (
+                        <Typography variant="body2" color="text.secondary">
+                          {t(
+                            "projectPlanning.noStockSelected",
+                            "No stock selected.",
+                          )}
+                        </Typography>
+                      ) : (
+                        <Box
+                          sx={{
+                            border: "1px solid",
+                            borderColor: "divider",
+                            borderRadius: 1,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              display: "grid",
+                              gridTemplateColumns:
+                                "minmax(0, 1.6fr) minmax(0, 1fr) 90px 56px",
+                              gap: 1,
+                              px: 1.25,
+                              py: 0.75,
+                              bgcolor: "background.default",
+                              borderBottom: "1px solid",
+                              borderColor: "divider",
+                            }}
+                          >
+                            <Typography variant="caption" fontWeight={700}>
+                              {t("product.productName", "Product")}
+                            </Typography>
+                            <Typography variant="caption" fontWeight={700}>
+                              {t("product.productCode", "Code")}
+                            </Typography>
+                            <Typography variant="caption" fontWeight={700}>
+                              {t("basic.quantity", "Quantity")}
+                            </Typography>
+                            <Typography variant="caption" fontWeight={700}>
+                              {t("basic.remove", "Remove")}
+                            </Typography>
+                          </Box>
+                          {getInventoryRows("stock").map((item) => (
+                            <Box
+                              key={String(item.productId)}
+                              sx={{
+                                display: "grid",
+                                gridTemplateColumns:
+                                  "minmax(0, 1.6fr) minmax(0, 1fr) 90px 56px",
+                                gap: 1,
+                                px: 1.25,
+                                py: 0.5,
+                                borderBottom: "1px solid",
+                                borderColor: "divider",
+                                alignItems: "center",
+                                "&:last-child": { borderBottom: "none" },
+                              }}
+                            >
+                              <Typography variant="body2" noWrap>
+                                {item.productName}
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                noWrap
+                              >
+                                {item.productCode || item.productId}
+                              </Typography>
+                              <Typography variant="body2">
+                                {item.quantity}
+                              </Typography>
+                              <IconButton
+                                size="small"
+                                onClick={() =>
+                                  removePlanningRow(
+                                    "stock",
+                                    "productId",
+                                    item.productId,
+                                  )
+                                }
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          ))}
+                        </Box>
+                      )}
+                    </Stack>
+                  )
+                ) : inventoryPlanningTab === "asset" ? (
+                  inventoryPlanningTarget?.type !== "stream" ? (
+                    <Alert severity="warning">
+                      {t(
+                        "projectPlanning.assetOnlyForStream",
+                        "Asset planning is only available for streams.",
+                      )}
+                    </Alert>
+                  ) : (
+                    <Stack spacing={1.25}>
+                      <Typography variant="body2">
+                        {t(
+                          "projectPlanning.assetWorkspaceHelp",
+                          "Include asset requirements for the entire stream duration.",
+                        )}
+                      </Typography>
+                      <Stack
+                        direction={{ xs: "column", md: "row" }}
+                        spacing={1}
+                      >
+                        <Autocomplete
+                          options={getAvailableProductOptions(
+                            "asset",
+                            assetProductOptions,
+                          )}
+                          fullWidth
+                          size="small"
+                          value={
+                            getAvailableProductOptions(
+                              "asset",
+                              assetProductOptions,
+                            ).find(
+                              (product) =>
+                                String(product?.productId || "") ===
+                                String(inventoryDraft.productId || ""),
+                            ) || null
+                          }
+                          onChange={(_, value) =>
+                            setInventoryDraft((prev) => ({
+                              ...prev,
+                              productId: String(value?.productId || ""),
+                            }))
+                          }
+                          getOptionLabel={(option) =>
+                            String(
+                              option?.productName ||
+                                option?.productCode ||
+                                option?.productId ||
+                                "",
+                            ).trim()
+                          }
+                          isOptionEqualToValue={(option, value) =>
+                            String(option?.productId || "") ===
+                            String(value?.productId || "")
+                          }
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              label={t("product.productName", "Product")}
+                            />
+                          )}
+                        />
+                        <TextField
+                          type="number"
+                          size="small"
+                          label={t("basic.quantity", "Quantity")}
+                          value={inventoryDraft.quantity}
+                          onChange={(e) =>
+                            setInventoryDraft((prev) => ({
+                              ...prev,
+                              quantity: e.target.value,
+                            }))
+                          }
+                          inputProps={{ min: 1 }}
+                          sx={{ width: { xs: "100%", md: 160 } }}
+                        />
+                        <Button
+                          variant="contained"
+                          disabled={
+                            !String(inventoryDraft.productId || "").trim()
+                          }
+                          onClick={() =>
+                            addPlanningProduct(
+                              "asset",
+                              getAvailableProductOptions(
+                                "asset",
+                                assetProductOptions,
+                              ),
+                            )
+                          }
+                        >
+                          {t("basic.add", "Add")}
+                        </Button>
+                      </Stack>
+                      {getInventoryRows("asset").length === 0 ? (
+                        <Typography variant="body2" color="text.secondary">
+                          {t(
+                            "projectPlanning.noAssetSelected",
+                            "No asset selected.",
+                          )}
+                        </Typography>
+                      ) : (
+                        <Box
+                          sx={{
+                            border: "1px solid",
+                            borderColor: "divider",
+                            borderRadius: 1,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              display: "grid",
+                              gridTemplateColumns:
+                                "minmax(0, 1.6fr) minmax(0, 1fr) 90px 56px",
+                              gap: 1,
+                              px: 1.25,
+                              py: 0.75,
+                              bgcolor: "background.default",
+                              borderBottom: "1px solid",
+                              borderColor: "divider",
+                            }}
+                          >
+                            <Typography variant="caption" fontWeight={700}>
+                              {t("product.productName", "Product")}
+                            </Typography>
+                            <Typography variant="caption" fontWeight={700}>
+                              {t("product.productCode", "Code")}
+                            </Typography>
+                            <Typography variant="caption" fontWeight={700}>
+                              {t("basic.quantity", "Quantity")}
+                            </Typography>
+                            <Typography variant="caption" fontWeight={700}>
+                              {t("basic.remove", "Remove")}
+                            </Typography>
+                          </Box>
+                          {getInventoryRows("asset").map((item) => (
+                            <Box
+                              key={String(item.productId)}
+                              sx={{
+                                display: "grid",
+                                gridTemplateColumns:
+                                  "minmax(0, 1.6fr) minmax(0, 1fr) 90px 56px",
+                                gap: 1,
+                                px: 1.25,
+                                py: 0.5,
+                                borderBottom: "1px solid",
+                                borderColor: "divider",
+                                alignItems: "center",
+                                "&:last-child": { borderBottom: "none" },
+                              }}
+                            >
+                              <Typography variant="body2" noWrap>
+                                {item.productName}
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                noWrap
+                              >
+                                {item.productCode || item.productId}
+                              </Typography>
+                              <Typography variant="body2">
+                                {item.quantity}
+                              </Typography>
+                              <IconButton
+                                size="small"
+                                onClick={() =>
+                                  removePlanningRow(
+                                    "asset",
+                                    "productId",
+                                    item.productId,
+                                  )
+                                }
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          ))}
+                        </Box>
+                      )}
+                    </Stack>
+                  )
+                ) : (
+                  <Stack spacing={1.25}>
+                    <Typography variant="body2">
+                      {t(
+                        "projectPlanning.bundleWorkspaceHelp",
+                        "Include fixed bundles required for the entire stream/task duration.",
+                      )}
+                    </Typography>
+                    <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
+                      <Autocomplete
+                        options={getAvailableBundleOptions()}
+                        fullWidth
+                        size="small"
+                        value={
+                          getAvailableBundleOptions().find(
+                            (bundle) =>
+                              getBundleId(bundle) ===
+                              String(inventoryDraft.bundleId || ""),
+                          ) || null
+                        }
+                        onChange={(_, value) =>
+                          setInventoryDraft((prev) => ({
+                            ...prev,
+                            bundleId: getBundleId(value),
+                          }))
+                        }
+                        getOptionLabel={(option) => getBundleName(option)}
+                        isOptionEqualToValue={(option, value) =>
+                          getBundleId(option) === getBundleId(value)
+                        }
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label={t("productBundle.title", "Bundle")}
+                          />
+                        )}
+                      />
+                      <TextField
+                        type="number"
+                        size="small"
+                        label={t("basic.quantity", "Quantity")}
+                        value={inventoryDraft.bundleQuantity}
+                        onChange={(e) =>
+                          setInventoryDraft((prev) => ({
+                            ...prev,
+                            bundleQuantity: e.target.value,
+                          }))
+                        }
+                        inputProps={{ min: 1 }}
+                        sx={{ width: { xs: "100%", md: 160 } }}
+                      />
+                      <Button
+                        variant="contained"
+                        disabled={!String(inventoryDraft.bundleId || "").trim()}
+                        onClick={addPlanningBundle}
+                      >
+                        {t("basic.add", "Add")}
+                      </Button>
+                    </Stack>
+                    {getInventoryRows("bundle").length === 0 ? (
+                      <Typography variant="body2" color="text.secondary">
+                        {t(
+                          "projectPlanning.noBundleSelected",
+                          "No bundle selected.",
+                        )}
+                      </Typography>
+                    ) : (
+                      <Box
+                        sx={{
+                          border: "1px solid",
+                          borderColor: "divider",
+                          borderRadius: 1,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            display: "grid",
+                            gridTemplateColumns:
+                              "minmax(0, 1.2fr) minmax(0, 1.8fr) 90px 56px",
+                            gap: 1,
+                            px: 1.25,
+                            py: 0.75,
+                            bgcolor: "background.default",
+                            borderBottom: "1px solid",
+                            borderColor: "divider",
+                          }}
+                        >
+                          <Typography variant="caption" fontWeight={700}>
+                            {t("productBundle.title", "Bundle")}
+                          </Typography>
+                          <Typography variant="caption" fontWeight={700}>
+                            {t("productBundle.members", "Members")}
+                          </Typography>
+                          <Typography variant="caption" fontWeight={700}>
+                            {t("basic.quantity", "Quantity")}
+                          </Typography>
+                          <Typography variant="caption" fontWeight={700}>
+                            {t("basic.remove", "Remove")}
+                          </Typography>
+                        </Box>
+                        {getInventoryRows("bundle").map((item) => (
+                          <Box
+                            key={String(item.bundleId)}
+                            sx={{
+                              display: "grid",
+                              gridTemplateColumns:
+                                "minmax(0, 1.2fr) minmax(0, 1.8fr) 90px 56px",
+                              gap: 1,
+                              px: 1.25,
+                              py: 0.5,
+                              borderBottom: "1px solid",
+                              borderColor: "divider",
+                              alignItems: "center",
+                              "&:last-child": { borderBottom: "none" },
+                            }}
+                          >
+                            <Typography variant="body2" noWrap>
+                              {item.bundleName}
+                            </Typography>
+                            <Box sx={{ minWidth: 0 }}>
+                              {String(item.bundleMembersText || "").trim() ? (
+                                <Stack
+                                  direction="row"
+                                  spacing={0.5}
+                                  flexWrap="wrap"
+                                  useFlexGap
+                                >
+                                  {String(item.bundleMembersText || "")
+                                    .split(",")
+                                    .map((name) => name.trim())
+                                    .filter(Boolean)
+                                    .map((name, idx) => (
+                                      <Chip
+                                        key={`${item.bundleId}-${idx}`}
+                                        label={name}
+                                        size="small"
+                                      />
+                                    ))}
+                                </Stack>
+                              ) : (
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  -
+                                </Typography>
+                              )}
+                            </Box>
+                            <Typography variant="body2">
+                              {item.quantity}
+                            </Typography>
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                removePlanningRow(
+                                  "bundle",
+                                  "bundleId",
+                                  item.bundleId,
+                                )
+                              }
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+                  </Stack>
+                )}
+              </Stack>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setInventoryPlanningOpen(false)}>
+                {t("basic.close", "Close")}
+              </Button>
             </DialogActions>
           </Dialog>
 

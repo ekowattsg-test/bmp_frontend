@@ -1,7 +1,14 @@
 ﻿import React, { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
-import { TextField, Button, Box, IconButton, Typography, InputAdornment } from "@mui/material";
+import {
+  TextField,
+  Button,
+  Box,
+  IconButton,
+  Typography,
+  InputAdornment,
+} from "@mui/material";
 import { Add as AddIcon, Delete as DeleteIcon } from "@mui/icons-material";
 import { HeaderBar } from "../common";
 import SelectionDialog from "../common/SelectionDialog";
@@ -11,9 +18,6 @@ const ProductBundleAdd = ({ onCancel }) => {
 
   const [products, setProducts] = useState([]);
   const [hierarchies, setHierarchies] = useState([]);
-  const [bundleCode] = useState(
-    () => "BDL-" + String(Date.now()).slice(-10).padStart(10, "0"),
-  );
   const [bundleName, setBundleName] = useState("");
   // members: [{ product, quantity }]
   const [members, setMembers] = useState([]);
@@ -116,7 +120,7 @@ const ProductBundleAdd = ({ onCancel }) => {
     );
   };
 
-  const getProductLabel = (p) => (p.productName || "");
+  const getProductLabel = (p) => p.productName || "";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -132,7 +136,7 @@ const ProductBundleAdd = ({ onCancel }) => {
     setLoading(true);
     try {
       const payload = {
-        bundleCode: bundleCode.trim(),
+        bundleCode: "",
         bundleName: bundleName.trim(),
         bundleMembers: members.map(({ product: m, quantity }) => ({
           productId: m.productId,
@@ -163,19 +167,7 @@ const ProductBundleAdd = ({ onCancel }) => {
         borderRadius: 2,
       }}
     >
-      <HeaderBar
-        title={t("productBundle.add")}
-        sx={{ mb: 1 }}
-      />
-
-      <TextField
-        label={t("productBundle.bundleCode")}
-        value={bundleCode}
-        fullWidth
-        margin="normal"
-        InputProps={{ readOnly: true }}
-        sx={{ "& .MuiInputBase-input": { color: "text.secondary" } }}
-      />
+      <HeaderBar title={t("productBundle.add")} sx={{ mb: 1 }} />
 
       <TextField
         label={t("productBundle.bundleName")}
@@ -229,7 +221,15 @@ const ProductBundleAdd = ({ onCancel }) => {
               onChange={(e) => handleQtyChange(m.productId, e.target.value)}
               onBlur={() => handleQtyBlur(m.productId)}
               inputProps={{ min: 1 }}
-              InputProps={m.uom ? { endAdornment: <InputAdornment position="end">{m.uom}</InputAdornment> } : {}}
+              InputProps={
+                m.uom
+                  ? {
+                      endAdornment: (
+                        <InputAdornment position="end">{m.uom}</InputAdornment>
+                      ),
+                    }
+                  : {}
+              }
               sx={{ width: "100%" }}
             />
             <IconButton
@@ -293,11 +293,11 @@ const ProductBundleAdd = ({ onCancel }) => {
         onSelect={handlePickerSelect}
         facetFields={["productCategory", "productClass"]}
         renderItem={(p) => ({
-            primary: p.productName || "",
-            secondary: [p.productCode, p.productClass]
-              .filter(Boolean)
-              .join(" · "),
-          })}
+          primary: p.productName || "",
+          secondary: [p.productCode, p.productClass]
+            .filter(Boolean)
+            .join(" · "),
+        })}
       />
     </Box>
   );
