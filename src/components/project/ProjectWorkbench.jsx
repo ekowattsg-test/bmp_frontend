@@ -34,6 +34,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DriveFileMoveIcon from "@mui/icons-material/DriveFileMove";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import EditIcon from "@mui/icons-material/Edit";
 import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
 import TaskAltOutlinedIcon from "@mui/icons-material/TaskAltOutlined";
@@ -304,7 +305,12 @@ const ProjectWorkbench = () => {
   const [manpowerPlanningError, setManpowerPlanningError] = useState("");
   const [manpowerPlanningRows, setManpowerPlanningRows] = useState([]);
   const [manpowerStaffOptions, setManpowerStaffOptions] = useState([]);
+  const [manpowerStaffDropdownOpen, setManpowerStaffDropdownOpen] =
+    useState(false);
+  const [manpowerSkillsByStaffId, setManpowerSkillsByStaffId] = useState({});
+  const [manpowerSkillFilter, setManpowerSkillFilter] = useState([]);
   const [manpowerDraft, setManpowerDraft] = useState({
+    apiId: null,
     staffId: "",
     role: "worker",
     loading: "1",
@@ -369,6 +375,85 @@ const ProjectWorkbench = () => {
       }, {}),
     [manpowerStaffOptions],
   );
+
+  const manpowerSkillFilterOptions = useMemo(() => {
+    const unique = new Set();
+    Object.values(manpowerSkillsByStaffId || {}).forEach((skills) => {
+      (Array.isArray(skills) ? skills : []).forEach((skill) => {
+        const normalized = String(skill || "").trim();
+        if (normalized) unique.add(normalized);
+      });
+    });
+    return Array.from(unique).sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: "base" }),
+    );
+  }, [manpowerSkillsByStaffId]);
+
+  const filteredManpowerStaffOptions = useMemo(() => {
+    const selectedSkills = manpowerSkillFilter
+      .map((skill) => String(skill || "").trim())
+      .filter(Boolean);
+    const editingStaffId = String(
+      manpowerPlanningRows.find(
+        (item) =>
+          String(item?.apiId || "") === String(manpowerDraft.apiId || ""),
+      )?.staffId || "",
+    ).trim();
+
+    const assignedStaffIds = new Set(
+      manpowerPlanningRows
+        .map((item) => String(item?.staffId || "").trim())
+        .filter(Boolean),
+    );
+
+    const baseOptions = manpowerStaffOptions.filter((staff) => {
+      const staffId = String(staff?.staffId || "").trim();
+      if (!staffId) return false;
+      if (!assignedStaffIds.has(staffId)) return true;
+      return staffId === editingStaffId;
+    });
+
+    if (selectedSkills.length === 0) return baseOptions;
+
+    const selectedSet = new Set(selectedSkills);
+    return baseOptions.filter((staff) => {
+      const staffId = String(staff?.staffId || "").trim();
+      if (!staffId) return false;
+      const skills = manpowerSkillsByStaffId?.[staffId] || [];
+      return skills.some((skill) =>
+        selectedSet.has(String(skill || "").trim()),
+      );
+    });
+  }, [
+    manpowerSkillFilter,
+    manpowerSkillsByStaffId,
+    manpowerStaffOptions,
+    manpowerPlanningRows,
+    manpowerDraft.apiId,
+  ]);
+
+  const toggleManpowerSkillFilter = (skillName) => {
+    const nextSkill = String(skillName || "").trim();
+    if (!nextSkill) return;
+    setManpowerSkillFilter((prev) => {
+      const exists = prev.some(
+        (skill) =>
+          String(skill || "")
+            .trim()
+            .toLowerCase() === nextSkill.toLowerCase(),
+      );
+      if (exists) {
+        return prev.filter(
+          (skill) =>
+            String(skill || "")
+              .trim()
+              .toLowerCase() !== nextSkill.toLowerCase(),
+        );
+      }
+      return [...prev, nextSkill];
+    });
+    setManpowerStaffDropdownOpen(true);
+  };
 
   const buildTaskAssigneeOptions = (leaderRows, staffRows) => {
     const staffNameMap = new Map();
@@ -1747,6 +1832,48 @@ const ProjectWorkbench = () => {
 
   // ΓöÇΓöÇ Bar geometry helpers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const colWidth = COL_WIDTH[viewMode];
+  const today = useMemo(() => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }, []);
+  const todayTime = today.getTime();
+
+  const isCurrentPeriodColumn = (mode, col) => {
+    if (!col) return false;
+
+    if (mode === "day") {
+      if (!(col.date instanceof Date)) return false;
+      const date = new Date(col.date);
+      date.setHours(0, 0, 0, 0);
+      return date.getTime() === todayTime;
+    }
+
+    if (mode === "week") {
+      if (!(col.weekStart instanceof Date) || !(col.weekEnd instanceof Date)) {
+        return false;
+      }
+      const start = col.weekStart.getTime();
+      const end = col.weekEnd.getTime();
+      return todayTime >= start && todayTime <= end;
+    }
+
+    if (!(col.monthStart instanceof Date) || !(col.monthEnd instanceof Date)) {
+      return false;
+    }
+    const start = col.monthStart.getTime();
+    const end = col.monthEnd.getTime();
+    return todayTime >= start && todayTime <= end;
+  };
+
+  const getCurrentPeriodOverlay = (mode, cols, widthPerCol) => {
+    const index = cols.findIndex((col) => isCurrentPeriodColumn(mode, col));
+    if (index < 0) return null;
+    return {
+      left: index * widthPerCol,
+      width: widthPerCol,
+    };
+  };
 
   const getBarGeometry = (startDate, endDate) => {
     if (!startDate || !endDate || endDate < startDate) return null;
@@ -1832,6 +1959,11 @@ const ProjectWorkbench = () => {
       : viewMode === "week"
         ? weekColumns
         : monthColumns;
+  const ganttCurrentPeriodOverlay = getCurrentPeriodOverlay(
+    viewMode,
+    activeCols,
+    colWidth,
+  );
   const timelineWidth = Math.max(700, activeCols.length * colWidth);
 
   const statusLabel = {
@@ -1947,6 +2079,19 @@ const ProjectWorkbench = () => {
     setSettingsOpen(true);
   };
 
+  const openReplicateStreamDialog = (row) => {
+    clearMoveMode();
+    setSettingsError("");
+    setSettingsTarget(row);
+    setDialogMode("replicate-stream");
+    const sourceName = String(row?.raw?.streamName || "").trim();
+    setFormData({
+      streamName: sourceName ? `${sourceName} (Copy)` : "",
+    });
+    setSettingsOpen(true);
+    closeSettingsMenu();
+  };
+
   const startMoveMode = (row) => {
     setMoveSourceTaskId(String(row?.raw?.projectTaskId || ""));
     closeSettingsMenu();
@@ -2057,6 +2202,39 @@ const ProjectWorkbench = () => {
       setSettingsOpen(false);
     } catch {
       setSettingsError(t("basic.deleteFailed", "Delete failed"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const replicateStream = async () => {
+    const streamId = settingsTarget?.raw?.projectStreamId;
+    if (!streamId) return;
+
+    setSaving(true);
+    setSettingsError("");
+    setError("");
+    try {
+      const streamName = String(formData.streamName || "").trim();
+      if (!streamName) {
+        const message = t(
+          "basic.validationRequired",
+          "Required fields are missing.",
+        );
+        setSettingsError(message);
+        setSaving(false);
+        return;
+      }
+
+      await request("POST", `/api/projectstreams/${streamId}/replicate`, {
+        streamName,
+      });
+      await syncWorkbenchFromServer();
+      setSettingsOpen(false);
+    } catch {
+      const message = t("basic.saveFailed", "Save failed");
+      setSettingsError(message);
+      setError(message);
     } finally {
       setSaving(false);
     }
@@ -2549,12 +2727,7 @@ const ProjectWorkbench = () => {
       getInventoryRows(section).map((item) => String(item?.productId || "")),
     );
     return options
-      .filter(
-        (product) =>
-          !selectedIds.has(String(product?.productId || "")) ||
-          String(product?.productId || "") ===
-            String(inventoryDraft.productId || ""),
-      )
+      .filter((product) => !selectedIds.has(String(product?.productId || "")))
       .sort((a, b) => {
         const labelA = String(
           a?.productName || a?.productCode || a?.productId || "",
@@ -2574,10 +2747,7 @@ const ProjectWorkbench = () => {
       .filter((bundle) => {
         const bundleId = getBundleId(bundle);
         if (!bundleId) return false;
-        return (
-          !selectedIds.has(bundleId) ||
-          bundleId === String(inventoryDraft.bundleId || "")
-        );
+        return !selectedIds.has(bundleId);
       })
       .sort((a, b) =>
         getBundleName(a).localeCompare(getBundleName(b), undefined, {
@@ -2586,33 +2756,22 @@ const ProjectWorkbench = () => {
       );
   };
 
-  const getPlanningTaskId = (target, section) => {
-    if (target?.type === "task") {
-      return Number(target?.raw?.projectTaskId || 0) || null;
-    }
-    if (target?.type !== "stream") return null;
-    if (section === "stock") return null;
+  const getPlanningTaskId = (target) =>
+    target?.type === "task"
+      ? Number(target?.raw?.projectTaskId || 0) || null
+      : null;
 
-    const streamId = String(target?.raw?.projectStreamId || "").trim();
-    const streamTasks = tasks
-      .filter((task) => String(task?.projectStreamId || "").trim() === streamId)
-      .sort((a, b) => {
-        const aStart = parseDate(a?.taskStartDate);
-        const bStart = parseDate(b?.taskStartDate);
-        if (!aStart && !bStart) return 0;
-        if (!aStart) return 1;
-        if (!bStart) return -1;
-        return aStart.getTime() - bStart.getTime();
-      });
-
-    return Number(streamTasks[0]?.projectTaskId || 0) || null;
-  };
+  const getPlanningStreamId = (target) =>
+    target?.type === "stream"
+      ? Number(target?.raw?.projectStreamId || 0) || null
+      : null;
 
   const getPlanningConfig = (section, target = inventoryPlanningTarget) => {
-    const taskId = getPlanningTaskId(target, section);
-    if (!taskId) return null;
+    const taskId = getPlanningTaskId(target);
+    const streamId = getPlanningStreamId(target);
 
     if (section === "stock") {
+      if (!taskId) return null;
       return {
         listEndpoint: `/api/projectstocks/task/${taskId}`,
         createEndpoint: "/api/projectstocks",
@@ -2629,6 +2788,23 @@ const ProjectWorkbench = () => {
     }
 
     if (section === "asset") {
+      if (streamId) {
+        return {
+          listEndpoint: `/api/projectstreamassets/stream/${streamId}`,
+          createEndpoint: "/api/projectstreamassets",
+          updateEndpoint: (id) => `/api/projectstreamassets/${id}`,
+          deleteEndpoint: (id) => `/api/projectstreamassets/${id}`,
+          idField: "projectStreamAssetId",
+          toPayload: (row) => ({
+            projectStreamAssetId: row?.apiId || undefined,
+            projectStreamId: streamId,
+            productId: Number(row.productId),
+            quantity: Number(row.quantity || 1),
+          }),
+        };
+      }
+
+      if (!taskId) return null;
       return {
         listEndpoint: `/api/projectassets/task/${taskId}`,
         createEndpoint: "/api/projectassets",
@@ -2643,6 +2819,24 @@ const ProjectWorkbench = () => {
         }),
       };
     }
+
+    if (streamId) {
+      return {
+        listEndpoint: `/api/projectstreambundles/stream/${streamId}`,
+        createEndpoint: "/api/projectstreambundles",
+        updateEndpoint: (id) => `/api/projectstreambundles/${id}`,
+        deleteEndpoint: (id) => `/api/projectstreambundles/${id}`,
+        idField: "projectStreamBundleId",
+        toPayload: (row) => ({
+          projectStreamBundleId: row?.apiId || undefined,
+          projectStreamId: streamId,
+          bundleId: Number(row.bundleId),
+          quantity: Number(row.quantity || 1),
+        }),
+      };
+    }
+
+    if (!taskId) return null;
 
     return {
       listEndpoint: `/api/projectbundles/task/${taskId}`,
@@ -2792,10 +2986,19 @@ const ProjectWorkbench = () => {
     const existsAt = currentRows.findIndex(
       (item) => String(item?.productId || "") === productId,
     );
+    if (existsAt >= 0) {
+      setInventoryPlanningError(
+        t(
+          "projectPlanning.inventoryDuplicateProduct",
+          "This product has already been added.",
+        ),
+      );
+      return;
+    }
 
     const nextRows = [...currentRows];
     const rowData = {
-      apiId: existsAt >= 0 ? currentRows[existsAt]?.apiId : undefined,
+      apiId: undefined,
       productId,
       productCode: String(picked?.productCode || "").trim(),
       productName: String(picked?.productName || "").trim() || productId,
@@ -2852,11 +3055,20 @@ const ProjectWorkbench = () => {
     const existsAt = currentRows.findIndex(
       (item) => String(item?.bundleId || "") === bundleId,
     );
+    if (existsAt >= 0) {
+      setInventoryPlanningError(
+        t(
+          "projectPlanning.inventoryDuplicateBundle",
+          "This bundle has already been added.",
+        ),
+      );
+      return;
+    }
 
     const nextRows = [...currentRows];
     const rowData = {
       ...(picked || {}),
-      apiId: existsAt >= 0 ? currentRows[existsAt]?.apiId : undefined,
+      apiId: undefined,
       bundleId,
       bundleName: picked ? getBundleName(picked) : bundleId,
       bundleMembersText: picked
@@ -2971,21 +3183,82 @@ const ProjectWorkbench = () => {
     setManpowerPlanningTarget(row);
     setManpowerPlanningOpen(true);
     setManpowerPlanningError("");
-    setManpowerDraft({ staffId: "", role: "worker", loading: "1" });
+    setManpowerSkillFilter([]);
+    setManpowerStaffDropdownOpen(false);
+    setManpowerDraft({
+      apiId: null,
+      staffId: "",
+      role: "worker",
+      loading: "1",
+    });
     setManpowerPlanningLoading(true);
 
     try {
-      const [staffsRes, manpowerRes] = await Promise.all([
+      const [staffsRes, manpowerRes, skillsRes] = await Promise.all([
         request("GET", "/api/staffs").catch(() => ({ data: [] })),
         request("GET", `/api/projectmanpowers/task/${taskId}`).catch(() => ({
           data: [],
         })),
+        request("GET", "/api/staffskills").catch(() => ({ data: [] })),
       ]);
 
       const staffs = Array.isArray(staffsRes?.data) ? staffsRes.data : [];
       const rows = Array.isArray(manpowerRes?.data) ? manpowerRes.data : [];
+      const skillRows = Array.isArray(skillsRes?.data) ? skillsRes.data : [];
+
+      const skillNameById = skillRows.reduce((acc, skill) => {
+        const id = String(skill?.staffSkillId || "").trim();
+        if (!id) return acc;
+        acc[id] = String(skill?.skillName || "").trim() || id;
+        return acc;
+      }, {});
+
+      const profileNames = Array.from(
+        new Set(
+          staffs
+            .map((staff) => String(staff?.staffName || "").trim())
+            .filter(Boolean),
+        ),
+      );
+
+      const profileByNameEntries = await Promise.all(
+        profileNames.map(async (staffName) => {
+          const profileRes = await request(
+            "GET",
+            `/api/staffskillprofiles/staff/${encodeURIComponent(staffName)}`,
+          ).catch(() => ({ data: [] }));
+
+          const profileRows = Array.isArray(profileRes?.data)
+            ? profileRes.data
+            : [];
+          const names = Array.from(
+            new Set(
+              profileRows
+                .map((profileRow) => {
+                  const skillId = String(profileRow?.staffSkillId || "").trim();
+                  if (skillId && skillNameById[skillId]) {
+                    return skillNameById[skillId];
+                  }
+                  return String(profileRow?.skillName || "").trim();
+                })
+                .filter(Boolean),
+            ),
+          );
+          return [staffName, names];
+        }),
+      );
+
+      const profileByName = Object.fromEntries(profileByNameEntries);
+      const skillsByStaff = staffs.reduce((acc, staff) => {
+        const staffId = String(staff?.staffId || "").trim();
+        if (!staffId) return acc;
+        const staffName = String(staff?.staffName || "").trim();
+        acc[staffId] = profileByName?.[staffName] || [];
+        return acc;
+      }, {});
 
       setManpowerStaffOptions(staffs);
+      setManpowerSkillsByStaffId(skillsByStaff);
       setManpowerPlanningRows(
         rows.map((item) => ({
           apiId: item?.projectManpowerId,
@@ -3003,6 +3276,7 @@ const ProjectWorkbench = () => {
         ),
       );
       setManpowerStaffOptions([]);
+      setManpowerSkillsByStaffId({});
       setManpowerPlanningRows([]);
     } finally {
       setManpowerPlanningLoading(false);
@@ -3011,6 +3285,7 @@ const ProjectWorkbench = () => {
 
   const saveManpowerAssignment = async () => {
     const taskId = getManpowerTaskId(manpowerPlanningTarget);
+    const apiId = manpowerDraft.apiId;
     const staffId = String(manpowerDraft.staffId || "").trim();
     const role = normalizeManpowerRole(manpowerDraft.role);
     const loading = Number(manpowerDraft.loading);
@@ -3026,12 +3301,21 @@ const ProjectWorkbench = () => {
       return;
     }
 
-    const existingIndex = manpowerPlanningRows.findIndex(
-      (item) => String(item?.staffId || "") === staffId,
+    const duplicateRow = manpowerPlanningRows.find(
+      (item) =>
+        String(item?.staffId || "") === staffId &&
+        String(item?.apiId || "") !== String(apiId || ""),
     );
-    const existing =
-      existingIndex >= 0 ? manpowerPlanningRows[existingIndex] : null;
-    const apiId = existing?.apiId;
+    if (duplicateRow) {
+      setManpowerPlanningError(
+        t(
+          "projectPlanning.manpowerDuplicateStaff",
+          "This staff has already been added.",
+        ),
+      );
+      return;
+    }
+
     const payload = {
       ...(apiId ? { projectManpowerId: apiId } : {}),
       projectTaskId: taskId,
@@ -3058,7 +3342,7 @@ const ProjectWorkbench = () => {
 
       setManpowerPlanningRows((prev) => {
         const idx = prev.findIndex(
-          (item) => String(item?.staffId || "") === staffId,
+          (item) => String(item?.apiId || "") === String(apiId || ""),
         );
         if (idx < 0) {
           return [...prev, nextRow];
@@ -3068,7 +3352,12 @@ const ProjectWorkbench = () => {
         return next;
       });
 
-      setManpowerDraft({ staffId: "", role: "worker", loading: "1" });
+      setManpowerDraft({
+        apiId: null,
+        staffId: "",
+        role: "worker",
+        loading: "1",
+      });
     } catch {
       setManpowerPlanningError(
         t(
@@ -3617,6 +3906,9 @@ const ProjectWorkbench = () => {
                           sx={{
                             px: 0,
                             py: 0.5,
+                            bgcolor: isCurrentPeriodColumn(viewMode, col)
+                              ? "action.selected"
+                              : "transparent",
                             borderLeft: "1px solid",
                             borderColor: (
                               viewMode === "day" ? col.isMonthStart : idx === 0
@@ -3994,10 +4286,16 @@ const ProjectWorkbench = () => {
                               />
                             )}
                           </Box>
-                          <Typography variant="caption">
+                          <Typography
+                            variant="caption"
+                            sx={{ textAlign: "right" }}
+                          >
                             {formatDate(row.startDate)}
                           </Typography>
-                          <Typography variant="caption">
+                          <Typography
+                            variant="caption"
+                            sx={{ textAlign: "right" }}
+                          >
                             {formatDate(row.endDate)}
                           </Typography>
                         </Box>
@@ -4008,6 +4306,19 @@ const ProjectWorkbench = () => {
                             backgroundImage: `repeating-linear-gradient(to right, transparent, transparent ${colWidth - 1}px, rgba(0,0,0,0.06) ${colWidth - 1}px, rgba(0,0,0,0.06) ${colWidth}px)`,
                           }}
                         >
+                          {ganttCurrentPeriodOverlay && (
+                            <Box
+                              sx={{
+                                position: "absolute",
+                                left: ganttCurrentPeriodOverlay.left,
+                                top: 0,
+                                bottom: 0,
+                                width: ganttCurrentPeriodOverlay.width,
+                                bgcolor: "action.selected",
+                                pointerEvents: "none",
+                              }}
+                            />
+                          )}
                           {geo && !isMilestoneTaskType && (
                             <Box
                               sx={{
@@ -4092,6 +4403,15 @@ const ProjectWorkbench = () => {
                   )}
                 </Typography>
                 <Typography variant="subtitle2">
+                  {t("projectPlanning.helpSectionWorkflow", "Quick Workflow")}
+                </Typography>
+                <Typography variant="body2">
+                  {t(
+                    "projectPlanning.helpWorkflowBody",
+                    "Start by adding streams, then create tasks inside each stream, assign person in-charge, set duration/status, and use timeline bars to validate overlaps before execution.",
+                  )}
+                </Typography>
+                <Typography variant="subtitle2">
                   {t("projectPlanning.helpSectionTimeline", "Timeline Views")}
                 </Typography>
                 <Typography variant="body2">
@@ -4101,12 +4421,45 @@ const ProjectWorkbench = () => {
                   )}
                 </Typography>
                 <Typography variant="subtitle2">
+                  {t(
+                    "projectPlanning.helpSectionCurrentPeriod",
+                    "Current Period Highlight",
+                  )}
+                </Typography>
+                <Typography variant="body2">
+                  {t(
+                    "projectPlanning.helpCurrentPeriodBody",
+                    "The current period is highlighted automatically: today in Day view, the current week in Week view, and the current month in Month view. The same highlight appears in Gantt, Inventory Overview, and Manpower Overview.",
+                  )}
+                </Typography>
+                <Typography variant="subtitle2">
                   {t("projectPlanning.helpSectionActions", "Row Actions")}
                 </Typography>
                 <Typography variant="body2">
                   {t(
                     "projectPlanning.helpActionsBody",
                     "Open the settings menu on each stream or task row to create tasks, edit details, link milestones, move tasks, or remove items.",
+                  )}
+                </Typography>
+                <Typography variant="subtitle2">
+                  {t(
+                    "projectPlanning.helpSectionStreamActions",
+                    "Stream Actions",
+                  )}
+                </Typography>
+                <Typography variant="body2">
+                  {t(
+                    "projectPlanning.helpStreamActionsBody",
+                    "For each stream you can create task, edit stream info, replicate stream (copy stream by entering a new stream name), show/hide tasks, and remove stream when it has no tasks.",
+                  )}
+                </Typography>
+                <Typography variant="subtitle2">
+                  {t("projectPlanning.helpSectionTaskActions", "Task Actions")}
+                </Typography>
+                <Typography variant="body2">
+                  {t(
+                    "projectPlanning.helpTaskActionsBody",
+                    "For each task you can create child task, edit task, link milestone task, move to another parent task, and remove current task when task-type and dependency rules allow.",
                   )}
                 </Typography>
                 <Typography variant="subtitle2">
@@ -4130,6 +4483,102 @@ const ProjectWorkbench = () => {
                     "Task type, duration limits, start-date editability, and delete permissions are controlled by task-type settings.",
                   )}
                 </Typography>
+                <Typography variant="subtitle2">
+                  {t(
+                    "projectPlanning.helpSectionPlanningWorkspaces",
+                    "Planning Workspaces",
+                  )}
+                </Typography>
+                <Typography variant="body2">
+                  {t(
+                    "projectPlanning.helpPlanningWorkspacesBody",
+                    "Inventory Planning lets you add stock/asset/bundle requirements on a selected task or stream. Manpower Workspace lets you assign staff, role, and loading (0.0-1.0) for a task.",
+                  )}
+                </Typography>
+                <Typography variant="subtitle2">
+                  {t(
+                    "projectPlanning.helpSectionOverviews",
+                    "Inventory & Manpower Overviews",
+                  )}
+                </Typography>
+                <Typography variant="body2">
+                  {t(
+                    "projectPlanning.helpOverviewsBody",
+                    "Inventory Overview summarizes planned quantities by period and shows details on hover. Manpower Overview aggregates staff loading by period; red values indicate overloaded days (>1.0).",
+                  )}
+                </Typography>
+                <Typography variant="subtitle2">
+                  {t(
+                    "projectPlanning.helpSectionHowReplicateStream",
+                    "How To: Replicate A Stream",
+                  )}
+                </Typography>
+                <Typography variant="body2">
+                  {t(
+                    "projectPlanning.helpHowReplicateStreamBody",
+                    "1. Open the stream row settings menu. 2. Click Replicate Stream. 3. Enter the new stream name in the dialog. 4. Click Save to copy the selected stream.",
+                  )}
+                </Typography>
+                <Typography variant="subtitle2">
+                  {t(
+                    "projectPlanning.helpSectionHowManageTasks",
+                    "How To: Create And Manage Tasks",
+                  )}
+                </Typography>
+                <Typography variant="body2">
+                  {t(
+                    "projectPlanning.helpHowManageTasksBody",
+                    "1. Open stream settings and click Create Task (or open a task and click Create Child Task). 2. Fill task name/type/start/duration/person in-charge. 3. Save the task. 4. Use task settings to edit, link milestone, move, or remove when allowed.",
+                  )}
+                </Typography>
+                <Typography variant="subtitle2">
+                  {t(
+                    "projectPlanning.helpSectionHowMoveTask",
+                    "How To: Move A Task",
+                  )}
+                </Typography>
+                <Typography variant="body2">
+                  {t(
+                    "projectPlanning.helpHowMoveTaskBody",
+                    "1. Open task settings and click Move To. 2. Move mode activates. 3. Click a valid target parent task in the grid. 4. The system recalculates and updates the task hierarchy.",
+                  )}
+                </Typography>
+                <Typography variant="subtitle2">
+                  {t(
+                    "projectPlanning.helpSectionHowInventoryPlanning",
+                    "How To: Plan Inventory",
+                  )}
+                </Typography>
+                <Typography variant="body2">
+                  {t(
+                    "projectPlanning.helpHowInventoryPlanningBody",
+                    "1. Click the inventory icon on a stream/task row. 2. Select Stock, Asset, or Bundle tab as needed. 3. Add required items and quantities. 4. Remove or adjust entries before closing.",
+                  )}
+                </Typography>
+                <Typography variant="subtitle2">
+                  {t(
+                    "projectPlanning.helpSectionHowManpowerPlanning",
+                    "How To: Plan Manpower",
+                  )}
+                </Typography>
+                <Typography variant="body2">
+                  {t(
+                    "projectPlanning.helpHowManpowerPlanningBody",
+                    "1. Click the manpower icon on a task row. 2. Select staff member(s). 3. Set role and loading value (0.0 to 1.0). 4. Save or remove assignments as needed.",
+                  )}
+                </Typography>
+                <Typography variant="subtitle2">
+                  {t(
+                    "projectPlanning.helpSectionHowReadOverviews",
+                    "How To: Read Overview Grids",
+                  )}
+                </Typography>
+                <Typography variant="body2">
+                  {t(
+                    "projectPlanning.helpHowReadOverviewsBody",
+                    "1. Open Inventory Overview or Manpower Overview from the header actions. 2. Switch Day/Week/Month to change granularity. 3. Follow the highlighted current period column for present-time tracking. 4. Hover populated cells to view detail breakdown.",
+                  )}
+                </Typography>
               </Stack>
             </DialogContent>
             <DialogActions>
@@ -4148,11 +4597,13 @@ const ProjectWorkbench = () => {
             <DialogTitle>
               {dialogMode === "add-stream"
                 ? t("projectPlanning.addStream", "Add Stream")
-                : dialogMode === "add-task"
-                  ? t("projectPlanning.createTask", "Create Task")
-                  : settingsTarget?.type === "stream"
-                    ? t("projectPlanning.streamSettings", "Stream Settings")
-                    : t("projectPlanning.taskSettings", "Task Settings")}
+                : dialogMode === "replicate-stream"
+                  ? t("projectPlanning.replicateStream", "Replicate Stream")
+                  : dialogMode === "add-task"
+                    ? t("projectPlanning.createTask", "Create Task")
+                    : settingsTarget?.type === "stream"
+                      ? t("projectPlanning.streamSettings", "Stream Settings")
+                      : t("projectPlanning.taskSettings", "Task Settings")}
             </DialogTitle>
             <DialogContent dividers>
               {settingsError && (
@@ -4196,6 +4647,26 @@ const ProjectWorkbench = () => {
                   />
                 </Stack>
               )}
+
+              {dialogMode === "replicate-stream" &&
+                settingsTarget?.type === "stream" && (
+                  <Stack spacing={2}>
+                    <TextField
+                      label={t("projectstream.streamName", "Stream Name")}
+                      value={formData.streamName || ""}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          streamName: e.target.value,
+                        }))
+                      }
+                      size="small"
+                      fullWidth
+                      autoFocus
+                      required
+                    />
+                  </Stack>
+                )}
 
               {dialogMode === "edit-stream" &&
                 settingsTarget?.type === "stream" && (
@@ -4769,6 +5240,15 @@ const ProjectWorkbench = () => {
                 >
                   {t("basic.save", "Save")}
                 </Button>
+              ) : dialogMode === "replicate-stream" ? (
+                <Button
+                  variant="contained"
+                  onClick={replicateStream}
+                  disabled={saving}
+                  sx={{ minWidth: 120, fontWeight: 600 }}
+                >
+                  {t("basic.save", "Save")}
+                </Button>
               ) : dialogMode === "edit-stream" ? (
                 <Button
                   variant="contained"
@@ -4924,12 +5404,39 @@ const ProjectWorkbench = () => {
                                 String(inventoryDraft.productId || ""),
                             ) || null
                           }
-                          onChange={(_, value) =>
+                          onChange={(_, value) => {
+                            const nextProductId = String(
+                              value?.productId || "",
+                            ).trim();
+                            if (!nextProductId) {
+                              setInventoryDraft((prev) => ({
+                                ...prev,
+                                productId: "",
+                              }));
+                              return;
+                            }
+
+                            const duplicate = getInventoryRows("stock").some(
+                              (item) =>
+                                String(item?.productId || "").trim() ===
+                                nextProductId,
+                            );
+                            if (duplicate) {
+                              setInventoryPlanningError(
+                                t(
+                                  "projectPlanning.inventoryDuplicateProduct",
+                                  "This product has already been added.",
+                                ),
+                              );
+                              return;
+                            }
+
+                            setInventoryPlanningError("");
                             setInventoryDraft((prev) => ({
                               ...prev,
-                              productId: String(value?.productId || ""),
-                            }))
-                          }
+                              productId: nextProductId,
+                            }));
+                          }}
                           getOptionLabel={(option) =>
                             String(
                               option?.productName ||
@@ -5107,12 +5614,39 @@ const ProjectWorkbench = () => {
                                 String(inventoryDraft.productId || ""),
                             ) || null
                           }
-                          onChange={(_, value) =>
+                          onChange={(_, value) => {
+                            const nextProductId = String(
+                              value?.productId || "",
+                            ).trim();
+                            if (!nextProductId) {
+                              setInventoryDraft((prev) => ({
+                                ...prev,
+                                productId: "",
+                              }));
+                              return;
+                            }
+
+                            const duplicate = getInventoryRows("asset").some(
+                              (item) =>
+                                String(item?.productId || "").trim() ===
+                                nextProductId,
+                            );
+                            if (duplicate) {
+                              setInventoryPlanningError(
+                                t(
+                                  "projectPlanning.inventoryDuplicateProduct",
+                                  "This product has already been added.",
+                                ),
+                              );
+                              return;
+                            }
+
+                            setInventoryPlanningError("");
                             setInventoryDraft((prev) => ({
                               ...prev,
-                              productId: String(value?.productId || ""),
-                            }))
-                          }
+                              productId: nextProductId,
+                            }));
+                          }}
                           getOptionLabel={(option) =>
                             String(
                               option?.productName ||
@@ -5273,12 +5807,37 @@ const ProjectWorkbench = () => {
                               String(inventoryDraft.bundleId || ""),
                           ) || null
                         }
-                        onChange={(_, value) =>
+                        onChange={(_, value) => {
+                          const nextBundleId = getBundleId(value);
+                          if (!nextBundleId) {
+                            setInventoryDraft((prev) => ({
+                              ...prev,
+                              bundleId: "",
+                            }));
+                            return;
+                          }
+
+                          const duplicate = getInventoryRows("bundle").some(
+                            (item) =>
+                              String(item?.bundleId || "").trim() ===
+                              nextBundleId,
+                          );
+                          if (duplicate) {
+                            setInventoryPlanningError(
+                              t(
+                                "projectPlanning.inventoryDuplicateBundle",
+                                "This bundle has already been added.",
+                              ),
+                            );
+                            return;
+                          }
+
+                          setInventoryPlanningError("");
                           setInventoryDraft((prev) => ({
                             ...prev,
-                            bundleId: getBundleId(value),
-                          }))
-                        }
+                            bundleId: nextBundleId,
+                          }));
+                        }}
                         getOptionLabel={(option) => getBundleName(option)}
                         isOptionEqualToValue={(option, value) =>
                           getBundleId(option) === getBundleId(value)
@@ -5469,9 +6028,87 @@ const ProjectWorkbench = () => {
                   <Alert severity="error">{manpowerPlanningError}</Alert>
                 )}
 
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    {t(
+                      "projectPlanning.manpowerSkillProfileFilter",
+                      "Skill Profile",
+                    )}
+                  </Typography>
+                  <Box
+                    sx={{
+                      mt: 0.5,
+                      p: 0.75,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 1,
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 0.5,
+                      minHeight: 44,
+                      alignItems: "center",
+                    }}
+                  >
+                    {manpowerSkillFilterOptions.length === 0 ? (
+                      <Typography variant="caption" color="text.secondary">
+                        {t(
+                          "projectPlanning.manpowerNoSkillProfiles",
+                          "No skill profiles",
+                        )}
+                      </Typography>
+                    ) : (
+                      manpowerSkillFilterOptions.map((skill) => {
+                        const isSelected = manpowerSkillFilter.some(
+                          (selected) =>
+                            String(selected || "")
+                              .trim()
+                              .toLowerCase() ===
+                            String(skill || "")
+                              .trim()
+                              .toLowerCase(),
+                        );
+
+                        return (
+                          <Chip
+                            key={`skill-filter-chip-${skill}`}
+                            label={skill}
+                            size="small"
+                            clickable
+                            onMouseDown={(event) => event.preventDefault()}
+                            variant={isSelected ? "filled" : "outlined"}
+                            color={isSelected ? "primary" : "default"}
+                            onClick={() => toggleManpowerSkillFilter(skill)}
+                            onDelete={
+                              isSelected
+                                ? () => toggleManpowerSkillFilter(skill)
+                                : undefined
+                            }
+                            sx={{
+                              height: 18,
+                              "& .MuiChip-label": {
+                                px: 0.6,
+                                fontSize: "0.68rem",
+                              },
+                            }}
+                          />
+                        );
+                      })
+                    )}
+                  </Box>
+                </Box>
+
                 <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
                   <Autocomplete
-                    options={manpowerStaffOptions}
+                    options={filteredManpowerStaffOptions}
+                    open={manpowerStaffDropdownOpen}
+                    onOpen={() => setManpowerStaffDropdownOpen(true)}
+                    onClose={(_, reason) => {
+                      if (reason === "selectOption") {
+                        setManpowerStaffDropdownOpen(false);
+                        return;
+                      }
+                      setManpowerStaffDropdownOpen(false);
+                    }}
                     fullWidth
                     size="small"
                     value={
@@ -5481,33 +6118,121 @@ const ProjectWorkbench = () => {
                           String(manpowerDraft.staffId || ""),
                       ) || null
                     }
-                    onChange={(_, value) =>
+                    onChange={(_, value) => {
+                      const nextStaffId = String(value?.staffId || "").trim();
+                      if (!nextStaffId) {
+                        setManpowerDraft((prev) => ({ ...prev, staffId: "" }));
+                        return;
+                      }
+
+                      const duplicateRow = manpowerPlanningRows.find(
+                        (item) =>
+                          String(item?.staffId || "").trim() === nextStaffId &&
+                          String(item?.apiId || "") !==
+                            String(manpowerDraft.apiId || ""),
+                      );
+
+                      if (duplicateRow) {
+                        setManpowerPlanningError(
+                          t(
+                            "projectPlanning.manpowerDuplicateStaff",
+                            "This staff has already been added.",
+                          ),
+                        );
+                        return;
+                      }
+
+                      setManpowerPlanningError("");
                       setManpowerDraft((prev) => ({
                         ...prev,
-                        staffId: String(value?.staffId || ""),
-                      }))
-                    }
+                        staffId: nextStaffId,
+                      }));
+                    }}
                     getOptionLabel={(option) => {
-                      const id = String(option?.staffId || "").trim();
                       const name =
                         String(option?.staffName || "").trim() ||
                         [option?.firstName, option?.lastName]
                           .filter(Boolean)
                           .join(" ")
                           .trim();
-                      return name ? `${id} - ${name}` : id;
+                      return name || "-";
                     }}
                     isOptionEqualToValue={(option, value) =>
                       String(option?.staffId || "") ===
                       String(value?.staffId || "")
                     }
+                    renderOption={(props, option) => {
+                      const staffId = String(option?.staffId || "").trim();
+                      const skills = manpowerSkillsByStaffId?.[staffId] || [];
+                      const name =
+                        String(option?.staffName || "").trim() ||
+                        [option?.firstName, option?.lastName]
+                          .filter(Boolean)
+                          .join(" ")
+                          .trim() ||
+                        "-";
+
+                      return (
+                        <Box
+                          component="li"
+                          {...props}
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.75,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <Typography sx={{ mr: 0.25, fontSize: "inherit" }}>
+                            {name}
+                          </Typography>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              gap: 0.5,
+                              flexWrap: "wrap",
+                              alignItems: "center",
+                              ml: 0.5,
+                            }}
+                          >
+                            {skills.length === 0 ? (
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ ml: 0.25 }}
+                              >
+                                {t(
+                                  "projectPlanning.manpowerNoSkillProfiles",
+                                  "No skill profiles",
+                                )}
+                              </Typography>
+                            ) : (
+                              skills.slice(0, 3).map((skill) => (
+                                <Chip
+                                  key={`${staffId}-${skill}`}
+                                  label={skill}
+                                  size="small"
+                                  sx={{
+                                    height: 18,
+                                    "& .MuiChip-label": {
+                                      px: 0.6,
+                                      fontSize: "0.66rem",
+                                    },
+                                  }}
+                                />
+                              ))
+                            )}
+                          </Box>
+                        </Box>
+                      );
+                    }}
                     renderInput={(params) => (
                       <TextField
                         {...params}
-                        label={t("projectPlanning.staffId", "Staff")}
+                        label={t("projectPlanning.staffName", "Staff Name")}
                         placeholder={t(
                           "projectPlanning.manpowerStaffFilterPlaceholder",
-                          "Search by staff ID or name",
+                          "Search by staff name",
                         )}
                       />
                     )}
@@ -5561,11 +6286,7 @@ const ProjectWorkbench = () => {
                     }
                     onClick={saveManpowerAssignment}
                   >
-                    {manpowerPlanningRows.some(
-                      (item) =>
-                        String(item?.staffId || "") ===
-                        String(manpowerDraft.staffId || ""),
-                    )
+                    {manpowerDraft.apiId
                       ? t("basic.save", "Save")
                       : t("basic.add", "Add")}
                   </Button>
@@ -5596,8 +6317,7 @@ const ProjectWorkbench = () => {
                     <Box
                       sx={{
                         display: "grid",
-                        gridTemplateColumns:
-                          "minmax(0, 1fr) minmax(0, 1.4fr) 110px 90px 82px",
+                        gridTemplateColumns: "minmax(0, 2.4fr) 110px 90px 82px",
                         gap: 1,
                         px: 1.25,
                         py: 0.75,
@@ -5606,9 +6326,6 @@ const ProjectWorkbench = () => {
                         borderColor: "divider",
                       }}
                     >
-                      <Typography variant="caption" fontWeight={700}>
-                        {t("projectPlanning.staffId", "Staff")}
-                      </Typography>
                       <Typography variant="caption" fontWeight={700}>
                         {t("projectPlanning.staffName", "Staff Name")}
                       </Typography>
@@ -5656,7 +6373,7 @@ const ProjectWorkbench = () => {
                             sx={{
                               display: "grid",
                               gridTemplateColumns:
-                                "minmax(0, 1fr) minmax(0, 1.4fr) 110px 90px 82px",
+                                "minmax(0, 2.4fr) 110px 90px 82px",
                               gap: 1,
                               px: 1.25,
                               py: 0.5,
@@ -5666,16 +6383,47 @@ const ProjectWorkbench = () => {
                               "&:last-child": { borderBottom: "none" },
                             }}
                           >
-                            <Typography variant="body2" noWrap>
-                              {item.staffId}
-                            </Typography>
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              noWrap
-                            >
-                              {staffName}
-                            </Typography>
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                noWrap
+                                sx={{ display: "inline" }}
+                              >
+                                {staffName}
+                              </Typography>
+                              <Box
+                                component="span"
+                                sx={{
+                                  ml: 0.75,
+                                  display: "inline-flex",
+                                  gap: 0.5,
+                                  flexWrap: "wrap",
+                                  verticalAlign: "middle",
+                                }}
+                              >
+                                {(
+                                  manpowerSkillsByStaffId?.[
+                                    String(item?.staffId || "")
+                                  ] || []
+                                )
+                                  .slice(0, 3)
+                                  .map((skill) => (
+                                    <Chip
+                                      key={`${item.staffId}-${skill}`}
+                                      size="small"
+                                      label={skill}
+                                      sx={{
+                                        height: 18,
+                                        "& .MuiChip-label": {
+                                          px: 0.6,
+                                          fontSize: "0.66rem",
+                                        },
+                                      }}
+                                    />
+                                  ))}
+                              </Box>
+                            </Box>
                             <Typography variant="body2">{roleLabel}</Typography>
                             <Typography variant="body2">
                               {item.loading}
@@ -5685,6 +6433,7 @@ const ProjectWorkbench = () => {
                                 size="small"
                                 onClick={() =>
                                   setManpowerDraft({
+                                    apiId: item.apiId || null,
                                     staffId: String(item.staffId || ""),
                                     role: normalizeManpowerRole(item.role),
                                     loading: String(item.loading || "1"),
@@ -5742,6 +6491,14 @@ const ProjectWorkbench = () => {
                   </ListItemIcon>
                   <ListItemText>
                     {t("projectPlanning.editStream", "Edit Stream Information")}
+                  </ListItemText>
+                </MenuItem>
+                <MenuItem onClick={() => openReplicateStreamDialog(menuTarget)}>
+                  <ListItemIcon>
+                    <ContentCopyIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText>
+                    {t("projectPlanning.replicateStream", "Replicate Stream")}
                   </ListItemText>
                 </MenuItem>
                 <MenuItem
@@ -5825,22 +6582,6 @@ const ProjectWorkbench = () => {
                   </ListItemIcon>
                   <ListItemText>
                     {t("projectPlanning.moveTo", "Move To")}
-                  </ListItemText>
-                </MenuItem>
-                <MenuItem
-                  onClick={() => {
-                    openManpowerPlanningDialog(menuTarget);
-                    closeSettingsMenu();
-                  }}
-                >
-                  <ListItemIcon>
-                    <Groups2OutlinedIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText>
-                    {t(
-                      "projectPlanning.openManpowerPlanning",
-                      "Open manpower workspace",
-                    )}
                   </ListItemText>
                 </MenuItem>
                 <MenuItem
@@ -6096,6 +6837,12 @@ const ProjectWorkbench = () => {
                                 width: inventoryOverviewColWidth,
                                 px: 0,
                                 py: 0.4,
+                                bgcolor: isCurrentPeriodColumn(
+                                  inventoryOverviewViewMode,
+                                  col,
+                                )
+                                  ? "action.selected"
+                                  : "transparent",
                                 borderLeft: "1px solid",
                                 borderColor:
                                   inventoryOverviewViewMode === "day"
@@ -6189,8 +6936,15 @@ const ProjectWorkbench = () => {
                           {inventoryOverviewActiveCols.map((col) => {
                             const value = getUsageValue(row, col);
                             const hasValue = value > 0;
+                            const isCurrentPeriod = isCurrentPeriodColumn(
+                              inventoryOverviewViewMode,
+                              col,
+                            );
                             const cellSx = {
                               width: inventoryOverviewColWidth,
+                              bgcolor: isCurrentPeriod
+                                ? "action.selected"
+                                : "transparent",
                               borderLeft: "1px solid",
                               borderColor:
                                 inventoryOverviewViewMode === "day"
@@ -6484,6 +7238,12 @@ const ProjectWorkbench = () => {
                                 width: manpowerOverviewColWidth,
                                 px: 0,
                                 py: 0.4,
+                                bgcolor: isCurrentPeriodColumn(
+                                  manpowerOverviewViewMode,
+                                  col,
+                                )
+                                  ? "action.selected"
+                                  : "transparent",
                                 borderLeft: "1px solid",
                                 borderColor:
                                   manpowerOverviewViewMode === "day"
@@ -6622,11 +7382,18 @@ const ProjectWorkbench = () => {
                           {manpowerOverviewActiveCols.map((col) => {
                             const value = getManpowerUsageValue(row, col);
                             const hasValue = value > 0;
+                            const isCurrentPeriod = isCurrentPeriodColumn(
+                              manpowerOverviewViewMode,
+                              col,
+                            );
                             const overloaded = hasValue
                               ? isManpowerOverloaded(row, col)
                               : false;
                             const cellSx = {
                               width: manpowerOverviewColWidth,
+                              bgcolor: isCurrentPeriod
+                                ? "action.selected"
+                                : "transparent",
                               borderLeft: "1px solid",
                               borderColor:
                                 manpowerOverviewViewMode === "day"
