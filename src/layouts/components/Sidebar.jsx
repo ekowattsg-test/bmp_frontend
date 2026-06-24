@@ -325,7 +325,7 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
             },
             {
               key: "projectPlanning",
-              label: t("menu.projectPlanning", "Project Planning"),
+              label: t("menu.projectPlanning", "Project Workbench"),
               icon: <AccountTreeIcon fontSize="small" />,
               path: "/projectplanning",
               minLevel: 1,
@@ -367,7 +367,7 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
             .filter((child) =>
               child.minLevel === undefined
                 ? true
-                : (userInfo?.level ?? 0) >= child.minLevel
+                : (userInfo?.level ?? 0) >= child.minLevel,
             ),
         }))
         .filter((section) => {

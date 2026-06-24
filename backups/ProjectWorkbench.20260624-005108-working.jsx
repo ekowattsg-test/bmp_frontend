@@ -300,7 +300,8 @@ const ProjectWorkbench = () => {
   });
   const [manpowerPlanningOpen, setManpowerPlanningOpen] = useState(false);
   const [manpowerPlanningTarget, setManpowerPlanningTarget] = useState(null);
-  const [manpowerPlanningLoading, setManpowerPlanningLoading] = useState(false);
+  const [manpowerPlanningLoading, setManpowerPlanningLoading] =
+    useState(false);
   const [manpowerPlanningError, setManpowerPlanningError] = useState("");
   const [manpowerPlanningRows, setManpowerPlanningRows] = useState([]);
   const [manpowerStaffOptions, setManpowerStaffOptions] = useState([]);
@@ -2938,9 +2939,7 @@ const ProjectWorkbench = () => {
   };
 
   const normalizeManpowerRole = (value) => {
-    const raw = String(value || "")
-      .trim()
-      .toLowerCase();
+    const raw = String(value || "").trim().toLowerCase();
     if (raw === "s" || raw === "supervisor") return "supervisor";
     return "worker";
   };
@@ -2997,10 +2996,7 @@ const ProjectWorkbench = () => {
       );
     } catch {
       setManpowerPlanningError(
-        t(
-          "projectPlanning.manpowerLoadFailed",
-          "Failed to load project manpower.",
-        ),
+        t("projectPlanning.manpowerLoadFailed", "Failed to load project manpower."),
       );
       setManpowerStaffOptions([]);
       setManpowerPlanningRows([]);
@@ -3029,8 +3025,7 @@ const ProjectWorkbench = () => {
     const existingIndex = manpowerPlanningRows.findIndex(
       (item) => String(item?.staffId || "") === staffId,
     );
-    const existing =
-      existingIndex >= 0 ? manpowerPlanningRows[existingIndex] : null;
+    const existing = existingIndex >= 0 ? manpowerPlanningRows[existingIndex] : null;
     const apiId = existing?.apiId;
     const payload = {
       ...(apiId ? { projectManpowerId: apiId } : {}),
@@ -3057,9 +3052,7 @@ const ProjectWorkbench = () => {
       };
 
       setManpowerPlanningRows((prev) => {
-        const idx = prev.findIndex(
-          (item) => String(item?.staffId || "") === staffId,
-        );
+        const idx = prev.findIndex((item) => String(item?.staffId || "") === staffId);
         if (idx < 0) {
           return [...prev, nextRow];
         }
@@ -3071,10 +3064,7 @@ const ProjectWorkbench = () => {
       setManpowerDraft({ staffId: "", role: "worker", loading: "1" });
     } catch {
       setManpowerPlanningError(
-        t(
-          "projectPlanning.manpowerSaveFailed",
-          "Failed to save project manpower.",
-        ),
+        t("projectPlanning.manpowerSaveFailed", "Failed to save project manpower."),
       );
     } finally {
       setManpowerPlanningLoading(false);
@@ -5513,10 +5503,7 @@ const ProjectWorkbench = () => {
                     )}
                   />
 
-                  <FormControl
-                    size="small"
-                    sx={{ minWidth: { xs: "100%", md: 170 } }}
-                  >
+                  <FormControl size="small" sx={{ minWidth: { xs: "100%", md: 170 } }}>
                     <InputLabel>
                       {t("projectPlanning.manpowerRole", "Role")}
                     </InputLabel>
@@ -5572,17 +5559,12 @@ const ProjectWorkbench = () => {
                 </Stack>
 
                 {manpowerPlanningLoading ? (
-                  <Box
-                    sx={{ py: 4, display: "flex", justifyContent: "center" }}
-                  >
+                  <Box sx={{ py: 4, display: "flex", justifyContent: "center" }}>
                     <CircularProgress size={24} />
                   </Box>
                 ) : manpowerPlanningRows.length === 0 ? (
                   <Typography variant="body2" color="text.secondary">
-                    {t(
-                      "projectPlanning.noManpowerSelected",
-                      "No manpower selected.",
-                    )}
+                    {t("projectPlanning.noManpowerSelected", "No manpower selected.")}
                   </Typography>
                 ) : (
                   <Box
@@ -5633,8 +5615,7 @@ const ProjectWorkbench = () => {
                         ),
                       )
                       .map((item) => {
-                        const staff =
-                          manpowerStaffById[String(item?.staffId || "")];
+                        const staff = manpowerStaffById[String(item?.staffId || "")];
                         const staffName =
                           String(staff?.staffName || "").trim() ||
                           [staff?.firstName, staff?.lastName]
@@ -5644,10 +5625,7 @@ const ProjectWorkbench = () => {
                           "-";
                         const roleLabel =
                           normalizeManpowerRole(item?.role) === "supervisor"
-                            ? t(
-                                "projectPlanning.manpowerRoleSupervisor",
-                                "Supervisor",
-                              )
+                            ? t("projectPlanning.manpowerRoleSupervisor", "Supervisor")
                             : t("projectPlanning.manpowerRoleWorker", "Worker");
 
                         return (
@@ -5669,17 +5647,11 @@ const ProjectWorkbench = () => {
                             <Typography variant="body2" noWrap>
                               {item.staffId}
                             </Typography>
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              noWrap
-                            >
+                            <Typography variant="body2" color="text.secondary" noWrap>
                               {staffName}
                             </Typography>
                             <Typography variant="body2">{roleLabel}</Typography>
-                            <Typography variant="body2">
-                              {item.loading}
-                            </Typography>
+                            <Typography variant="body2">{item.loading}</Typography>
                             <Box sx={{ display: "flex", gap: 0.25 }}>
                               <IconButton
                                 size="small"

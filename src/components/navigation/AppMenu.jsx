@@ -245,7 +245,7 @@ const AppMenu = () => {
           },
           {
             to: "/projectplanning",
-            label: t("menu.projectPlanning", "Project Planning"),
+            label: t("menu.projectPlanning", "Project Workbench"),
             icon: <AccountTree />,
           },
         ],

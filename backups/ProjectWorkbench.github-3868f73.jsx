@@ -1,4 +1,4 @@
-ï»¿import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Autocomplete,
@@ -298,17 +298,6 @@ const ProjectWorkbench = () => {
     bundleId: "",
     bundleQuantity: 1,
   });
-  const [manpowerPlanningOpen, setManpowerPlanningOpen] = useState(false);
-  const [manpowerPlanningTarget, setManpowerPlanningTarget] = useState(null);
-  const [manpowerPlanningLoading, setManpowerPlanningLoading] = useState(false);
-  const [manpowerPlanningError, setManpowerPlanningError] = useState("");
-  const [manpowerPlanningRows, setManpowerPlanningRows] = useState([]);
-  const [manpowerStaffOptions, setManpowerStaffOptions] = useState([]);
-  const [manpowerDraft, setManpowerDraft] = useState({
-    staffId: "",
-    role: "worker",
-    loading: "1",
-  });
 
   const taskTypeOptions = useMemo(() => {
     const map = new Map();
@@ -343,31 +332,6 @@ const ProjectWorkbench = () => {
         return acc;
       }, {}),
     [taskTypeOptions],
-  );
-
-  const manpowerRoleOptions = useMemo(
-    () => [
-      {
-        value: "worker",
-        label: t("projectPlanning.manpowerRoleWorker", "Worker"),
-      },
-      {
-        value: "supervisor",
-        label: t("projectPlanning.manpowerRoleSupervisor", "Supervisor"),
-      },
-    ],
-    [t],
-  );
-
-  const manpowerStaffById = useMemo(
-    () =>
-      manpowerStaffOptions.reduce((acc, staff) => {
-        const id = String(staff?.staffId || "").trim();
-        if (!id) return acc;
-        acc[id] = staff;
-        return acc;
-      }, {}),
-    [manpowerStaffOptions],
   );
 
   const buildTaskAssigneeOptions = (leaderRows, staffRows) => {
@@ -1632,7 +1596,7 @@ const ProjectWorkbench = () => {
     );
   };
 
-  // Î“Ã¶Ã‡Î“Ã¶Ã‡ Day view columns Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡
+  // GöÇGöÇ Day view columns GöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇ
   const dayColumns = useMemo(() => {
     const { minDate, maxDate } = timelineBounds;
     const span = Math.max(1, diffDays(minDate, maxDate) + 1);
@@ -1647,7 +1611,7 @@ const ProjectWorkbench = () => {
     });
   }, [timelineBounds]);
 
-  // Î“Ã¶Ã‡Î“Ã¶Ã‡ Week view columns (Mon-aligned) Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡
+  // GöÇGöÇ Week view columns (Mon-aligned) GöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇ
   const weekColumns = useMemo(() => {
     const { minDate, maxDate } = timelineBounds;
     // Snap start back to Monday of first week
@@ -1689,7 +1653,7 @@ const ProjectWorkbench = () => {
     return cols;
   }, [timelineBounds]);
 
-  // Î“Ã¶Ã‡Î“Ã¶Ã‡ Month view columns Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡
+  // GöÇGöÇ Month view columns GöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇ
   const monthColumns = useMemo(() => {
     const { minDate, maxDate } = timelineBounds;
     const cols = [];
@@ -1713,10 +1677,10 @@ const ProjectWorkbench = () => {
     return cols;
   }, [timelineBounds]);
 
-  // Î“Ã¶Ã‡Î“Ã¶Ã‡ Shared upper-header segments
-  // day   Î“Ã¥Ã† group by month  (upper = month label)
-  // week  Î“Ã¥Ã† group by year   (upper = year)
-  // month Î“Ã¥Ã† group by year   (upper = year)
+  // GöÇGöÇ Shared upper-header segments
+  // day   GåÆ group by month  (upper = month label)
+  // week  GåÆ group by year   (upper = year)
+  // month GåÆ group by year   (upper = year)
   const upperSegments = useMemo(() => {
     if (viewMode === "day") {
       const segs = [];
@@ -1745,7 +1709,7 @@ const ProjectWorkbench = () => {
     return segs;
   }, [viewMode, dayColumns, weekColumns, monthColumns]);
 
-  // Î“Ã¶Ã‡Î“Ã¶Ã‡ Bar geometry helpers Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡
+  // GöÇGöÇ Bar geometry helpers GöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇ
   const colWidth = COL_WIDTH[viewMode];
 
   const getBarGeometry = (startDate, endDate) => {
@@ -1771,7 +1735,7 @@ const ProjectWorkbench = () => {
       const right = endFrac * colWidth;
       return { left, width: Math.max(colWidth / 7, right - left) };
     }
-    // month view Î“Ã‡Ã¶ fractional within each month by day-of-month
+    // month view GÇö fractional within each month by day-of-month
     if (weekColumns.length === 0 && monthColumns.length === 0) return null;
     const startMonthIdx = monthColumns.findIndex(
       (col) => startDate >= col.monthStart && startDate <= col.monthEnd,
@@ -2937,178 +2901,6 @@ const ProjectWorkbench = () => {
     });
   };
 
-  const normalizeManpowerRole = (value) => {
-    const raw = String(value || "")
-      .trim()
-      .toLowerCase();
-    if (raw === "s" || raw === "supervisor") return "supervisor";
-    return "worker";
-  };
-
-  const normalizeManpowerLoading = (value) => {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return 1;
-    return Math.max(0, Math.min(1, numeric));
-  };
-
-  const getManpowerTaskId = (target) =>
-    Number(target?.raw?.projectTaskId || 0) || null;
-
-  const openManpowerPlanningDialog = async (row) => {
-    if (row?.type !== "task") {
-      setError(
-        t(
-          "projectPlanning.manpowerOnlyForTask",
-          "Manpower planning is only available for tasks.",
-        ),
-      );
-      return;
-    }
-
-    const taskId = getManpowerTaskId(row);
-    if (!taskId) return;
-
-    setManpowerPlanningTarget(row);
-    setManpowerPlanningOpen(true);
-    setManpowerPlanningError("");
-    setManpowerDraft({ staffId: "", role: "worker", loading: "1" });
-    setManpowerPlanningLoading(true);
-
-    try {
-      const [staffsRes, manpowerRes] = await Promise.all([
-        request("GET", "/api/staffs").catch(() => ({ data: [] })),
-        request("GET", `/api/projectmanpowers/task/${taskId}`).catch(() => ({
-          data: [],
-        })),
-      ]);
-
-      const staffs = Array.isArray(staffsRes?.data) ? staffsRes.data : [];
-      const rows = Array.isArray(manpowerRes?.data) ? manpowerRes.data : [];
-
-      setManpowerStaffOptions(staffs);
-      setManpowerPlanningRows(
-        rows.map((item) => ({
-          apiId: item?.projectManpowerId,
-          projectTaskId: Number(item?.projectTaskId || taskId) || taskId,
-          staffId: String(item?.staffId || "").trim(),
-          role: normalizeManpowerRole(item?.role),
-          loading: String(normalizeManpowerLoading(item?.loading ?? 1)),
-        })),
-      );
-    } catch {
-      setManpowerPlanningError(
-        t(
-          "projectPlanning.manpowerLoadFailed",
-          "Failed to load project manpower.",
-        ),
-      );
-      setManpowerStaffOptions([]);
-      setManpowerPlanningRows([]);
-    } finally {
-      setManpowerPlanningLoading(false);
-    }
-  };
-
-  const saveManpowerAssignment = async () => {
-    const taskId = getManpowerTaskId(manpowerPlanningTarget);
-    const staffId = String(manpowerDraft.staffId || "").trim();
-    const role = normalizeManpowerRole(manpowerDraft.role);
-    const loading = Number(manpowerDraft.loading);
-
-    if (!taskId || !staffId) return;
-    if (!Number.isFinite(loading) || loading < 0 || loading > 1) {
-      setManpowerPlanningError(
-        t(
-          "projectPlanning.manpowerLoadingHint",
-          "Loading must be between 0.0 and 1.0.",
-        ),
-      );
-      return;
-    }
-
-    const existingIndex = manpowerPlanningRows.findIndex(
-      (item) => String(item?.staffId || "") === staffId,
-    );
-    const existing =
-      existingIndex >= 0 ? manpowerPlanningRows[existingIndex] : null;
-    const apiId = existing?.apiId;
-    const payload = {
-      ...(apiId ? { projectManpowerId: apiId } : {}),
-      projectTaskId: taskId,
-      staffId,
-      role,
-      loading,
-    };
-
-    setManpowerPlanningError("");
-    setManpowerPlanningLoading(true);
-    try {
-      const res = apiId
-        ? await request("PUT", `/api/projectmanpowers/${apiId}`, payload)
-        : await request("POST", "/api/projectmanpowers", payload);
-
-      const saved = res?.data || payload;
-      const nextRow = {
-        apiId: saved?.projectManpowerId || apiId,
-        projectTaskId: taskId,
-        staffId,
-        role: normalizeManpowerRole(saved?.role ?? role),
-        loading: String(normalizeManpowerLoading(saved?.loading ?? loading)),
-      };
-
-      setManpowerPlanningRows((prev) => {
-        const idx = prev.findIndex(
-          (item) => String(item?.staffId || "") === staffId,
-        );
-        if (idx < 0) {
-          return [...prev, nextRow];
-        }
-        const next = [...prev];
-        next[idx] = nextRow;
-        return next;
-      });
-
-      setManpowerDraft({ staffId: "", role: "worker", loading: "1" });
-    } catch {
-      setManpowerPlanningError(
-        t(
-          "projectPlanning.manpowerSaveFailed",
-          "Failed to save project manpower.",
-        ),
-      );
-    } finally {
-      setManpowerPlanningLoading(false);
-    }
-  };
-
-  const removeManpowerAssignment = async (row) => {
-    const apiId = row?.apiId;
-    const staffId = String(row?.staffId || "").trim();
-    if (!staffId) return;
-
-    if (!apiId) {
-      setManpowerPlanningRows((prev) =>
-        prev.filter((item) => String(item?.staffId || "") !== staffId),
-      );
-      return;
-    }
-
-    setManpowerPlanningError("");
-    try {
-      await request("DELETE", `/api/projectmanpowers/${apiId}`);
-      setManpowerPlanningRows((prev) =>
-        prev.filter((item) => String(item?.staffId || "") !== staffId),
-      );
-    } catch {
-      setManpowerPlanningError(
-        t(
-          "projectPlanning.manpowerDeleteFailed",
-          "Failed to delete project manpower.",
-        ),
-      );
-    }
-  };
-
   const onTaskIconHoverStart = (task) => {
     const currentTaskId = String(task?.projectTaskId || "").trim();
     if (!currentTaskId) return;
@@ -3953,34 +3745,23 @@ const ProjectWorkbench = () => {
                             )}
 
                             {manpowerRequired > 0 ? (
-                              <Tooltip
-                                title={t(
-                                  "projectPlanning.openManpowerPlanning",
-                                  "Open manpower workspace",
-                                )}
+                              <Box
+                                component="span"
+                                sx={{
+                                  width: 18,
+                                  height: 18,
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  color: "error.main",
+                                  flexShrink: 0,
+                                  m: "1px",
+                                }}
                               >
-                                <IconButton
-                                  size="small"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    openManpowerPlanningDialog(row);
-                                  }}
-                                  sx={{
-                                    width: 16,
-                                    height: 16,
-                                    color: "error.main",
-                                    p: 0,
-                                    m: "1px",
-                                    "&:hover": {
-                                      bgcolor: "action.hover",
-                                    },
-                                  }}
-                                >
-                                  <Groups2OutlinedIcon
-                                    sx={{ fontSize: "0.875rem" }}
-                                  />
-                                </IconButton>
-                              </Tooltip>
+                                <Groups2OutlinedIcon
+                                  sx={{ fontSize: "0.875rem" }}
+                                />
+                              </Box>
                             ) : (
                               <Box
                                 component="span"
@@ -5432,288 +5213,6 @@ const ProjectWorkbench = () => {
             </DialogActions>
           </Dialog>
 
-          <Dialog
-            open={manpowerPlanningOpen}
-            onClose={() => setManpowerPlanningOpen(false)}
-            fullWidth
-            maxWidth="md"
-          >
-            <DialogTitle>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 2,
-                  flexWrap: "wrap",
-                }}
-              >
-                <Typography variant="h6" component="div">
-                  {t("projectPlanning.manpowerWorkspace", "Manpower Workspace")}
-                  {" - "}
-                  {manpowerPlanningTarget?.name ||
-                    manpowerPlanningTarget?.raw?.taskName ||
-                    "-"}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {t(
-                    "projectPlanning.manpowerWorkspaceHelp",
-                    "Define the staff required for this task.",
-                  )}
-                </Typography>
-              </Box>
-            </DialogTitle>
-            <DialogContent dividers>
-              <Stack spacing={1.25}>
-                {manpowerPlanningError && (
-                  <Alert severity="error">{manpowerPlanningError}</Alert>
-                )}
-
-                <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
-                  <Autocomplete
-                    options={manpowerStaffOptions}
-                    fullWidth
-                    size="small"
-                    value={
-                      manpowerStaffOptions.find(
-                        (staff) =>
-                          String(staff?.staffId || "") ===
-                          String(manpowerDraft.staffId || ""),
-                      ) || null
-                    }
-                    onChange={(_, value) =>
-                      setManpowerDraft((prev) => ({
-                        ...prev,
-                        staffId: String(value?.staffId || ""),
-                      }))
-                    }
-                    getOptionLabel={(option) => {
-                      const id = String(option?.staffId || "").trim();
-                      const name =
-                        String(option?.staffName || "").trim() ||
-                        [option?.firstName, option?.lastName]
-                          .filter(Boolean)
-                          .join(" ")
-                          .trim();
-                      return name ? `${id} - ${name}` : id;
-                    }}
-                    isOptionEqualToValue={(option, value) =>
-                      String(option?.staffId || "") ===
-                      String(value?.staffId || "")
-                    }
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label={t("projectPlanning.staffId", "Staff")}
-                        placeholder={t(
-                          "projectPlanning.manpowerStaffFilterPlaceholder",
-                          "Search by staff ID or name",
-                        )}
-                      />
-                    )}
-                  />
-
-                  <FormControl
-                    size="small"
-                    sx={{ minWidth: { xs: "100%", md: 170 } }}
-                  >
-                    <InputLabel>
-                      {t("projectPlanning.manpowerRole", "Role")}
-                    </InputLabel>
-                    <Select
-                      value={manpowerDraft.role}
-                      label={t("projectPlanning.manpowerRole", "Role")}
-                      onChange={(event) =>
-                        setManpowerDraft((prev) => ({
-                          ...prev,
-                          role: normalizeManpowerRole(event.target.value),
-                        }))
-                      }
-                    >
-                      {manpowerRoleOptions.map((option) => (
-                        <MenuItem key={option.value} value={option.value}>
-                          {option.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-
-                  <TextField
-                    type="number"
-                    size="small"
-                    label={t("projectPlanning.manpowerLoading", "Loading")}
-                    value={manpowerDraft.loading}
-                    onChange={(event) =>
-                      setManpowerDraft((prev) => ({
-                        ...prev,
-                        loading: event.target.value,
-                      }))
-                    }
-                    inputProps={{ min: 0, max: 1, step: 0.1 }}
-                    sx={{ width: { xs: "100%", md: 150 } }}
-                  />
-
-                  <Button
-                    variant="contained"
-                    disabled={
-                      manpowerPlanningLoading ||
-                      !String(manpowerDraft.staffId || "").trim()
-                    }
-                    onClick={saveManpowerAssignment}
-                  >
-                    {manpowerPlanningRows.some(
-                      (item) =>
-                        String(item?.staffId || "") ===
-                        String(manpowerDraft.staffId || ""),
-                    )
-                      ? t("basic.save", "Save")
-                      : t("basic.add", "Add")}
-                  </Button>
-                </Stack>
-
-                {manpowerPlanningLoading ? (
-                  <Box
-                    sx={{ py: 4, display: "flex", justifyContent: "center" }}
-                  >
-                    <CircularProgress size={24} />
-                  </Box>
-                ) : manpowerPlanningRows.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    {t(
-                      "projectPlanning.noManpowerSelected",
-                      "No manpower selected.",
-                    )}
-                  </Typography>
-                ) : (
-                  <Box
-                    sx={{
-                      border: "1px solid",
-                      borderColor: "divider",
-                      borderRadius: 1,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns:
-                          "minmax(0, 1fr) minmax(0, 1.4fr) 110px 90px 82px",
-                        gap: 1,
-                        px: 1.25,
-                        py: 0.75,
-                        bgcolor: "background.default",
-                        borderBottom: "1px solid",
-                        borderColor: "divider",
-                      }}
-                    >
-                      <Typography variant="caption" fontWeight={700}>
-                        {t("projectPlanning.staffId", "Staff")}
-                      </Typography>
-                      <Typography variant="caption" fontWeight={700}>
-                        {t("projectPlanning.staffName", "Staff Name")}
-                      </Typography>
-                      <Typography variant="caption" fontWeight={700}>
-                        {t("projectPlanning.manpowerRole", "Role")}
-                      </Typography>
-                      <Typography variant="caption" fontWeight={700}>
-                        {t("projectPlanning.manpowerLoading", "Loading")}
-                      </Typography>
-                      <Typography variant="caption" fontWeight={700}>
-                        {t("basic.remove", "Remove")}
-                      </Typography>
-                    </Box>
-
-                    {manpowerPlanningRows
-                      .slice()
-                      .sort((a, b) =>
-                        String(a?.staffId || "").localeCompare(
-                          String(b?.staffId || ""),
-                          undefined,
-                          { sensitivity: "base" },
-                        ),
-                      )
-                      .map((item) => {
-                        const staff =
-                          manpowerStaffById[String(item?.staffId || "")];
-                        const staffName =
-                          String(staff?.staffName || "").trim() ||
-                          [staff?.firstName, staff?.lastName]
-                            .filter(Boolean)
-                            .join(" ")
-                            .trim() ||
-                          "-";
-                        const roleLabel =
-                          normalizeManpowerRole(item?.role) === "supervisor"
-                            ? t(
-                                "projectPlanning.manpowerRoleSupervisor",
-                                "Supervisor",
-                              )
-                            : t("projectPlanning.manpowerRoleWorker", "Worker");
-
-                        return (
-                          <Box
-                            key={String(item.staffId)}
-                            sx={{
-                              display: "grid",
-                              gridTemplateColumns:
-                                "minmax(0, 1fr) minmax(0, 1.4fr) 110px 90px 82px",
-                              gap: 1,
-                              px: 1.25,
-                              py: 0.5,
-                              borderBottom: "1px solid",
-                              borderColor: "divider",
-                              alignItems: "center",
-                              "&:last-child": { borderBottom: "none" },
-                            }}
-                          >
-                            <Typography variant="body2" noWrap>
-                              {item.staffId}
-                            </Typography>
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              noWrap
-                            >
-                              {staffName}
-                            </Typography>
-                            <Typography variant="body2">{roleLabel}</Typography>
-                            <Typography variant="body2">
-                              {item.loading}
-                            </Typography>
-                            <Box sx={{ display: "flex", gap: 0.25 }}>
-                              <IconButton
-                                size="small"
-                                onClick={() =>
-                                  setManpowerDraft({
-                                    staffId: String(item.staffId || ""),
-                                    role: normalizeManpowerRole(item.role),
-                                    loading: String(item.loading || "1"),
-                                  })
-                                }
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                onClick={() => removeManpowerAssignment(item)}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          </Box>
-                        );
-                      })}
-                  </Box>
-                )}
-              </Stack>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setManpowerPlanningOpen(false)}>
-                {t("basic.close", "Close")}
-              </Button>
-            </DialogActions>
-          </Dialog>
-
           <Menu
             anchorEl={menuAnchorEl}
             open={Boolean(menuAnchorEl)}
@@ -5825,22 +5324,6 @@ const ProjectWorkbench = () => {
                   </ListItemIcon>
                   <ListItemText>
                     {t("projectPlanning.moveTo", "Move To")}
-                  </ListItemText>
-                </MenuItem>
-                <MenuItem
-                  onClick={() => {
-                    openManpowerPlanningDialog(menuTarget);
-                    closeSettingsMenu();
-                  }}
-                >
-                  <ListItemIcon>
-                    <Groups2OutlinedIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText>
-                    {t(
-                      "projectPlanning.openManpowerPlanning",
-                      "Open manpower workspace",
-                    )}
                   </ListItemText>
                 </MenuItem>
                 <MenuItem
