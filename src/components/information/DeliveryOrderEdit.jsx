@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
@@ -32,6 +32,7 @@ const DeliveryOrderEdit = ({ order, onCancel }) => {
   const { t } = useTranslation();
   const { shouldUseBlockLayout } = useResponsiveLayout();
   const [customers, setCustomers] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [formData, setFormData] = useState({
     customerId: order.customerId || "",
     projectCode: order.projectCode || "",
@@ -51,10 +52,12 @@ const DeliveryOrderEdit = ({ order, onCancel }) => {
   useEffect(() => {
     Promise.all([
       request("GET", "/api/customers"),
+      request("GET", "/api/projects"),
       request("GET", `/api/deliveryOrderItems/order/${order.orderId}`),
     ])
-      .then(([customersRes, itemsRes]) => {
+      .then(([customersRes, projectsRes, itemsRes]) => {
         setCustomers(customersRes.data || []);
+        setProjects(projectsRes.data || []);
         const loaded = (itemsRes.data || []).map((item, index) => ({
           ...item,
           tempId: item.itemId ?? `existing-${index}`,
@@ -95,8 +98,51 @@ const DeliveryOrderEdit = ({ order, onCancel }) => {
       });
   }, [order.orderId]);
 
+  const customerById = useMemo(
+    () =>
+      customers.reduce((acc, customer) => {
+        const id = String(customer?.customerId || "").trim();
+        if (!id) return acc;
+        acc[id] = customer;
+        return acc;
+      }, {}),
+    [customers],
+  );
+
+  const selectedProject = useMemo(
+    () =>
+      projects.find(
+        (project) =>
+          String(project?.projectCode || "") ===
+          String(formData.projectCode || ""),
+      ) || null,
+    [projects, formData.projectCode],
+  );
+
+  useEffect(() => {
+    const customerId = String(selectedProject?.customerId || "").trim();
+    if (!customerId) return;
+    setFormData((prev) =>
+      String(prev.customerId || "") === customerId
+        ? prev
+        : { ...prev, customerId },
+    );
+  }, [selectedProject?.customerId]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === "projectCode") {
+      const selected = projects.find(
+        (project) => String(project?.projectCode || "") === String(value || ""),
+      );
+      setFormData((prev) => ({
+        ...prev,
+        projectCode: value,
+        customerId: String(selected?.customerId || "").trim(),
+      }));
+      setErrorMsg("");
+      return;
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrorMsg("");
   };
@@ -323,87 +369,75 @@ const DeliveryOrderEdit = ({ order, onCancel }) => {
             {t("deliveryOrderList.orderDetails", "Order Details")}
           </Typography>
 
-          <Box
-            sx={{
-              display: "grid",
-              gap: 2,
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-            }}
-          >
-            <FormControl fullWidth required>
-              <InputLabel>
-                {t("deliveryOrderList.customerId", "Customer")}
-              </InputLabel>
-              <Select
-                name="customerId"
-                value={formData.customerId}
-                onChange={handleChange}
+          <Box sx={{ display: "grid", gap: 2 }}>
+            <Box
+              sx={{
+                display: "grid",
+                gap: 2,
+                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+              }}
+            >
+              <FormControl fullWidth required>
+                <InputLabel>
+                  {t("deliveryOrderList.projectCode", "Project Code")}
+                </InputLabel>
+                <Select
+                  name="projectCode"
+                  value={formData.projectCode}
+                  onChange={handleChange}
+                  label={t("deliveryOrderList.projectCode", "Project Code")}
+                >
+                  {projects.map((project) => (
+                    <MenuItem
+                      key={project.projectCode}
+                      value={project.projectCode}
+                    >
+                      {project.projectCode}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <TextField
+                fullWidth
                 label={t("deliveryOrderList.customerId", "Customer")}
-              >
-                {customers.map((customer) => (
-                  <MenuItem
-                    key={customer.customerId}
-                    value={customer.customerId}
-                  >
-                    {customer.customerName} ({customer.customerId})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                value={
+                  selectedProject
+                    ? `${customerById[String(selectedProject.customerId || "")]?.customerName || "-"} (${selectedProject.customerId || "-"})`
+                    : ""
+                }
+                InputProps={{ readOnly: true }}
+              />
+            </Box>
 
-            <TextField
-              fullWidth
-              label={t("deliveryOrderList.orderDate", "Order Date")}
-              name="orderDate"
-              type="date"
-              value={formData.orderDate}
-              onChange={handleChange}
-              required
-              InputLabelProps={{ shrink: true }}
-            />
-
-            <TextField
-              fullWidth
-              label={t("deliveryOrderList.deliveryDate", "Delivery Date")}
-              name="deliveryDate"
-              type="date"
-              value={formData.deliveryDate}
-              onChange={handleChange}
-              InputLabelProps={{ shrink: true }}
-            />
-
-            <TextField
-              fullWidth
-              label={t("deliveryOrderList.projectCode", "Project Code")}
-              name="projectCode"
-              value={formData.projectCode}
-              onChange={handleChange}
-            />
-
-            <FormControl fullWidth>
-              <InputLabel>
-                {t("deliveryOrderList.orderStatus", "Order Status")}
-              </InputLabel>
-              <Select
-                name="orderStatus"
-                value={formData.orderStatus}
+            <Box
+              sx={{
+                display: "grid",
+                gap: 2,
+                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+              }}
+            >
+              <TextField
+                fullWidth
+                label={t("deliveryOrderList.orderDate", "Order Date")}
+                name="orderDate"
+                type="date"
+                value={formData.orderDate}
                 onChange={handleChange}
-                label={t("deliveryOrderList.orderStatus", "Order Status")}
-              >
-                <MenuItem value="NEW">
-                  {t("deliveryOrderList.status.new", "New")}
-                </MenuItem>
-                <MenuItem value="PROCESSING">
-                  {t("deliveryOrderList.status.processing", "Processing")}
-                </MenuItem>
-                <MenuItem value="COMPLETED">
-                  {t("deliveryOrderList.status.completed", "Completed")}
-                </MenuItem>
-                <MenuItem value="CANCELLED">
-                  {t("deliveryOrderList.status.cancelled", "Cancelled")}
-                </MenuItem>
-              </Select>
-            </FormControl>
+                required
+                InputLabelProps={{ shrink: true }}
+              />
+
+              <TextField
+                fullWidth
+                label={t("deliveryOrderList.deliveryDate", "Delivery Date")}
+                name="deliveryDate"
+                type="date"
+                value={formData.deliveryDate}
+                onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Box>
           </Box>
         </Box>
 

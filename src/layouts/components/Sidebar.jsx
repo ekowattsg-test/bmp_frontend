@@ -60,6 +60,8 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
   const { roles, menus, param, userInfo } = useContext(AuthContext);
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [expandedItems, setExpandedItems] = React.useState({});
+  const userLevel = Number(userInfo?.userLevel ?? userInfo?.level ?? 0);
+  const canAccessWaSimulator = userLevel >= 5;
 
   const getParamValue = (key) => param?.[key];
   const isParamEnabled = (key) => Number(getParamValue(key) ?? 0) === 1;
@@ -175,13 +177,15 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               icon: <ManageAccountsIcon fontSize="small" />,
               path: "/operationrole",
             },
-            {
-              key: "waSimulator",
-              label: t("menu.waSimulator", "WA Simulator"),
-              icon: <WhatsAppIcon fontSize="small" />,
-              path: "/wa-simulator",
-            },
-          ],
+            canAccessWaSimulator
+              ? {
+                  key: "waSimulator",
+                  label: t("menu.waSimulator", "WA Simulator"),
+                  icon: <WhatsAppIcon fontSize="small" />,
+                  path: "/wa-simulator",
+                }
+              : null,
+          ].filter(Boolean),
         },
         {
           key: "Information",

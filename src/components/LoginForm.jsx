@@ -35,6 +35,7 @@ export default function LoginForm({
   const [otp, setOtp] = useState("");
   const [qrLoginUrl, setQrLoginUrl] = useState("");
   const [qrInputOpen, setQrInputOpen] = useState(false);
+  const otpInputRef = useRef(null);
   const qrRedirectingRef = useRef(false);
 
   const onChangeHandler = (event) => {
@@ -220,6 +221,18 @@ export default function LoginForm({
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
                   disabled={hasCredentials || loading}
+                  inputRef={otpInputRef}
+                  autoComplete="one-time-code"
+                  inputProps={{
+                    inputMode: "numeric",
+                    autoComplete: "one-time-code",
+                    spellCheck: false,
+                    onMouseDown: () => {
+                      requestAnimationFrame(() => {
+                        otpInputRef.current?.focus?.();
+                      });
+                    },
+                  }}
                   sx={{ mb: 0 }}
                 />
                 <Button

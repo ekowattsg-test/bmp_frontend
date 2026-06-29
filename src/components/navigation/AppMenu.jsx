@@ -35,9 +35,19 @@ import {
 import { Link } from "react-router-dom";
 
 const AppMenu = () => {
-  const { roles, menus, param, logout, currMenu, setOpenMenu, setCurrMenu } =
-    useContext(AuthContext);
+  const {
+    roles,
+    menus,
+    param,
+    logout,
+    currMenu,
+    setOpenMenu,
+    setCurrMenu,
+    userInfo,
+  } = useContext(AuthContext);
   const { t } = useTranslation();
+  const userLevel = Number(userInfo?.userLevel ?? userInfo?.level ?? 0);
+  const canAccessWaSimulator = userLevel >= 5;
 
   const getParamValue = (key) => param?.[key];
   const isParamEnabled = (key) => Number(getParamValue(key) ?? 0) === 1;
@@ -128,11 +138,13 @@ const AppMenu = () => {
             label: t("menu.operationRole", "Operation Roles"),
             icon: <ManageAccounts />,
           },
-          {
-            to: "/wa-simulator",
-            label: t("menu.waSimulator", "WA Simulator"),
-            icon: <WhatsApp />,
-          },
+          canAccessWaSimulator
+            ? {
+                to: "/wa-simulator",
+                label: t("menu.waSimulator", "WA Simulator"),
+                icon: <WhatsApp />,
+              }
+            : null,
         ],
       },
       {

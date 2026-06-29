@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import { Box, Button, TextField, MenuItem } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
@@ -11,6 +11,7 @@ const UserRoleAdd = ({ onCancel }) => {
   const [form, setForm] = useState({ roleId: "", userId: "" });
   const [roles, setRoles] = useState([]);
   const [users, setUsers] = useState([]);
+  const [userRoleViews, setUserRoleViews] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [success, setSuccess] = useState(false);
@@ -40,7 +41,38 @@ const UserRoleAdd = ({ onCancel }) => {
         setUsers(filteredUsers);
       })
       .catch(() => setUsers([]));
+
+    request("GET", "/api/userroleviews")
+      .then((response) => {
+        setUserRoleViews(Array.isArray(response.data) ? response.data : []);
+      })
+      .catch(() => setUserRoleViews([]));
   }, [userInfo]);
+
+  const assignedRoleIds = useMemo(() => {
+    const selectedUserId = String(form.userId || "").trim();
+    if (!selectedUserId) return new Set();
+
+    return new Set(
+      userRoleViews
+        .filter(
+          (row) =>
+            String(row.user_id || row.userId || "").trim() === selectedUserId,
+        )
+        .map((row) => String(row.role_id || row.roleId || "").trim())
+        .filter(Boolean),
+    );
+  }, [userRoleViews, form.userId]);
+
+  const availableRoles = useMemo(() => {
+    const selectedRoleId = String(form.roleId || "").trim();
+    return roles.filter((role) => {
+      const roleId = String(role.id || "").trim();
+      if (!roleId) return false;
+      if (roleId === selectedRoleId) return true;
+      return !assignedRoleIds.has(roleId);
+    });
+  }, [roles, assignedRoleIds, form.roleId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -108,7 +140,7 @@ const UserRoleAdd = ({ onCancel }) => {
         fullWidth
         margin="normal"
       >
-        {roles.map((role) => (
+        {availableRoles.map((role) => (
           <MenuItem key={role.id} value={role.id}>
             {role.description}
           </MenuItem>

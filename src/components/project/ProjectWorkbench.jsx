@@ -47,7 +47,7 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import AllInboxOutlinedIcon from "@mui/icons-material/AllInboxOutlined";
 import HandymanOutlinedIcon from "@mui/icons-material/HandymanOutlined";
-import Groups2OutlinedIcon from "@mui/icons-material/Groups2Outlined";
+import PsychologyAltOutlinedIcon from "@mui/icons-material/PsychologyAltOutlined";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { request } from "../../helpers/axios_helper";
@@ -258,6 +258,13 @@ const ProjectWorkbench = () => {
     useState("day");
   const [manpowerOverviewRowsReady, setManpowerOverviewRowsReady] =
     useState(false);
+  const [skillOverviewOpen, setSkillOverviewOpen] = useState(false);
+  const [skillOverviewLoading, setSkillOverviewLoading] = useState(false);
+  const [skillOverviewError, setSkillOverviewError] = useState("");
+  const [skillOverviewData, setSkillOverviewData] = useState([]);
+  const [skillOverviewSkills, setSkillOverviewSkills] = useState([]);
+  const [skillOverviewViewMode, setSkillOverviewViewMode] = useState("day");
+  const [skillOverviewRowsReady, setSkillOverviewRowsReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTarget, setSettingsTarget] = useState(null);
   const [dialogMode, setDialogMode] = useState("");
@@ -314,6 +321,25 @@ const ProjectWorkbench = () => {
     staffId: "",
     role: "worker",
     loading: "1",
+  });
+  const [skillPlanningOpen, setSkillPlanningOpen] = useState(false);
+  const [skillPlanningTarget, setSkillPlanningTarget] = useState(null);
+  const [skillPlanningLoading, setSkillPlanningLoading] = useState(false);
+  const [skillPlanningError, setSkillPlanningError] = useState("");
+  const [skillPlanningRows, setSkillPlanningRows] = useState([]);
+  const [skillOptions, setSkillOptions] = useState([]);
+  const [skillDraft, setSkillDraft] = useState({
+    apiId: null,
+    skillId: "",
+    unit: "1",
+  });
+  const [skillCreateOpen, setSkillCreateOpen] = useState(false);
+  const [skillCreateLoading, setSkillCreateLoading] = useState(false);
+  const [skillCreateError, setSkillCreateError] = useState("");
+  const [skillCreateForm, setSkillCreateForm] = useState({
+    skillName: "",
+    skillDescription: "",
+    skillCategory: "",
   });
 
   const taskTypeOptions = useMemo(() => {
@@ -375,6 +401,73 @@ const ProjectWorkbench = () => {
       }, {}),
     [manpowerStaffOptions],
   );
+
+  const skillById = useMemo(
+    () =>
+      skillOptions.reduce((acc, skill) => {
+        const id = String(skill?.staffSkillId || "").trim();
+        if (!id) return acc;
+        acc[id] = skill;
+        return acc;
+      }, {}),
+    [skillOptions],
+  );
+
+  const skillCategoryOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          skillOptions
+            .map((skill) => String(skill?.skillCategory || "").trim())
+            .filter(Boolean),
+        ),
+      ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })),
+    [skillOptions],
+  );
+
+  const availableSkillOptions = useMemo(() => {
+    const editingSkillId = String(
+      skillPlanningRows.find(
+        (item) => String(item?.apiId || "") === String(skillDraft.apiId || ""),
+      )?.skillId || "",
+    ).trim();
+
+    const assignedSkillIds = new Set(
+      skillPlanningRows
+        .map((item) => String(item?.skillId || "").trim())
+        .filter(Boolean),
+    );
+
+    return skillOptions
+      .filter((skill) => {
+        const skillId = String(skill?.staffSkillId || "").trim();
+        if (!skillId) return false;
+        if (!assignedSkillIds.has(skillId)) return true;
+        return skillId === editingSkillId;
+      })
+      .sort((a, b) => {
+        const nameA =
+          String(a?.skillName || "").trim() ||
+          String(a?.staffSkillId || "").trim();
+        const nameB =
+          String(b?.skillName || "").trim() ||
+          String(b?.staffSkillId || "").trim();
+        return nameA.localeCompare(nameB, undefined, { sensitivity: "base" });
+      });
+  }, [skillOptions, skillPlanningRows, skillDraft.apiId]);
+
+  const fetchStaffSkills = async () => {
+    const skillsRes = await request("GET", "/api/staffskills").catch(() => ({
+      data: [],
+    }));
+    return Array.isArray(skillsRes?.data) ? skillsRes.data : [];
+  };
+
+  const refreshSkillOptions = async () => {
+    const skills = await fetchStaffSkills();
+    setSkillOptions(skills);
+    return skills;
+  };
 
   const manpowerSkillFilterOptions = useMemo(() => {
     const unique = new Set();
@@ -920,6 +1013,60 @@ const ProjectWorkbench = () => {
   }, [manpowerOverviewOpen, tasks, t]);
 
   useEffect(() => {
+    if (!skillOverviewOpen) return;
+
+    let mounted = true;
+
+    const loadSkillOverview = async () => {
+      setSkillOverviewLoading(true);
+      setSkillOverviewError("");
+
+      try {
+        const [skillsRes, projectSkillsRes] = await Promise.all([
+          request("GET", "/api/staffskills").catch(() => ({ data: [] })),
+          request("GET", "/api/projectskills").catch(() => ({ data: [] })),
+        ]);
+
+        const taskIdSet = new Set(
+          tasks.map((task) => String(task?.projectTaskId || "").trim()),
+        );
+
+        const allProjectSkills = Array.isArray(projectSkillsRes?.data)
+          ? projectSkillsRes.data
+          : [];
+        const filteredProjectSkills = allProjectSkills.filter((item) =>
+          taskIdSet.has(String(item?.projectTaskId || "").trim()),
+        );
+
+        if (!mounted) return;
+        setSkillOverviewData(filteredProjectSkills);
+        setSkillOverviewSkills(
+          Array.isArray(skillsRes?.data) ? skillsRes.data : [],
+        );
+      } catch {
+        if (!mounted) return;
+        setSkillOverviewError(
+          t(
+            "projectPlanning.skillLoadFailed",
+            "Failed to load project skills.",
+          ),
+        );
+        setSkillOverviewData([]);
+        setSkillOverviewSkills([]);
+      } finally {
+        if (!mounted) return;
+        setSkillOverviewLoading(false);
+      }
+    };
+
+    loadSkillOverview();
+
+    return () => {
+      mounted = false;
+    };
+  }, [skillOverviewOpen, tasks, t]);
+
+  useEffect(() => {
     setInventoryOverviewRowsReady(false);
     if (!inventoryOverviewData.length || inventoryOverviewLoading) return;
 
@@ -942,6 +1089,17 @@ const ProjectWorkbench = () => {
 
     return () => clearTimeout(timer);
   }, [manpowerOverviewData, manpowerOverviewLoading]);
+
+  useEffect(() => {
+    setSkillOverviewRowsReady(false);
+    if (!skillOverviewData.length || skillOverviewLoading) return;
+
+    const timer = setTimeout(() => {
+      setSkillOverviewRowsReady(true);
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [skillOverviewData, skillOverviewLoading]);
 
   const timelineBounds = useMemo(() => {
     const starts = rows.map((row) => row.startDate).filter(Boolean);
@@ -1156,6 +1314,309 @@ const ProjectWorkbench = () => {
     680,
     manpowerOverviewActiveCols.length * manpowerOverviewColWidth,
   );
+
+  const skillOverviewUpperSegments = useMemo(() => {
+    if (skillOverviewViewMode === "day") {
+      const segs = [];
+      inventoryDayColumns.forEach((col) => {
+        const key = `${col.date.getFullYear()}-${col.date.getMonth() + 1}`;
+        const label = col.date.toLocaleDateString(undefined, {
+          month: "short",
+          year: "numeric",
+        });
+        const last = segs[segs.length - 1];
+        if (last && last.key === key) {
+          last.span += 1;
+        } else {
+          segs.push({ key, label, span: 1 });
+        }
+      });
+      return segs;
+    }
+
+    const srcCols =
+      skillOverviewViewMode === "week"
+        ? inventoryWeekColumns
+        : inventoryMonthColumns;
+    const segs = [];
+    srcCols.forEach((col) => {
+      const last = segs[segs.length - 1];
+      if (last && last.key === col.yearKey) {
+        last.span += 1;
+      } else {
+        segs.push({ key: col.yearKey, label: col.yearKey, span: 1 });
+      }
+    });
+    return segs;
+  }, [
+    skillOverviewViewMode,
+    inventoryDayColumns,
+    inventoryWeekColumns,
+    inventoryMonthColumns,
+  ]);
+
+  const skillOverviewActiveCols =
+    skillOverviewViewMode === "day"
+      ? inventoryDayColumns
+      : skillOverviewViewMode === "week"
+        ? inventoryWeekColumns
+        : inventoryMonthColumns;
+
+  const skillOverviewColWidth = COL_WIDTH[skillOverviewViewMode];
+  const skillOverviewTimelineWidth = Math.max(
+    680,
+    skillOverviewActiveCols.length * skillOverviewColWidth,
+  );
+
+  const skillOverviewRows = useMemo(() => {
+    if (!skillOverviewRowsReady) return [];
+
+    const minTime = inventoryOverviewBounds.minDate.getTime();
+    const maxTime = inventoryOverviewBounds.maxDate.getTime();
+    const taskById = tasks.reduce((acc, task) => {
+      const key = String(task?.projectTaskId || "").trim();
+      if (!key) return acc;
+      acc[key] = task;
+      return acc;
+    }, {});
+
+    const skillNameById = skillOverviewSkills.reduce((acc, skill) => {
+      const key = String(skill?.staffSkillId || "").trim();
+      if (!key) return acc;
+      acc[key] = String(skill?.skillName || "").trim() || key;
+      return acc;
+    }, {});
+
+    const grouped = new Map();
+
+    skillOverviewData.forEach((item) => {
+      const taskId = String(item?.projectTaskId || "").trim();
+      const skillId = String(item?.skillId || "").trim();
+      if (!taskId || !skillId) return;
+
+      const task = taskById[taskId];
+      if (!task) return;
+
+      const start = parseDate(task?.taskStartDate || task?.actualStartDate);
+      const end = parseDate(task?.taskEndDate || task?.actualEndDate) || start;
+      if (!start || !end) return;
+
+      const unitValue = Number(item?.unit || 0);
+      if (!Number.isFinite(unitValue) || unitValue <= 0) return;
+
+      if (!grouped.has(skillId)) {
+        grouped.set(skillId, {
+          key: skillId,
+          skillId,
+          skillName: skillNameById[skillId] || skillId,
+          dayMap: new Map(),
+        });
+      }
+
+      const target = grouped.get(skillId);
+      const taskName = String(task?.taskName || `Task ${taskId}`).trim();
+      const sTime = Math.max(start.getTime(), minTime);
+      const eTime = Math.min(end.getTime(), maxTime);
+      if (eTime < sTime) return;
+
+      const cur = new Date(sTime);
+      cur.setHours(0, 0, 0, 0);
+      while (cur.getTime() <= eTime) {
+        const timeKey = cur.getTime();
+        const existing = target.dayMap.get(timeKey) || [];
+        existing.push({ taskName, unit: unitValue });
+        target.dayMap.set(timeKey, existing);
+        cur.setDate(cur.getDate() + 1);
+      }
+    });
+
+    return Array.from(grouped.values()).sort((a, b) =>
+      String(a.skillName || "").localeCompare(
+        String(b.skillName || ""),
+        undefined,
+        { sensitivity: "base" },
+      ),
+    );
+  }, [
+    skillOverviewData,
+    skillOverviewSkills,
+    tasks,
+    inventoryOverviewBounds,
+    skillOverviewRowsReady,
+  ]);
+
+  const getSkillUsageValue = (row, col) => {
+    if (skillOverviewViewMode === "day") {
+      const tasksInCell = row.dayMap.get(col.time) || [];
+      return tasksInCell.reduce((sum, item) => sum + item.unit, 0);
+    }
+
+    if (skillOverviewViewMode === "week") {
+      let total = 0;
+      row.dayMap.forEach((items, time) => {
+        if (time >= col.weekStart.getTime() && time <= col.weekEnd.getTime()) {
+          total += items.reduce((sum, item) => sum + item.unit, 0);
+        }
+      });
+      return total;
+    }
+
+    let total = 0;
+    row.dayMap.forEach((items, time) => {
+      if (time >= col.monthStart.getTime() && time <= col.monthEnd.getTime()) {
+        total += items.reduce((sum, item) => sum + item.unit, 0);
+      }
+    });
+    return total;
+  };
+
+  const getSkillUsageDetailsTable = (row, col) => {
+    const items = [];
+
+    if (skillOverviewViewMode === "day") {
+      items.push(...(row.dayMap.get(col.time) || []));
+    } else if (skillOverviewViewMode === "week") {
+      row.dayMap.forEach((dayItems, time) => {
+        if (time >= col.weekStart.getTime() && time <= col.weekEnd.getTime()) {
+          items.push(...dayItems);
+        }
+      });
+    } else {
+      row.dayMap.forEach((dayItems, time) => {
+        if (
+          time >= col.monthStart.getTime() &&
+          time <= col.monthEnd.getTime()
+        ) {
+          items.push(...dayItems);
+        }
+      });
+    }
+
+    const grouped = new Map();
+    items.forEach((entry) => {
+      const taskName = String(entry?.taskName || "-").trim() || "-";
+      grouped.set(
+        taskName,
+        (grouped.get(taskName) || 0) + Number(entry?.unit || 0),
+      );
+    });
+
+    const entries = Array.from(grouped.entries()).sort((a, b) => b[1] - a[1]);
+
+    let periodLabel = "";
+    if (skillOverviewViewMode === "day") {
+      periodLabel = col.date.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    } else if (skillOverviewViewMode === "week") {
+      const start = col.weekStart.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      });
+      const end = col.weekEnd.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      });
+      periodLabel = `${col.label} (${start} - ${end})`;
+    } else {
+      periodLabel = `${col.label} ${col.yearKey}`;
+    }
+
+    if (entries.length === 0) {
+      return (
+        <Box sx={{ fontSize: "0.75rem" }}>
+          <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, mb: 0.5 }}>
+            {periodLabel}
+          </Typography>
+          <Typography sx={{ fontSize: "0.75rem" }}>
+            {t("projectPlanning.noSkillSelected", "No skills selected.")}
+          </Typography>
+        </Box>
+      );
+    }
+
+    return (
+      <Box
+        sx={{
+          display: "table",
+          fontSize: "0.75rem",
+          borderCollapse: "collapse",
+        }}
+      >
+        <Box sx={{ display: "table-header-group" }}>
+          <Box
+            sx={{
+              display: "table-row",
+              bgcolor: "rgba(0,0,0,0.2)",
+              fontWeight: 600,
+            }}
+          >
+            <Box sx={{ display: "table-cell", px: 1, py: 0.4 }}>
+              {periodLabel}
+            </Box>
+          </Box>
+          <Box sx={{ display: "table-row" }}>
+            <Box
+              sx={{
+                display: "table-cell",
+                px: 1,
+                py: 0.25,
+                fontWeight: 600,
+                borderRight: "1px solid rgba(255,255,255,0.2)",
+              }}
+            >
+              {t("projecttask.taskName", "Task")}
+            </Box>
+            <Box
+              sx={{
+                display: "table-cell",
+                px: 1,
+                py: 0.25,
+                fontWeight: 600,
+                textAlign: "right",
+              }}
+            >
+              {t("projectPlanning.skillUnit", "Unit")}
+            </Box>
+          </Box>
+        </Box>
+        <Box sx={{ display: "table-row-group" }}>
+          {entries.map(([taskName, unit], idx) => (
+            <Box
+              key={`${taskName}-${idx}`}
+              sx={{
+                display: "table-row",
+                "&:nth-of-type(even)": { bgcolor: "rgba(0,0,0,0.1)" },
+              }}
+            >
+              <Box
+                sx={{
+                  display: "table-cell",
+                  px: 1,
+                  py: 0.25,
+                  borderRight: "1px solid rgba(255,255,255,0.1)",
+                }}
+              >
+                {taskName}
+              </Box>
+              <Box
+                sx={{
+                  display: "table-cell",
+                  px: 1,
+                  py: 0.25,
+                  textAlign: "right",
+                }}
+              >
+                {Number(unit.toFixed(2))}
+              </Box>
+            </Box>
+          ))}
+        </Box>
+      </Box>
+    );
+  };
 
   const manpowerOverviewRows = useMemo(() => {
     if (!manpowerOverviewRowsReady) return [];
@@ -3149,6 +3610,264 @@ const ProjectWorkbench = () => {
     });
   };
 
+  const normalizeSkillUnit = (value) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 1;
+    return Math.max(1, Math.round(numeric));
+  };
+
+  const getSkillTaskId = (target) =>
+    Number(target?.raw?.projectTaskId || 0) || null;
+
+  const openSkillPlanningDialog = async (row) => {
+    if (row?.type !== "task") {
+      setError(
+        t(
+          "projectPlanning.skillOnlyForTask",
+          "Skill planning is only available for tasks.",
+        ),
+      );
+      return;
+    }
+
+    const taskId = getSkillTaskId(row);
+    if (!taskId) return;
+
+    setSkillPlanningTarget(row);
+    setSkillPlanningOpen(true);
+    setSkillPlanningError("");
+    setSkillCreateError("");
+    setSkillCreateOpen(false);
+    setSkillCreateForm({
+      skillName: "",
+      skillDescription: "",
+      skillCategory: "",
+    });
+    setSkillDraft({
+      apiId: null,
+      skillId: "",
+      unit: "1",
+    });
+    setSkillPlanningLoading(true);
+
+    try {
+      const [skills, projectSkillsRes] = await Promise.all([
+        fetchStaffSkills(),
+        request("GET", `/api/projectskills/task/${taskId}`).catch(() => ({
+          data: [],
+        })),
+      ]);
+
+      const rows = Array.isArray(projectSkillsRes?.data)
+        ? projectSkillsRes.data
+        : [];
+
+      const skillNameById = skills.reduce((acc, skill) => {
+        const id = String(skill?.staffSkillId || "").trim();
+        if (!id) return acc;
+        acc[id] = String(skill?.skillName || "").trim() || id;
+        return acc;
+      }, {});
+
+      setSkillOptions(skills);
+      setSkillPlanningRows(
+        rows.map((item) => {
+          const skillId = String(item?.skillId || "").trim();
+          return {
+            apiId: item?.projectSkillId,
+            projectTaskId: Number(item?.projectTaskId || taskId) || taskId,
+            skillId,
+            skillName: skillNameById[skillId] || skillId,
+            unit: String(normalizeSkillUnit(item?.unit || 1)),
+          };
+        }),
+      );
+    } catch {
+      setSkillPlanningError(
+        t("projectPlanning.skillLoadFailed", "Failed to load project skills."),
+      );
+      setSkillOptions([]);
+      setSkillPlanningRows([]);
+    } finally {
+      setSkillPlanningLoading(false);
+    }
+  };
+
+  const openCreateSkillDialog = () => {
+    setSkillCreateError("");
+    setSkillCreateForm({
+      skillName: "",
+      skillDescription: "",
+      skillCategory: "",
+    });
+    setSkillCreateOpen(true);
+  };
+
+  const saveNewSkillDefinition = async () => {
+    const skillName = String(skillCreateForm.skillName || "").trim();
+    const skillDescription = String(
+      skillCreateForm.skillDescription || "",
+    ).trim();
+    const skillCategory = String(skillCreateForm.skillCategory || "").trim();
+
+    if (!skillName) {
+      setSkillCreateError(
+        t("projectPlanning.skillName", "Skill") + " is required",
+      );
+      return;
+    }
+
+    setSkillCreateError("");
+    setSkillCreateLoading(true);
+    try {
+      const createRes = await request("POST", "/api/staffskills", {
+        skillName,
+        skillDescription,
+        skillCategory,
+      });
+
+      const createdSkill = createRes?.data || null;
+      const refreshedSkills = await refreshSkillOptions();
+
+      const createdSkillId = String(createdSkill?.staffSkillId || "").trim();
+      const selectedSkillId = createdSkillId
+        ? createdSkillId
+        : String(
+            refreshedSkills.find(
+              (skill) =>
+                String(skill?.skillName || "")
+                  .trim()
+                  .toLowerCase() === skillName.toLowerCase(),
+            )?.staffSkillId || "",
+          ).trim();
+
+      setSkillDraft((prev) => ({
+        ...prev,
+        skillId: selectedSkillId || prev.skillId,
+      }));
+      setSkillCreateOpen(false);
+    } catch (err) {
+      setSkillCreateError(
+        err?.response?.data?.message ||
+          t(
+            "projectPlanning.skillCreateFailed",
+            "Failed to save skill definition.",
+          ),
+      );
+    } finally {
+      setSkillCreateLoading(false);
+    }
+  };
+
+  const saveSkillAssignment = async () => {
+    const taskId = getSkillTaskId(skillPlanningTarget);
+    const apiId = skillDraft.apiId;
+    const skillId = String(skillDraft.skillId || "").trim();
+    const unit = Number(skillDraft.unit);
+
+    if (!taskId || !skillId) return;
+    if (!Number.isFinite(unit) || unit < 1) {
+      setSkillPlanningError(
+        t("projectPlanning.skillUnitHint", "Unit must be a positive integer."),
+      );
+      return;
+    }
+
+    const duplicateRow = skillPlanningRows.find(
+      (item) =>
+        String(item?.skillId || "") === skillId &&
+        String(item?.apiId || "") !== String(apiId || ""),
+    );
+    if (duplicateRow) {
+      setSkillPlanningError(
+        t(
+          "projectPlanning.skillDuplicate",
+          "This skill has already been added.",
+        ),
+      );
+      return;
+    }
+
+    const payload = {
+      ...(apiId ? { projectSkillId: apiId } : {}),
+      projectTaskId: taskId,
+      skillId,
+      unit: normalizeSkillUnit(unit),
+    };
+
+    setSkillPlanningError("");
+    setSkillPlanningLoading(true);
+    try {
+      const res = apiId
+        ? await request("PUT", `/api/projectskills/${apiId}`, payload)
+        : await request("POST", "/api/projectskills", payload);
+
+      const saved = res?.data || payload;
+      const resolvedSkillId = String(saved?.skillId || skillId).trim();
+      const nextRow = {
+        apiId: saved?.projectSkillId || apiId,
+        projectTaskId: taskId,
+        skillId: resolvedSkillId,
+        skillName:
+          String(skillById?.[resolvedSkillId]?.skillName || "").trim() ||
+          resolvedSkillId,
+        unit: String(normalizeSkillUnit(saved?.unit ?? payload.unit)),
+      };
+
+      setSkillPlanningRows((prev) => {
+        const idx = prev.findIndex(
+          (item) => String(item?.apiId || "") === String(apiId || ""),
+        );
+        if (idx < 0) {
+          return [...prev, nextRow];
+        }
+        const next = [...prev];
+        next[idx] = nextRow;
+        return next;
+      });
+
+      setSkillDraft({
+        apiId: null,
+        skillId: "",
+        unit: "1",
+      });
+    } catch {
+      setSkillPlanningError(
+        t("projectPlanning.skillSaveFailed", "Failed to save project skills."),
+      );
+    } finally {
+      setSkillPlanningLoading(false);
+    }
+  };
+
+  const removeSkillAssignment = async (row) => {
+    const apiId = row?.apiId;
+    const skillId = String(row?.skillId || "").trim();
+    if (!skillId) return;
+
+    if (!apiId) {
+      setSkillPlanningRows((prev) =>
+        prev.filter((item) => String(item?.skillId || "") !== skillId),
+      );
+      return;
+    }
+
+    setSkillPlanningError("");
+    try {
+      await request("DELETE", `/api/projectskills/${apiId}`);
+      setSkillPlanningRows((prev) =>
+        prev.filter((item) => String(item?.skillId || "") !== skillId),
+      );
+    } catch {
+      setSkillPlanningError(
+        t(
+          "projectPlanning.skillDeleteFailed",
+          "Failed to delete project skills.",
+        ),
+      );
+    }
+  };
+
   const normalizeManpowerRole = (value) => {
     const raw = String(value || "")
       .trim()
@@ -3729,10 +4448,10 @@ const ProjectWorkbench = () => {
                 </Button>
                 <Button
                   variant="outlined"
-                  onClick={() => setManpowerOverviewOpen(true)}
+                  onClick={() => setSkillOverviewOpen(true)}
                   sx={{ minWidth: 170, fontWeight: 600 }}
                 >
-                  {t("projectPlanning.manpowerOverview", "Manpower Overview")}
+                  {t("projectPlanning.skillOverview", "Skill Overview")}
                 </Button>
               </Box>
               <ToggleButtonGroup
@@ -4247,20 +4966,20 @@ const ProjectWorkbench = () => {
                             {manpowerRequired > 0 ? (
                               <Tooltip
                                 title={t(
-                                  "projectPlanning.openManpowerPlanning",
-                                  "Open manpower workspace",
+                                  "projectPlanning.openSkillPlanning",
+                                  "Open skill workspace",
                                 )}
                               >
                                 <IconButton
                                   size="small"
                                   onClick={(event) => {
                                     event.stopPropagation();
-                                    openManpowerPlanningDialog(row);
+                                    openSkillPlanningDialog(row);
                                   }}
                                   sx={{
                                     width: 16,
                                     height: 16,
-                                    color: "error.main",
+                                    color: "secondary.main",
                                     p: 0,
                                     m: "1px",
                                     "&:hover": {
@@ -4268,7 +4987,7 @@ const ProjectWorkbench = () => {
                                     },
                                   }}
                                 >
-                                  <Groups2OutlinedIcon
+                                  <PsychologyAltOutlinedIcon
                                     sx={{ fontSize: "0.875rem" }}
                                   />
                                 </IconButton>
@@ -4429,7 +5148,7 @@ const ProjectWorkbench = () => {
                 <Typography variant="body2">
                   {t(
                     "projectPlanning.helpCurrentPeriodBody",
-                    "The current period is highlighted automatically: today in Day view, the current week in Week view, and the current month in Month view. The same highlight appears in Gantt, Inventory Overview, and Manpower Overview.",
+                    "The current period is highlighted automatically: today in Day view, the current week in Week view, and the current month in Month view. The same highlight appears in Gantt, Inventory Overview, and Skill Overview.",
                   )}
                 </Typography>
                 <Typography variant="subtitle2">
@@ -4492,19 +5211,19 @@ const ProjectWorkbench = () => {
                 <Typography variant="body2">
                   {t(
                     "projectPlanning.helpPlanningWorkspacesBody",
-                    "Inventory Planning lets you add stock/asset/bundle requirements on a selected task or stream. Manpower Workspace lets you assign staff, role, and loading (0.0-1.0) for a task.",
+                    "Inventory Planning lets you add stock/asset/bundle requirements on a selected task or stream. Skill Workspace lets you assign required skills and units for a task.",
                   )}
                 </Typography>
                 <Typography variant="subtitle2">
                   {t(
                     "projectPlanning.helpSectionOverviews",
-                    "Inventory & Manpower Overviews",
+                    "Inventory & Skill Overviews",
                   )}
                 </Typography>
                 <Typography variant="body2">
                   {t(
                     "projectPlanning.helpOverviewsBody",
-                    "Inventory Overview summarizes planned quantities by period and shows details on hover. Manpower Overview aggregates staff loading by period; red values indicate overloaded days (>1.0).",
+                    "Inventory Overview summarizes planned quantities by period and shows details on hover. Skill Overview aggregates required units by skill across each period.",
                   )}
                 </Typography>
                 <Typography variant="subtitle2">
@@ -4558,13 +5277,13 @@ const ProjectWorkbench = () => {
                 <Typography variant="subtitle2">
                   {t(
                     "projectPlanning.helpSectionHowManpowerPlanning",
-                    "How To: Plan Manpower",
+                    "How To: Plan Skills",
                   )}
                 </Typography>
                 <Typography variant="body2">
                   {t(
                     "projectPlanning.helpHowManpowerPlanningBody",
-                    "1. Click the manpower icon on a task row. 2. Select staff member(s). 3. Set role and loading value (0.0 to 1.0). 4. Save or remove assignments as needed.",
+                    "1. Click the skill icon on a task row. 2. Select required skill(s). 3. Set unit values. 4. Save or remove entries as needed.",
                   )}
                 </Typography>
                 <Typography variant="subtitle2">
@@ -4576,7 +5295,7 @@ const ProjectWorkbench = () => {
                 <Typography variant="body2">
                   {t(
                     "projectPlanning.helpHowReadOverviewsBody",
-                    "1. Open Inventory Overview or Manpower Overview from the header actions. 2. Switch Day/Week/Month to change granularity. 3. Follow the highlighted current period column for present-time tracking. 4. Hover populated cells to view detail breakdown.",
+                    "1. Open Inventory Overview or Skill Overview from the header actions. 2. Switch Day/Week/Month to change granularity. 3. Follow the highlighted current period column for present-time tracking. 4. Hover populated cells to view detail breakdown.",
                   )}
                 </Typography>
               </Stack>
@@ -5992,6 +6711,371 @@ const ProjectWorkbench = () => {
           </Dialog>
 
           <Dialog
+            open={skillPlanningOpen}
+            onClose={() => setSkillPlanningOpen(false)}
+            fullWidth
+            maxWidth="sm"
+          >
+            <DialogTitle>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: 1,
+                }}
+              >
+                <Typography variant="h6" component="div" sx={{ pr: 1 }}>
+                  {t("projectPlanning.skillWorkspace", "Skill Workspace")}
+                  {" - "}
+                  {skillPlanningTarget?.name ||
+                    skillPlanningTarget?.raw?.taskName ||
+                    "-"}
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<AddIcon fontSize="small" />}
+                  onClick={openCreateSkillDialog}
+                  disabled={skillPlanningLoading}
+                  sx={{ mt: 0, flexShrink: 0 }}
+                >
+                  {t(
+                    "projectPlanning.addSkillDefinition",
+                    "Add Skill Definition",
+                  )}
+                </Button>
+              </Box>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 0.5 }}
+              >
+                {t(
+                  "projectPlanning.skillWorkspaceHelp",
+                  "Define the skills and units required for this task.",
+                )}
+              </Typography>
+            </DialogTitle>
+            <DialogContent dividers>
+              <Stack spacing={1.25}>
+                {skillPlanningError && (
+                  <Alert severity="error">{skillPlanningError}</Alert>
+                )}
+
+                <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
+                  <FormControl
+                    size="small"
+                    fullWidth
+                    sx={{ minWidth: { xs: "100%", md: 260 } }}
+                  >
+                    <InputLabel>
+                      {t("projectPlanning.skillName", "Skill")}
+                    </InputLabel>
+                    <Select
+                      value={skillDraft.skillId}
+                      label={t("projectPlanning.skillName", "Skill")}
+                      onChange={(event) => {
+                        const nextSkillId = String(
+                          event.target.value || "",
+                        ).trim();
+                        if (!nextSkillId) {
+                          setSkillDraft((prev) => ({ ...prev, skillId: "" }));
+                          return;
+                        }
+
+                        const duplicateRow = skillPlanningRows.find(
+                          (item) =>
+                            String(item?.skillId || "").trim() ===
+                              nextSkillId &&
+                            String(item?.apiId || "") !==
+                              String(skillDraft.apiId || ""),
+                        );
+
+                        if (duplicateRow) {
+                          setSkillPlanningError(
+                            t(
+                              "projectPlanning.skillDuplicate",
+                              "This skill has already been added.",
+                            ),
+                          );
+                          return;
+                        }
+
+                        setSkillPlanningError("");
+                        setSkillDraft((prev) => ({
+                          ...prev,
+                          skillId: nextSkillId,
+                        }));
+                      }}
+                    >
+                      {availableSkillOptions.map((option) => {
+                        const skillId = String(
+                          option?.staffSkillId || "",
+                        ).trim();
+                        const skillName =
+                          String(option?.skillName || "").trim() || skillId;
+                        return (
+                          <MenuItem key={skillId} value={skillId}>
+                            {skillName}
+                          </MenuItem>
+                        );
+                      })}
+                    </Select>
+                  </FormControl>
+
+                  <TextField
+                    type="number"
+                    size="small"
+                    label={t("projectPlanning.skillUnit", "Unit")}
+                    value={skillDraft.unit}
+                    onChange={(event) =>
+                      setSkillDraft((prev) => ({
+                        ...prev,
+                        unit: event.target.value,
+                      }))
+                    }
+                    inputProps={{ min: 1, step: 1 }}
+                    sx={{ width: { xs: "100%", md: 140 } }}
+                  />
+
+                  <Button
+                    variant="contained"
+                    disabled={
+                      skillPlanningLoading ||
+                      !String(skillDraft.skillId || "").trim()
+                    }
+                    onClick={saveSkillAssignment}
+                  >
+                    {skillDraft.apiId
+                      ? t("basic.save", "Save")
+                      : t("basic.add", "Add")}
+                  </Button>
+                </Stack>
+
+                {skillPlanningLoading ? (
+                  <Box
+                    sx={{ py: 4, display: "flex", justifyContent: "center" }}
+                  >
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : skillPlanningRows.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    {t(
+                      "projectPlanning.noSkillSelected",
+                      "No skills selected.",
+                    )}
+                  </Typography>
+                ) : (
+                  <Box
+                    sx={{
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 1,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: "minmax(0, 2.8fr) 100px 82px",
+                        gap: 1,
+                        px: 1.25,
+                        py: 0.75,
+                        bgcolor: "background.default",
+                        borderBottom: "1px solid",
+                        borderColor: "divider",
+                      }}
+                    >
+                      <Typography variant="caption" fontWeight={700}>
+                        {t("projectPlanning.skillName", "Skill")}
+                      </Typography>
+                      <Typography variant="caption" fontWeight={700}>
+                        {t("projectPlanning.skillUnit", "Unit")}
+                      </Typography>
+                      <Typography variant="caption" fontWeight={700}>
+                        {t("basic.remove", "Remove")}
+                      </Typography>
+                    </Box>
+
+                    {skillPlanningRows
+                      .slice()
+                      .sort((a, b) =>
+                        String(a?.skillName || a?.skillId || "").localeCompare(
+                          String(b?.skillName || b?.skillId || ""),
+                          undefined,
+                          { sensitivity: "base" },
+                        ),
+                      )
+                      .map((item) => {
+                        const skillId = String(item?.skillId || "").trim();
+                        const skillName =
+                          String(item?.skillName || "").trim() ||
+                          String(
+                            skillById?.[skillId]?.skillName || "",
+                          ).trim() ||
+                          skillId ||
+                          "-";
+
+                        return (
+                          <Box
+                            key={`${String(item.apiId || "new")}-${skillId}`}
+                            sx={{
+                              display: "grid",
+                              gridTemplateColumns:
+                                "minmax(0, 2.8fr) 100px 82px",
+                              gap: 1,
+                              px: 1.25,
+                              py: 0.5,
+                              borderBottom: "1px solid",
+                              borderColor: "divider",
+                              alignItems: "center",
+                              "&:last-child": { borderBottom: "none" },
+                            }}
+                          >
+                            <Typography variant="body2" noWrap>
+                              {skillName}
+                            </Typography>
+                            <Typography variant="body2">{item.unit}</Typography>
+                            <Box sx={{ display: "flex", gap: 0.25 }}>
+                              <IconButton
+                                size="small"
+                                onClick={() =>
+                                  setSkillDraft({
+                                    apiId: item.apiId || null,
+                                    skillId,
+                                    unit: String(item.unit || "1"),
+                                  })
+                                }
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                onClick={() => removeSkillAssignment(item)}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </Box>
+                        );
+                      })}
+                  </Box>
+                )}
+              </Stack>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setSkillPlanningOpen(false)}>
+                {t("basic.close", "Close")}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <Dialog
+            open={skillCreateOpen}
+            onClose={() => {
+              if (skillCreateLoading) return;
+              setSkillCreateOpen(false);
+              setSkillCreateError("");
+            }}
+            fullWidth
+            maxWidth="sm"
+          >
+            <DialogTitle>
+              {t("projectPlanning.addSkillDefinition", "Add Skill Definition")}
+            </DialogTitle>
+            <DialogContent dividers>
+              <Stack spacing={1.25} sx={{ mt: 0.25 }}>
+                {skillCreateError && (
+                  <Alert severity="error">{skillCreateError}</Alert>
+                )}
+
+                <TextField
+                  size="small"
+                  label={t("projectPlanning.skillName", "Skill")}
+                  value={skillCreateForm.skillName}
+                  onChange={(event) =>
+                    setSkillCreateForm((prev) => ({
+                      ...prev,
+                      skillName: event.target.value,
+                    }))
+                  }
+                  required
+                  fullWidth
+                />
+
+                <TextField
+                  size="small"
+                  label={t("projectPlanning.skillDescription", "Description")}
+                  value={skillCreateForm.skillDescription}
+                  onChange={(event) =>
+                    setSkillCreateForm((prev) => ({
+                      ...prev,
+                      skillDescription: event.target.value,
+                    }))
+                  }
+                  fullWidth
+                />
+
+                <Autocomplete
+                  freeSolo
+                  options={skillCategoryOptions}
+                  value={null}
+                  inputValue={skillCreateForm.skillCategory}
+                  onInputChange={(_, newInputValue) =>
+                    setSkillCreateForm((prev) => ({
+                      ...prev,
+                      skillCategory: newInputValue,
+                    }))
+                  }
+                  onChange={(_, value) =>
+                    setSkillCreateForm((prev) => ({
+                      ...prev,
+                      skillCategory: String(value || "").trim(),
+                    }))
+                  }
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      size="small"
+                      label={t("projectPlanning.skillCategory", "Category")}
+                      placeholder={t(
+                        "projectPlanning.skillCategoryPlaceholder",
+                        "Select or type new category",
+                      )}
+                      fullWidth
+                    />
+                  )}
+                />
+              </Stack>
+            </DialogContent>
+            <DialogActions>
+              <Button
+                onClick={() => {
+                  if (skillCreateLoading) return;
+                  setSkillCreateOpen(false);
+                  setSkillCreateError("");
+                }}
+                disabled={skillCreateLoading}
+              >
+                {t("basic.cancel", "Cancel")}
+              </Button>
+              <Button
+                variant="contained"
+                onClick={saveNewSkillDefinition}
+                disabled={
+                  skillCreateLoading ||
+                  !String(skillCreateForm.skillName || "").trim()
+                }
+              >
+                {skillCreateLoading
+                  ? t("basic.loading", "Loading")
+                  : t("basic.save", "Save")}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <Dialog
             open={manpowerPlanningOpen}
             onClose={() => setManpowerPlanningOpen(false)}
             fullWidth
@@ -7010,6 +8094,368 @@ const ProjectWorkbench = () => {
                 onClick={() => {
                   setInventoryOverviewOpen(false);
                   setInventoryOverviewRowsReady(false);
+                }}
+              >
+                {t("basic.close", "Close")}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <Dialog
+            open={skillOverviewOpen}
+            onClose={() => {
+              setSkillOverviewOpen(false);
+              setSkillOverviewRowsReady(false);
+            }}
+            maxWidth={false}
+            fullWidth
+            PaperProps={{
+              sx: {
+                width: "94vw",
+                maxWidth: "94vw",
+                height: "86vh",
+              },
+            }}
+          >
+            <DialogTitle sx={{ pb: 0.25, pt: 1 }}>
+              {t("projectPlanning.skillOverview", "Skill Overview")} -{" "}
+              {projectCode}
+            </DialogTitle>
+            <Box
+              sx={{
+                px: 3,
+                py: 0.5,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 2,
+                flexWrap: "wrap",
+              }}
+            >
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ flex: 1 }}
+              >
+                {t(
+                  "projectPlanning.skillOverviewDesc",
+                  "Track required skill units across tasks. Hover each populated cell to see task-by-task unit breakdown.",
+                )}
+              </Typography>
+              <ToggleButtonGroup
+                value={skillOverviewViewMode}
+                exclusive
+                onChange={(_, value) => {
+                  if (value) setSkillOverviewViewMode(value);
+                }}
+                size="small"
+              >
+                <ToggleButton value="day">
+                  {t("projectPlanning.viewDay", "Day")}
+                </ToggleButton>
+                <ToggleButton value="week">
+                  {t("projectPlanning.viewWeek", "Week")}
+                </ToggleButton>
+                <ToggleButton value="month">
+                  {t("projectPlanning.viewMonth", "Month")}
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+            <DialogContent
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 1,
+                overflow: "hidden",
+              }}
+            >
+              {skillOverviewLoading || !skillOverviewRowsReady ? (
+                <Box sx={{ py: 4, display: "flex", justifyContent: "center" }}>
+                  <CircularProgress size={26} />
+                </Box>
+              ) : skillOverviewError ? (
+                <Alert severity="error">{skillOverviewError}</Alert>
+              ) : skillOverviewRows.length === 0 ? (
+                <Alert severity="info">
+                  {t("projectPlanning.noSkillSelected", "No skills selected.")}
+                </Alert>
+              ) : (
+                <Box
+                  sx={{
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 1,
+                    overflow: "auto",
+                    flex: 1,
+                  }}
+                >
+                  <Box sx={{ minWidth: 380 + skillOverviewTimelineWidth }}>
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: `380px ${skillOverviewTimelineWidth}px`,
+                        borderBottom: "1px solid",
+                        borderColor: "divider",
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 6,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          borderRight: "1px solid",
+                          borderColor: "divider",
+                          position: "sticky",
+                          left: 0,
+                          zIndex: 7,
+                          bgcolor: "background.default",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          px: 1,
+                          py: 0.5,
+                        }}
+                      >
+                        <Typography
+                          variant="caption"
+                          fontWeight={700}
+                          sx={{ fontSize: "0.64rem" }}
+                        >
+                          {t("projectPlanning.timeline", "Timeline")}
+                        </Typography>
+                      </Box>
+
+                      <Box
+                        sx={{ bgcolor: "background.default", display: "flex" }}
+                      >
+                        {skillOverviewUpperSegments.map((seg) => (
+                          <Box
+                            key={seg.key}
+                            sx={{
+                              width: seg.span * skillOverviewColWidth,
+                              px: 0.5,
+                              py: 0.5,
+                              borderLeft: "1px solid",
+                              borderColor: "divider",
+                              textAlign: "center",
+                            }}
+                          >
+                            <Typography
+                              variant="caption"
+                              sx={{ fontSize: "0.64rem", whiteSpace: "nowrap" }}
+                            >
+                              {seg.label}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
+
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: `380px ${skillOverviewTimelineWidth}px`,
+                        borderBottom: "1px solid",
+                        borderColor: "divider",
+                        position: "sticky",
+                        top: 27,
+                        zIndex: 5,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          borderRight: "1px solid",
+                          borderColor: "divider",
+                          position: "sticky",
+                          left: 0,
+                          zIndex: 6,
+                          bgcolor: "background.default",
+                          px: 1,
+                          py: 0.6,
+                        }}
+                      >
+                        <Typography
+                          variant="caption"
+                          fontWeight={700}
+                          sx={{ fontSize: "0.68rem" }}
+                        >
+                          {t("projectPlanning.skillName", "Skill")}
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ bgcolor: "background.default" }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            borderTop: "1px solid",
+                            borderColor: "divider",
+                          }}
+                        >
+                          {skillOverviewActiveCols.map((col, idx) => (
+                            <Box
+                              key={col.key}
+                              sx={{
+                                width: skillOverviewColWidth,
+                                px: 0,
+                                py: 0.4,
+                                bgcolor: isCurrentPeriodColumn(
+                                  skillOverviewViewMode,
+                                  col,
+                                )
+                                  ? "action.selected"
+                                  : "transparent",
+                                borderLeft: "1px solid",
+                                borderColor:
+                                  skillOverviewViewMode === "day"
+                                    ? col.isMonthStart
+                                      ? "divider"
+                                      : "transparent"
+                                    : idx === 0
+                                      ? "divider"
+                                      : "transparent",
+                                textAlign: "center",
+                              }}
+                            >
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  fontSize: "0.58rem",
+                                  lineHeight: 1,
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {col.label}
+                              </Typography>
+                            </Box>
+                          ))}
+                        </Box>
+                      </Box>
+                    </Box>
+
+                    {skillOverviewRows.map((row, rowIndex) => (
+                      <Box
+                        key={row.key}
+                        sx={{
+                          display: "grid",
+                          gridTemplateColumns: `380px ${skillOverviewTimelineWidth}px`,
+                          borderBottom: "1px solid",
+                          borderColor: "divider",
+                          minHeight: 28,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            borderRight: "1px solid",
+                            borderColor: "divider",
+                            position: "sticky",
+                            left: 0,
+                            zIndex: 5,
+                            bgcolor:
+                              rowIndex % 2 === 0
+                                ? "background.paper"
+                                : "grey.50",
+                            px: 1,
+                            py: 0.55,
+                          }}
+                        >
+                          <Typography
+                            variant="caption"
+                            sx={{ fontSize: "0.69rem" }}
+                            noWrap
+                          >
+                            {row.skillName}
+                          </Typography>
+                        </Box>
+
+                        <Box
+                          sx={{
+                            display: "flex",
+                            bgcolor:
+                              rowIndex % 2 === 0
+                                ? "background.paper"
+                                : "grey.50",
+                          }}
+                        >
+                          {skillOverviewActiveCols.map((col) => {
+                            const value = getSkillUsageValue(row, col);
+                            const hasValue = value > 0;
+                            const isCurrentPeriod = isCurrentPeriodColumn(
+                              skillOverviewViewMode,
+                              col,
+                            );
+                            const cellSx = {
+                              width: skillOverviewColWidth,
+                              bgcolor: isCurrentPeriod
+                                ? "action.selected"
+                                : "transparent",
+                              borderLeft: "1px solid",
+                              borderColor:
+                                skillOverviewViewMode === "day"
+                                  ? col.isMonthStart
+                                    ? "divider"
+                                    : "transparent"
+                                  : "divider",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              py: 0.3,
+                              cursor: hasValue ? "pointer" : "default",
+                            };
+
+                            if (!hasValue) {
+                              return (
+                                <Box key={`${row.key}-${col.key}`} sx={cellSx}>
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      fontSize: "0.62rem",
+                                      color: "text.disabled",
+                                    }}
+                                  >
+                                    -
+                                  </Typography>
+                                </Box>
+                              );
+                            }
+
+                            const detailsTable = getSkillUsageDetailsTable(
+                              row,
+                              col,
+                            );
+                            return (
+                              <Tooltip
+                                key={`${row.key}-${col.key}`}
+                                title={detailsTable}
+                                arrow
+                                placement="top"
+                                disableInteractive={false}
+                              >
+                                <Box sx={cellSx}>
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      fontSize: "0.62rem",
+                                      color: "text.primary",
+                                    }}
+                                  >
+                                    {Number(value.toFixed(2))}
+                                  </Typography>
+                                </Box>
+                              </Tooltip>
+                            );
+                          })}
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button
+                onClick={() => {
+                  setSkillOverviewOpen(false);
+                  setSkillOverviewRowsReady(false);
                 }}
               >
                 {t("basic.close", "Close")}
