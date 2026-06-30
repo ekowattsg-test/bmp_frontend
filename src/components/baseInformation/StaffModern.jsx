@@ -137,9 +137,10 @@ const StaffModern = () => {
     setDeleteError("");
     try {
       // Check if staff has any skill profiles assigned
+      const staffId = String(staff?.staffId || "").trim();
       const response = await request(
         "GET",
-        `/api/staffskillprofiles/staff/${staff.staffName}`,
+        `/api/staffskillprofiles/staffid/${encodeURIComponent(staffId)}`,
       );
       const skillProfiles = Array.isArray(response.data)
         ? response.data

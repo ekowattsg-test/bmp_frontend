@@ -19,8 +19,15 @@ import {
 } from "../../helpers/file_helper";
 import FileGallery from "../common/FileGallery";
 
-const StaffSkillEdit = ({ skill, onCancel, onSuccess }) => {
+const StaffSkillEdit = ({ skill, staff, onCancel, onSuccess }) => {
   const { t } = useTranslation();
+  const resolveStaffId = (...candidates) => {
+    for (const candidate of candidates) {
+      const normalized = String(candidate?.staffId || "").trim();
+      if (normalized) return normalized;
+    }
+    return null;
+  };
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [skillFormData, setSkillFormData] = useState({
@@ -111,6 +118,11 @@ const StaffSkillEdit = ({ skill, onCancel, onSuccess }) => {
         throw new Error("Invalid skill to edit");
       }
 
+      const staffId = resolveStaffId(skill, staff);
+      if (!staffId) {
+        throw new Error("Missing staffId for staff skill profile update.");
+      }
+
       setLoading(true);
 
       const normalizedCertLinks = skillFormData.certificationLinks
@@ -138,6 +150,7 @@ const StaffSkillEdit = ({ skill, onCancel, onSuccess }) => {
 
       const payload = {
         staffSkillProfileId: skill.staffSkillProfileId,
+        staffId,
         staffName: skill.staffName,
         staffSkillId: skill.staffSkillId,
         issuedBy: skillFormData.issuedBy,

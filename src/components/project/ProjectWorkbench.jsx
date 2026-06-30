@@ -183,6 +183,20 @@ const addDays = (value, days) => {
   return new Date(date.getTime() + (duration - 1) * DAY_MS);
 };
 
+const toLongId = (value) => {
+  if (value === null || value === undefined) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const numeric = Number(raw);
+  if (!Number.isFinite(numeric)) return null;
+  return Math.trunc(numeric);
+};
+
+const toLongIdKey = (value) => {
+  const normalized = toLongId(value);
+  return normalized === null ? "" : String(normalized);
+};
+
 const toRoleCode = (row) => {
   const raw = String(
     row?.projectRole || row?.role || row?.roleName || row?.leaderRole || "",
@@ -330,7 +344,7 @@ const ProjectWorkbench = () => {
   const [skillOptions, setSkillOptions] = useState([]);
   const [skillDraft, setSkillDraft] = useState({
     apiId: null,
-    skillId: "",
+    skillId: null,
     unit: "1",
   });
   const [skillCreateOpen, setSkillCreateOpen] = useState(false);
@@ -405,8 +419,8 @@ const ProjectWorkbench = () => {
   const skillById = useMemo(
     () =>
       skillOptions.reduce((acc, skill) => {
-        const id = String(skill?.staffSkillId || "").trim();
-        if (!id) return acc;
+        const id = toLongId(skill?.staffSkillId);
+        if (id === null) return acc;
         acc[id] = skill;
         return acc;
       }, {}),
@@ -426,32 +440,32 @@ const ProjectWorkbench = () => {
   );
 
   const availableSkillOptions = useMemo(() => {
-    const editingSkillId = String(
+    const editingSkillId = toLongId(
       skillPlanningRows.find(
         (item) => String(item?.apiId || "") === String(skillDraft.apiId || ""),
-      )?.skillId || "",
-    ).trim();
+      )?.skillId,
+    );
 
     const assignedSkillIds = new Set(
       skillPlanningRows
-        .map((item) => String(item?.skillId || "").trim())
-        .filter(Boolean),
+        .map((item) => toLongId(item?.skillId))
+        .filter((id) => id !== null),
     );
 
     return skillOptions
       .filter((skill) => {
-        const skillId = String(skill?.staffSkillId || "").trim();
-        if (!skillId) return false;
+        const skillId = toLongId(skill?.staffSkillId);
+        if (skillId === null) return false;
         if (!assignedSkillIds.has(skillId)) return true;
         return skillId === editingSkillId;
       })
       .sort((a, b) => {
         const nameA =
           String(a?.skillName || "").trim() ||
-          String(a?.staffSkillId || "").trim();
+          String(toLongId(a?.staffSkillId) ?? "").trim();
         const nameB =
           String(b?.skillName || "").trim() ||
-          String(b?.staffSkillId || "").trim();
+          String(toLongId(b?.staffSkillId) ?? "").trim();
         return nameA.localeCompare(nameB, undefined, { sensitivity: "base" });
       });
   }, [skillOptions, skillPlanningRows, skillDraft.apiId]);
@@ -925,12 +939,6 @@ const ProjectWorkbench = () => {
         );
 
         const staffs = Array.isArray(staffsRes?.data) ? staffsRes.data : [];
-        const staffById = staffs.reduce((acc, staff) => {
-          const id = String(staff?.staffId || "").trim();
-          if (!id) return acc;
-          acc[id] = staff;
-          return acc;
-        }, {});
 
         const skillRows = Array.isArray(skillsRes?.data) ? skillsRes.data : [];
         const skillNameById = skillRows.reduce((acc, skill) => {
@@ -950,14 +958,9 @@ const ProjectWorkbench = () => {
 
         const skillsByStaffEntries = await Promise.all(
           uniqueStaffIds.map(async (staffId) => {
-            const staffName = String(
-              staffById?.[staffId]?.staffName || "",
-            ).trim();
-            if (!staffName) return [staffId, []];
-
             const profileRes = await request(
               "GET",
-              `/api/staffskillprofiles/staff/${encodeURIComponent(staffName)}`,
+              `/api/staffskillprofiles/staffid/${encodeURIComponent(staffId)}`,
             ).catch(() => ({ data: [] }));
 
             const profileRows = Array.isArray(profileRes?.data)
@@ -1381,7 +1384,7 @@ const ProjectWorkbench = () => {
     }, {});
 
     const skillNameById = skillOverviewSkills.reduce((acc, skill) => {
-      const key = String(skill?.staffSkillId || "").trim();
+      const key = toLongIdKey(skill?.staffSkillId);
       if (!key) return acc;
       acc[key] = String(skill?.skillName || "").trim() || key;
       return acc;
@@ -1391,8 +1394,8 @@ const ProjectWorkbench = () => {
 
     skillOverviewData.forEach((item) => {
       const taskId = String(item?.projectTaskId || "").trim();
-      const skillId = String(item?.skillId || "").trim();
-      if (!taskId || !skillId) return;
+      const skillId = toLongId(item?.skillId);
+      if (!taskId || skillId === null) return;
 
       const task = taskById[taskId];
       if (!task) return;
@@ -1406,9 +1409,9 @@ const ProjectWorkbench = () => {
 
       if (!grouped.has(skillId)) {
         grouped.set(skillId, {
-          key: skillId,
+          key: String(skillId),
           skillId,
-          skillName: skillNameById[skillId] || skillId,
+          skillName: skillNameById[String(skillId)] || String(skillId),
           dayMap: new Map(),
         });
       }
@@ -3645,7 +3648,7 @@ const ProjectWorkbench = () => {
     });
     setSkillDraft({
       apiId: null,
-      skillId: "",
+      skillId: null,
       unit: "1",
     });
     setSkillPlanningLoading(true);
@@ -3663,7 +3666,7 @@ const ProjectWorkbench = () => {
         : [];
 
       const skillNameById = skills.reduce((acc, skill) => {
-        const id = String(skill?.staffSkillId || "").trim();
+        const id = toLongIdKey(skill?.staffSkillId);
         if (!id) return acc;
         acc[id] = String(skill?.skillName || "").trim() || id;
         return acc;
@@ -3671,16 +3674,19 @@ const ProjectWorkbench = () => {
 
       setSkillOptions(skills);
       setSkillPlanningRows(
-        rows.map((item) => {
-          const skillId = String(item?.skillId || "").trim();
-          return {
-            apiId: item?.projectSkillId,
-            projectTaskId: Number(item?.projectTaskId || taskId) || taskId,
-            skillId,
-            skillName: skillNameById[skillId] || skillId,
-            unit: String(normalizeSkillUnit(item?.unit || 1)),
-          };
-        }),
+        rows
+          .map((item) => {
+            const skillId = toLongId(item?.skillId);
+            if (skillId === null) return null;
+            return {
+              apiId: item?.projectSkillId,
+              projectTaskId: Number(item?.projectTaskId || taskId) || taskId,
+              skillId,
+              skillName: skillNameById[String(skillId)] || String(skillId),
+              unit: String(normalizeSkillUnit(item?.unit || 1)),
+            };
+          })
+          .filter(Boolean),
       );
     } catch {
       setSkillPlanningError(
@@ -3729,17 +3735,17 @@ const ProjectWorkbench = () => {
       const createdSkill = createRes?.data || null;
       const refreshedSkills = await refreshSkillOptions();
 
-      const createdSkillId = String(createdSkill?.staffSkillId || "").trim();
+      const createdSkillId = toLongId(createdSkill?.staffSkillId);
       const selectedSkillId = createdSkillId
         ? createdSkillId
-        : String(
+        : toLongId(
             refreshedSkills.find(
               (skill) =>
                 String(skill?.skillName || "")
                   .trim()
                   .toLowerCase() === skillName.toLowerCase(),
-            )?.staffSkillId || "",
-          ).trim();
+            )?.staffSkillId,
+          );
 
       setSkillDraft((prev) => ({
         ...prev,
@@ -3762,10 +3768,10 @@ const ProjectWorkbench = () => {
   const saveSkillAssignment = async () => {
     const taskId = getSkillTaskId(skillPlanningTarget);
     const apiId = skillDraft.apiId;
-    const skillId = String(skillDraft.skillId || "").trim();
+    const skillId = toLongId(skillDraft.skillId);
     const unit = Number(skillDraft.unit);
 
-    if (!taskId || !skillId) return;
+    if (!taskId || skillId === null) return;
     if (!Number.isFinite(unit) || unit < 1) {
       setSkillPlanningError(
         t("projectPlanning.skillUnitHint", "Unit must be a positive integer."),
@@ -3775,7 +3781,7 @@ const ProjectWorkbench = () => {
 
     const duplicateRow = skillPlanningRows.find(
       (item) =>
-        String(item?.skillId || "") === skillId &&
+        toLongId(item?.skillId) === skillId &&
         String(item?.apiId || "") !== String(apiId || ""),
     );
     if (duplicateRow) {
@@ -3803,14 +3809,14 @@ const ProjectWorkbench = () => {
         : await request("POST", "/api/projectskills", payload);
 
       const saved = res?.data || payload;
-      const resolvedSkillId = String(saved?.skillId || skillId).trim();
+      const resolvedSkillId = toLongId(saved?.skillId ?? skillId) ?? skillId;
       const nextRow = {
         apiId: saved?.projectSkillId || apiId,
         projectTaskId: taskId,
         skillId: resolvedSkillId,
         skillName:
           String(skillById?.[resolvedSkillId]?.skillName || "").trim() ||
-          resolvedSkillId,
+          String(resolvedSkillId),
         unit: String(normalizeSkillUnit(saved?.unit ?? payload.unit)),
       };
 
@@ -3828,7 +3834,7 @@ const ProjectWorkbench = () => {
 
       setSkillDraft({
         apiId: null,
-        skillId: "",
+        skillId: null,
         unit: "1",
       });
     } catch {
@@ -3842,12 +3848,12 @@ const ProjectWorkbench = () => {
 
   const removeSkillAssignment = async (row) => {
     const apiId = row?.apiId;
-    const skillId = String(row?.skillId || "").trim();
-    if (!skillId) return;
+    const skillId = toLongId(row?.skillId);
+    if (skillId === null) return;
 
     if (!apiId) {
       setSkillPlanningRows((prev) =>
-        prev.filter((item) => String(item?.skillId || "") !== skillId),
+        prev.filter((item) => toLongId(item?.skillId) !== skillId),
       );
       return;
     }
@@ -3856,7 +3862,7 @@ const ProjectWorkbench = () => {
     try {
       await request("DELETE", `/api/projectskills/${apiId}`);
       setSkillPlanningRows((prev) =>
-        prev.filter((item) => String(item?.skillId || "") !== skillId),
+        prev.filter((item) => toLongId(item?.skillId) !== skillId),
       );
     } catch {
       setSkillPlanningError(
@@ -3932,19 +3938,14 @@ const ProjectWorkbench = () => {
         return acc;
       }, {});
 
-      const profileNames = Array.from(
-        new Set(
-          staffs
-            .map((staff) => String(staff?.staffName || "").trim())
-            .filter(Boolean),
-        ),
-      );
+      const profileByStaffIdEntries = await Promise.all(
+        staffs.map(async (staff) => {
+          const staffId = String(staff?.staffId || "").trim();
+          if (!staffId) return null;
 
-      const profileByNameEntries = await Promise.all(
-        profileNames.map(async (staffName) => {
           const profileRes = await request(
             "GET",
-            `/api/staffskillprofiles/staff/${encodeURIComponent(staffName)}`,
+            `/api/staffskillprofiles/staffid/${encodeURIComponent(staffId)}`,
           ).catch(() => ({ data: [] }));
 
           const profileRows = Array.isArray(profileRes?.data)
@@ -3963,18 +3964,13 @@ const ProjectWorkbench = () => {
                 .filter(Boolean),
             ),
           );
-          return [staffName, names];
+          return [staffId, names];
         }),
       );
 
-      const profileByName = Object.fromEntries(profileByNameEntries);
-      const skillsByStaff = staffs.reduce((acc, staff) => {
-        const staffId = String(staff?.staffId || "").trim();
-        if (!staffId) return acc;
-        const staffName = String(staff?.staffName || "").trim();
-        acc[staffId] = profileByName?.[staffName] || [];
-        return acc;
-      }, {});
+      const skillsByStaff = Object.fromEntries(
+        profileByStaffIdEntries.filter(Boolean),
+      );
 
       setManpowerStaffOptions(staffs);
       setManpowerSkillsByStaffId(skillsByStaff);
@@ -6773,21 +6769,18 @@ const ProjectWorkbench = () => {
                       {t("projectPlanning.skillName", "Skill")}
                     </InputLabel>
                     <Select
-                      value={skillDraft.skillId}
+                      value={skillDraft.skillId ?? ""}
                       label={t("projectPlanning.skillName", "Skill")}
                       onChange={(event) => {
-                        const nextSkillId = String(
-                          event.target.value || "",
-                        ).trim();
-                        if (!nextSkillId) {
-                          setSkillDraft((prev) => ({ ...prev, skillId: "" }));
+                        const nextSkillId = toLongId(event.target.value);
+                        if (nextSkillId === null) {
+                          setSkillDraft((prev) => ({ ...prev, skillId: null }));
                           return;
                         }
 
                         const duplicateRow = skillPlanningRows.find(
                           (item) =>
-                            String(item?.skillId || "").trim() ===
-                              nextSkillId &&
+                            toLongId(item?.skillId) === nextSkillId &&
                             String(item?.apiId || "") !==
                               String(skillDraft.apiId || ""),
                         );
@@ -6810,11 +6803,11 @@ const ProjectWorkbench = () => {
                       }}
                     >
                       {availableSkillOptions.map((option) => {
-                        const skillId = String(
-                          option?.staffSkillId || "",
-                        ).trim();
+                        const skillId = toLongId(option?.staffSkillId);
+                        if (skillId === null) return null;
                         const skillName =
-                          String(option?.skillName || "").trim() || skillId;
+                          String(option?.skillName || "").trim() ||
+                          String(skillId);
                         return (
                           <MenuItem key={skillId} value={skillId}>
                             {skillName}
@@ -6842,8 +6835,7 @@ const ProjectWorkbench = () => {
                   <Button
                     variant="contained"
                     disabled={
-                      skillPlanningLoading ||
-                      !String(skillDraft.skillId || "").trim()
+                      skillPlanningLoading || skillDraft.skillId === null
                     }
                     onClick={saveSkillAssignment}
                   >
@@ -6908,13 +6900,14 @@ const ProjectWorkbench = () => {
                         ),
                       )
                       .map((item) => {
-                        const skillId = String(item?.skillId || "").trim();
+                        const skillId = toLongId(item?.skillId);
+                        if (skillId === null) return null;
                         const skillName =
                           String(item?.skillName || "").trim() ||
                           String(
                             skillById?.[skillId]?.skillName || "",
                           ).trim() ||
-                          skillId ||
+                          String(skillId) ||
                           "-";
 
                         return (

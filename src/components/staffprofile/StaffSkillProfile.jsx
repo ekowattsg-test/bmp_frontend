@@ -47,6 +47,13 @@ import StaffSkillEdit from "./StaffSkillEdit";
 
 const StaffSkillProfile = ({ onBack }) => {
   const { t } = useTranslation();
+  const resolveStaffId = (value) => {
+    const normalized =
+      typeof value === "object" && value !== null
+        ? String(value?.staffId || "").trim()
+        : String(value || "").trim();
+    return normalized || null;
+  };
   const { userInfo } = useContext(AuthContext);
   const { shouldUseBlockLayout } = useResponsiveLayout();
 
@@ -99,9 +106,18 @@ const StaffSkillProfile = ({ onBack }) => {
         const staffsWithSkillData = await Promise.all(
           staffs.map(async (staff) => {
             try {
+              const staffId = resolveStaffId(staff);
+              if (!staffId) {
+                return {
+                  ...staff,
+                  skillCount: 0,
+                  skillCategories: [],
+                };
+              }
+
               const skillResponse = await request(
                 "GET",
-                `/api/staffskillprofiles/staff/${staff.staffName}`,
+                `/api/staffskillprofiles/staffid/${encodeURIComponent(staffId)}`,
               );
               const skillProfiles = Array.isArray(skillResponse.data)
                 ? skillResponse.data
@@ -159,13 +175,19 @@ const StaffSkillProfile = ({ onBack }) => {
     }
   };
 
-  const loadStaffSkills = async (staffName) => {
+  const loadStaffSkills = async (staffId) => {
     try {
       setSkillsLoading(true);
       setError("");
+      const normalizedStaffId = resolveStaffId(staffId);
+      if (!normalizedStaffId) {
+        setStaffSkills([]);
+        return;
+      }
+
       const response = await request(
         "GET",
-        `/api/staffskillprofiles/staff/${staffName}`,
+        `/api/staffskillprofiles/staffid/${encodeURIComponent(normalizedStaffId)}`,
       );
 
       if (response.data) {
@@ -183,6 +205,7 @@ const StaffSkillProfile = ({ onBack }) => {
               );
               return {
                 ...skillProfile,
+                staffId: resolveStaffId(skillProfile) || normalizedStaffId,
                 skillName: skillResponse.data?.skillName || "-",
                 skillDescription: skillResponse.data?.skillDescription || "-",
                 skillCategory: skillResponse.data?.skillCategory || "-",
@@ -194,6 +217,7 @@ const StaffSkillProfile = ({ onBack }) => {
               );
               return {
                 ...skillProfile,
+                staffId: resolveStaffId(skillProfile) || normalizedStaffId,
                 skillName: "-",
                 skillDescription: "-",
                 skillCategory: "-",
@@ -223,7 +247,7 @@ const StaffSkillProfile = ({ onBack }) => {
 
   const handleStaffClick = (staff) => {
     setSelectedStaff(staff);
-    loadStaffSkills(staff.staffName);
+    loadStaffSkills(staff.staffId);
   };
 
   const handleBackFromSkills = () => {
@@ -235,7 +259,7 @@ const StaffSkillProfile = ({ onBack }) => {
   const handleAddSkillSuccess = () => {
     setShowAddFrame(false);
     if (selectedStaff) {
-      loadStaffSkills(selectedStaff.staffName);
+      loadStaffSkills(selectedStaff.staffId);
       loadStaffList(); // Refresh staff list to update skill count badge
     }
   };
@@ -244,7 +268,7 @@ const StaffSkillProfile = ({ onBack }) => {
     setShowEditFrame(false);
     setSkillToEdit(null);
     if (selectedStaff) {
-      loadStaffSkills(selectedStaff.staffName);
+      loadStaffSkills(selectedStaff.staffId);
       loadStaffList(); // Refresh staff list to update skill count badge
     }
   };
@@ -268,7 +292,7 @@ const StaffSkillProfile = ({ onBack }) => {
 
       // Reload both staff skills and staff list to update badges
       await Promise.all([
-        loadStaffSkills(skillToDelete.staffName),
+        loadStaffSkills(skillToDelete.staffId || selectedStaff?.staffId),
         loadStaffList(),
       ]);
 
@@ -446,7 +470,7 @@ const StaffSkillProfile = ({ onBack }) => {
                 size="small"
                 onClick={() => {
                   if (selectedStaff) {
-                    loadStaffSkills(selectedStaff.staffName);
+                    loadStaffSkills(selectedStaff.staffId);
                   }
                 }}
               >

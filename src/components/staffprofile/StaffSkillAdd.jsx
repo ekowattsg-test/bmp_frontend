@@ -26,6 +26,10 @@ import FileGallery from "../common/FileGallery";
 
 const StaffSkillAdd = ({ staff, onCancel, onSuccess }) => {
   const { t } = useTranslation();
+  const resolveStaffId = (value) => {
+    const normalized = String(value?.staffId || "").trim();
+    return normalized || null;
+  };
   const [availableSkills, setAvailableSkills] = useState([]);
   const [selectedSkill, setSelectedSkill] = useState(null);
   const [showSkillForm, setShowSkillForm] = useState(false);
@@ -113,6 +117,11 @@ const StaffSkillAdd = ({ staff, onCancel, onSuccess }) => {
     e.preventDefault();
     setError("");
     try {
+      const staffId = resolveStaffId(staff);
+      if (!staffId) {
+        throw new Error("Missing staffId for staff skill profile creation.");
+      }
+
       const normalizedCertLinks = skillFormData.certificationLinks
         .map((cert) => {
           const normalizedCert = normalizeFileMetadata(cert, {
@@ -137,6 +146,7 @@ const StaffSkillAdd = ({ staff, onCancel, onSuccess }) => {
       }
 
       const payload = {
+        staffId,
         staffName: staff.staffName,
         staffSkillId: selectedSkill.staffSkillId,
         issuedBy: skillFormData.issuedBy,
