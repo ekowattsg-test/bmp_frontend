@@ -3,7 +3,7 @@
  * - Flags usages of `readFirst(...)` (runtime multi-key probing)
  * - Flags `request("GET", "/api/products" ...)` calls (product-list fallback)
  */
-module.exports = {
+const noFallbacks = {
   meta: {
     type: "problem",
     docs: {
@@ -71,3 +71,5 @@ module.exports = {
     };
   },
 };
+
+export default noFallbacks;

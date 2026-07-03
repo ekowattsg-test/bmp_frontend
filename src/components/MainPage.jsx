@@ -36,6 +36,7 @@ import ForcedPassword from "./baseInformation/ForcedPassword";
 import ProjectModern from "./project/ProjectModern";
 import ProjectPlanningModern from "./project/ProjectPlanningModern";
 import ProjectWorkbench from "./project/ProjectWorkbench";
+import ProjectManpowerGenerate from "./project/ProjectManpowerGenerate";
 import VehicleModern from "./information/VehicleModern";
 import WorkOrderModern from "./workorder/WorkOrderModern";
 import OperationRoleModern from "./baseInformation/OperationRoleModern";
@@ -82,6 +83,10 @@ function MainPage() {
         <Route path="/about/privacy" element={<PrivacyPage />} />
         <Route path="/project" element={<ProjectModern />} />
         <Route path="/projectplanning" element={<ProjectPlanningModern />} />
+        <Route
+          path="/projectmanpower-generate"
+          element={<ProjectManpowerGenerate />}
+        />
         <Route
           path="/projectplanning/:projectCode/workbench"
           element={<ProjectWorkbench />}

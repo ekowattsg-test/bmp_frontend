@@ -334,6 +334,16 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               path: "/projectplanning",
               minLevel: 1,
             },
+            {
+              key: "projectManpowerGenerate",
+              label: t(
+                "menu.projectManpowerGenerate",
+                "Generate Project Manpower",
+              ),
+              icon: <PeopleManpowerIcon fontSize="small" />,
+              path: "/projectmanpower-generate",
+              minLevel: 5,
+            },
           ],
         },
         {
@@ -369,9 +379,7 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
           children: section.children
             ?.filter(Boolean)
             .filter((child) =>
-              child.minLevel === undefined
-                ? true
-                : (userInfo?.level ?? 0) >= child.minLevel,
+              child.minLevel === undefined ? true : userLevel >= child.minLevel,
             ),
         }))
         .filter((section) => {
@@ -394,7 +402,7 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
 
           return hasMenu(section.menu, menus);
         }),
-    [roles, menus, param, t],
+    [roles, menus, param, t, userLevel],
   );
 
   const handleItemClick = (item) => {

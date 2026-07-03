@@ -260,6 +260,16 @@ const AppMenu = () => {
             label: t("menu.projectPlanning", "Project Workbench"),
             icon: <AccountTree />,
           },
+          userLevel >= 5
+            ? {
+                to: "/projectmanpower-generate",
+                label: t(
+                  "menu.projectManpowerGenerate",
+                  "Generate Project Manpower",
+                ),
+                icon: <Task />,
+              }
+            : null,
         ],
       },
       {
@@ -277,7 +287,7 @@ const AppMenu = () => {
         ],
       },
     ],
-    [t],
+    [t, userLevel, canAccessWaSimulator],
   );
 
   const visibleSections = menuSections.filter((section) => {
@@ -354,7 +364,7 @@ const AppMenu = () => {
                     style={styles.nestedList}
                     onClick={() => setOpenMenu(false)}
                   >
-                    {section.items.map((item) => (
+                    {section.items.filter(Boolean).map((item) => (
                       <ListItem disablePadding key={item.to}>
                         <ListItemButton
                           className="menu-listitem"

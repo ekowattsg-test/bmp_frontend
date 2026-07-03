@@ -33,6 +33,11 @@ export default [
       // local custom rules
       "local-rules": localRules,
     },
+    settings: {
+      react: {
+        version: "detect",
+      },
+    },
     rules: {
       ...js.configs.recommended.rules,
       ...react.configs.recommended.rules,

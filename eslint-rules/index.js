@@ -1,5 +1,7 @@
-const noFallbacks = require("./no-fallbacks");
+import noFallbacks from "./no-fallbacks.js";
 
-module.exports.rules = {
-  "no-fallbacks": noFallbacks,
+export default {
+  rules: {
+    "no-fallbacks": noFallbacks,
+  },
 };

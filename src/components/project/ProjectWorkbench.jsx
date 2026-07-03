@@ -1,15 +1,10 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Autocomplete,
   Box,
   Button,
-  Chip,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   FormControl,
   IconButton,
   InputLabel,
@@ -23,18 +18,12 @@ import {
   Tooltip,
   Tab,
   Tabs,
-  ToggleButton,
-  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import SettingsIcon from "@mui/icons-material/Settings";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DriveFileMoveIcon from "@mui/icons-material/DriveFileMove";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import EditIcon from "@mui/icons-material/Edit";
 import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
 import TaskAltOutlinedIcon from "@mui/icons-material/TaskAltOutlined";
@@ -43,14 +32,52 @@ import VerticalAlignTopIcon from "@mui/icons-material/VerticalAlignTop";
 import VerticalAlignBottomIcon from "@mui/icons-material/VerticalAlignBottom";
 import ArrowForwardOutlinedIcon from "@mui/icons-material/ArrowForwardOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import AllInboxOutlinedIcon from "@mui/icons-material/AllInboxOutlined";
 import HandymanOutlinedIcon from "@mui/icons-material/HandymanOutlined";
-import PsychologyAltOutlinedIcon from "@mui/icons-material/PsychologyAltOutlined";
+import Groups2OutlinedIcon from "@mui/icons-material/Groups2Outlined";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { request } from "../../helpers/axios_helper";
+import WorkbenchLoadedView from "./workbench/components/WorkbenchLoadedView";
+import { buildWorkbenchDialogProps } from "./workbench/utils/buildWorkbenchDialogProps";
+import {
+  buildInventoryOverviewRows,
+  collectInventoryUsageItems,
+  getInventoryUsageValueByMode,
+} from "./workbench/utils/inventoryOverviewUtils";
+import {
+  buildManpowerOverviewRows,
+  collectManpowerUsageItems,
+  getManpowerUsageValueByMode,
+} from "./workbench/utils/manpowerOverviewUtils";
+import {
+  buildManpowerSavePayload,
+  buildManpowerDialogData,
+  getManpowerRowsForActiveDate,
+  getManpowerTaskId,
+  hasDuplicateStaffSelection,
+  hasEmptyStaffSelection,
+  hasInvalidManpowerLoading,
+  isManpowerTouched,
+  normalizeSavedManpowerRow,
+  normalizeManpowerLoading,
+} from "./workbench/utils/manpowerPlanningUtils";
+import {
+  buildSkillOverviewRows,
+  collectSkillUsageItems,
+  getSkillUsageValueByMode,
+} from "./workbench/utils/skillOverviewUtils";
+import {
+  buildSavedSkillRow,
+  buildSkillPlanningRowsFromApi,
+  buildSkillSavePayload,
+  findDuplicateSkillAssignment,
+  getSkillTaskId,
+  normalizeSkillUnit,
+  removeSkillPlanningRowsBySkillId,
+  upsertSkillPlanningRow,
+} from "./workbench/utils/skillPlanningUtils";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -258,6 +285,13 @@ const ProjectWorkbench = () => {
     useState("day");
   const [inventoryOverviewRowsReady, setInventoryOverviewRowsReady] =
     useState(false);
+  const [skillOverviewOpen, setSkillOverviewOpen] = useState(false);
+  const [skillOverviewLoading, setSkillOverviewLoading] = useState(false);
+  const [skillOverviewError, setSkillOverviewError] = useState("");
+  const [skillOverviewData, setSkillOverviewData] = useState([]);
+  const [skillOverviewSkills, setSkillOverviewSkills] = useState([]);
+  const [skillOverviewViewMode, setSkillOverviewViewMode] = useState("day");
+  const [skillOverviewRowsReady, setSkillOverviewRowsReady] = useState(false);
   const [workDaysPerWeek, setWorkDaysPerWeek] = useState(5);
   const [firstWorkDay, setFirstWorkDay] = useState(1);
   const [lastWorkDay, setLastWorkDay] = useState(5);
@@ -272,13 +306,6 @@ const ProjectWorkbench = () => {
     useState("day");
   const [manpowerOverviewRowsReady, setManpowerOverviewRowsReady] =
     useState(false);
-  const [skillOverviewOpen, setSkillOverviewOpen] = useState(false);
-  const [skillOverviewLoading, setSkillOverviewLoading] = useState(false);
-  const [skillOverviewError, setSkillOverviewError] = useState("");
-  const [skillOverviewData, setSkillOverviewData] = useState([]);
-  const [skillOverviewSkills, setSkillOverviewSkills] = useState([]);
-  const [skillOverviewViewMode, setSkillOverviewViewMode] = useState("day");
-  const [skillOverviewRowsReady, setSkillOverviewRowsReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTarget, setSettingsTarget] = useState(null);
   const [dialogMode, setDialogMode] = useState("");
@@ -325,13 +352,13 @@ const ProjectWorkbench = () => {
   const [manpowerPlanningLoading, setManpowerPlanningLoading] = useState(false);
   const [manpowerPlanningError, setManpowerPlanningError] = useState("");
   const [manpowerPlanningRows, setManpowerPlanningRows] = useState([]);
+  const [manpowerPlanningDate, setManpowerPlanningDate] = useState("");
+  const [manpowerSkillFilter, setManpowerSkillFilter] = useState("");
+  const [manpowerProjectSkills, setManpowerProjectSkills] = useState([]);
+  const [manpowerStaffSkillMap, setManpowerStaffSkillMap] = useState({});
+  const [manpowerDropdownOptions, setManpowerDropdownOptions] = useState([]);
   const [manpowerStaffOptions, setManpowerStaffOptions] = useState([]);
-  const [manpowerStaffDropdownOpen, setManpowerStaffDropdownOpen] =
-    useState(false);
-  const [manpowerSkillsByStaffId, setManpowerSkillsByStaffId] = useState({});
-  const [manpowerSkillFilter, setManpowerSkillFilter] = useState([]);
   const [manpowerDraft, setManpowerDraft] = useState({
-    apiId: null,
     staffId: "",
     role: "worker",
     loading: "1",
@@ -419,11 +446,23 @@ const ProjectWorkbench = () => {
   const skillById = useMemo(
     () =>
       skillOptions.reduce((acc, skill) => {
-        const id = toLongId(skill?.staffSkillId);
-        if (id === null) return acc;
-        acc[id] = skill;
+        const skillId = toLongId(skill?.staffSkillId);
+        if (skillId === null) return acc;
+        acc[skillId] = skill;
         return acc;
       }, {}),
+    [skillOptions],
+  );
+
+  const availableSkillOptions = useMemo(
+    () =>
+      [...skillOptions].sort((a, b) =>
+        String(a?.skillName || a?.staffSkillId || "").localeCompare(
+          String(b?.skillName || b?.staffSkillId || ""),
+          undefined,
+          { sensitivity: "base" },
+        ),
+      ),
     [skillOptions],
   );
 
@@ -435,131 +474,25 @@ const ProjectWorkbench = () => {
             .map((skill) => String(skill?.skillCategory || "").trim())
             .filter(Boolean),
         ),
-      ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })),
+      ).sort((a, b) =>
+        a.localeCompare(b, undefined, {
+          sensitivity: "base",
+        }),
+      ),
     [skillOptions],
   );
 
-  const availableSkillOptions = useMemo(() => {
-    const editingSkillId = toLongId(
-      skillPlanningRows.find(
-        (item) => String(item?.apiId || "") === String(skillDraft.apiId || ""),
-      )?.skillId,
-    );
-
-    const assignedSkillIds = new Set(
-      skillPlanningRows
-        .map((item) => toLongId(item?.skillId))
-        .filter((id) => id !== null),
-    );
-
-    return skillOptions
-      .filter((skill) => {
-        const skillId = toLongId(skill?.staffSkillId);
-        if (skillId === null) return false;
-        if (!assignedSkillIds.has(skillId)) return true;
-        return skillId === editingSkillId;
-      })
-      .sort((a, b) => {
-        const nameA =
-          String(a?.skillName || "").trim() ||
-          String(toLongId(a?.staffSkillId) ?? "").trim();
-        const nameB =
-          String(b?.skillName || "").trim() ||
-          String(toLongId(b?.staffSkillId) ?? "").trim();
-        return nameA.localeCompare(nameB, undefined, { sensitivity: "base" });
-      });
-  }, [skillOptions, skillPlanningRows, skillDraft.apiId]);
-
   const fetchStaffSkills = async () => {
-    const skillsRes = await request("GET", "/api/staffskills").catch(() => ({
+    const res = await request("GET", "/api/staffskills").catch(() => ({
       data: [],
     }));
-    return Array.isArray(skillsRes?.data) ? skillsRes.data : [];
+    return Array.isArray(res?.data) ? res.data : [];
   };
 
   const refreshSkillOptions = async () => {
     const skills = await fetchStaffSkills();
     setSkillOptions(skills);
     return skills;
-  };
-
-  const manpowerSkillFilterOptions = useMemo(() => {
-    const unique = new Set();
-    Object.values(manpowerSkillsByStaffId || {}).forEach((skills) => {
-      (Array.isArray(skills) ? skills : []).forEach((skill) => {
-        const normalized = String(skill || "").trim();
-        if (normalized) unique.add(normalized);
-      });
-    });
-    return Array.from(unique).sort((a, b) =>
-      a.localeCompare(b, undefined, { sensitivity: "base" }),
-    );
-  }, [manpowerSkillsByStaffId]);
-
-  const filteredManpowerStaffOptions = useMemo(() => {
-    const selectedSkills = manpowerSkillFilter
-      .map((skill) => String(skill || "").trim())
-      .filter(Boolean);
-    const editingStaffId = String(
-      manpowerPlanningRows.find(
-        (item) =>
-          String(item?.apiId || "") === String(manpowerDraft.apiId || ""),
-      )?.staffId || "",
-    ).trim();
-
-    const assignedStaffIds = new Set(
-      manpowerPlanningRows
-        .map((item) => String(item?.staffId || "").trim())
-        .filter(Boolean),
-    );
-
-    const baseOptions = manpowerStaffOptions.filter((staff) => {
-      const staffId = String(staff?.staffId || "").trim();
-      if (!staffId) return false;
-      if (!assignedStaffIds.has(staffId)) return true;
-      return staffId === editingStaffId;
-    });
-
-    if (selectedSkills.length === 0) return baseOptions;
-
-    const selectedSet = new Set(selectedSkills);
-    return baseOptions.filter((staff) => {
-      const staffId = String(staff?.staffId || "").trim();
-      if (!staffId) return false;
-      const skills = manpowerSkillsByStaffId?.[staffId] || [];
-      return skills.some((skill) =>
-        selectedSet.has(String(skill || "").trim()),
-      );
-    });
-  }, [
-    manpowerSkillFilter,
-    manpowerSkillsByStaffId,
-    manpowerStaffOptions,
-    manpowerPlanningRows,
-    manpowerDraft.apiId,
-  ]);
-
-  const toggleManpowerSkillFilter = (skillName) => {
-    const nextSkill = String(skillName || "").trim();
-    if (!nextSkill) return;
-    setManpowerSkillFilter((prev) => {
-      const exists = prev.some(
-        (skill) =>
-          String(skill || "")
-            .trim()
-            .toLowerCase() === nextSkill.toLowerCase(),
-      );
-      if (exists) {
-        return prev.filter(
-          (skill) =>
-            String(skill || "")
-              .trim()
-              .toLowerCase() !== nextSkill.toLowerCase(),
-        );
-      }
-      return [...prev, nextSkill];
-    });
-    setManpowerStaffDropdownOpen(true);
   };
 
   const buildTaskAssigneeOptions = (leaderRows, staffRows) => {
@@ -873,6 +806,61 @@ const ProjectWorkbench = () => {
   }, [inventoryOverviewOpen, projectCode, t]);
 
   useEffect(() => {
+    if (!skillOverviewOpen) return;
+
+    let mounted = true;
+
+    const loadSkillOverview = async () => {
+      setSkillOverviewLoading(true);
+      setSkillOverviewError("");
+
+      try {
+        const [projectSkillsRes, skillsRes] = await Promise.all([
+          request("GET", "/api/projectskills"),
+          request("GET", "/api/staffskills"),
+        ]);
+
+        const taskIdSet = new Set(
+          tasks.map((task) => String(task?.projectTaskId || "").trim()),
+        );
+
+        const allProjectSkills = Array.isArray(projectSkillsRes?.data)
+          ? projectSkillsRes.data
+          : [];
+
+        const filteredProjectSkills = allProjectSkills.filter((item) =>
+          taskIdSet.has(String(item?.projectTaskId || "").trim()),
+        );
+
+        const skillRows = Array.isArray(skillsRes?.data) ? skillsRes.data : [];
+
+        if (!mounted) return;
+        setSkillOverviewData(filteredProjectSkills);
+        setSkillOverviewSkills(skillRows);
+      } catch {
+        if (!mounted) return;
+        setSkillOverviewError(
+          t(
+            "projectPlanning.skillOverviewLoadFailed",
+            "Failed to load skill overview.",
+          ),
+        );
+        setSkillOverviewData([]);
+        setSkillOverviewSkills([]);
+      } finally {
+        if (!mounted) return;
+        setSkillOverviewLoading(false);
+      }
+    };
+
+    loadSkillOverview();
+
+    return () => {
+      mounted = false;
+    };
+  }, [skillOverviewOpen, tasks, t]);
+
+  useEffect(() => {
     let mounted = true;
 
     const loadWorkingDaysParams = async () => {
@@ -939,6 +927,12 @@ const ProjectWorkbench = () => {
         );
 
         const staffs = Array.isArray(staffsRes?.data) ? staffsRes.data : [];
+        const staffById = staffs.reduce((acc, staff) => {
+          const id = String(staff?.staffId || "").trim();
+          if (!id) return acc;
+          acc[id] = staff;
+          return acc;
+        }, {});
 
         const skillRows = Array.isArray(skillsRes?.data) ? skillsRes.data : [];
         const skillNameById = skillRows.reduce((acc, skill) => {
@@ -958,9 +952,14 @@ const ProjectWorkbench = () => {
 
         const skillsByStaffEntries = await Promise.all(
           uniqueStaffIds.map(async (staffId) => {
+            const staffName = String(
+              staffById?.[staffId]?.staffName || "",
+            ).trim();
+            if (!staffName) return [staffId, []];
+
             const profileRes = await request(
               "GET",
-              `/api/staffskillprofiles/staffid/${encodeURIComponent(staffId)}`,
+              `/api/staffskillprofiles/staff/${encodeURIComponent(staffName)}`,
             ).catch(() => ({ data: [] }));
 
             const profileRows = Array.isArray(profileRes?.data)
@@ -1016,60 +1015,6 @@ const ProjectWorkbench = () => {
   }, [manpowerOverviewOpen, tasks, t]);
 
   useEffect(() => {
-    if (!skillOverviewOpen) return;
-
-    let mounted = true;
-
-    const loadSkillOverview = async () => {
-      setSkillOverviewLoading(true);
-      setSkillOverviewError("");
-
-      try {
-        const [skillsRes, projectSkillsRes] = await Promise.all([
-          request("GET", "/api/staffskills").catch(() => ({ data: [] })),
-          request("GET", "/api/projectskills").catch(() => ({ data: [] })),
-        ]);
-
-        const taskIdSet = new Set(
-          tasks.map((task) => String(task?.projectTaskId || "").trim()),
-        );
-
-        const allProjectSkills = Array.isArray(projectSkillsRes?.data)
-          ? projectSkillsRes.data
-          : [];
-        const filteredProjectSkills = allProjectSkills.filter((item) =>
-          taskIdSet.has(String(item?.projectTaskId || "").trim()),
-        );
-
-        if (!mounted) return;
-        setSkillOverviewData(filteredProjectSkills);
-        setSkillOverviewSkills(
-          Array.isArray(skillsRes?.data) ? skillsRes.data : [],
-        );
-      } catch {
-        if (!mounted) return;
-        setSkillOverviewError(
-          t(
-            "projectPlanning.skillLoadFailed",
-            "Failed to load project skills.",
-          ),
-        );
-        setSkillOverviewData([]);
-        setSkillOverviewSkills([]);
-      } finally {
-        if (!mounted) return;
-        setSkillOverviewLoading(false);
-      }
-    };
-
-    loadSkillOverview();
-
-    return () => {
-      mounted = false;
-    };
-  }, [skillOverviewOpen, tasks, t]);
-
-  useEffect(() => {
     setInventoryOverviewRowsReady(false);
     if (!inventoryOverviewData.length || inventoryOverviewLoading) return;
 
@@ -1082,18 +1027,6 @@ const ProjectWorkbench = () => {
   }, [inventoryOverviewData, inventoryOverviewLoading]);
 
   useEffect(() => {
-    setManpowerOverviewRowsReady(false);
-    if (!manpowerOverviewData.length || manpowerOverviewLoading) return;
-
-    // Defer calculation to let dialog render first
-    const timer = setTimeout(() => {
-      setManpowerOverviewRowsReady(true);
-    }, 0);
-
-    return () => clearTimeout(timer);
-  }, [manpowerOverviewData, manpowerOverviewLoading]);
-
-  useEffect(() => {
     setSkillOverviewRowsReady(false);
     if (!skillOverviewData.length || skillOverviewLoading) return;
 
@@ -1103,6 +1036,17 @@ const ProjectWorkbench = () => {
 
     return () => clearTimeout(timer);
   }, [skillOverviewData, skillOverviewLoading]);
+
+  useEffect(() => {
+    setManpowerOverviewRowsReady(false);
+    if (manpowerOverviewLoading) return;
+
+    const timer = setTimeout(() => {
+      setManpowerOverviewRowsReady(true);
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [manpowerOverviewData, manpowerOverviewLoading]);
 
   const timelineBounds = useMemo(() => {
     const starts = rows.map((row) => row.startDate).filter(Boolean);
@@ -1265,59 +1209,6 @@ const ProjectWorkbench = () => {
     inventoryOverviewActiveCols.length * inventoryOverviewColWidth,
   );
 
-  const manpowerOverviewUpperSegments = useMemo(() => {
-    if (manpowerOverviewViewMode === "day") {
-      const segs = [];
-      inventoryDayColumns.forEach((col) => {
-        const key = `${col.date.getFullYear()}-${col.date.getMonth() + 1}`;
-        const label = col.date.toLocaleDateString(undefined, {
-          month: "short",
-          year: "numeric",
-        });
-        const last = segs[segs.length - 1];
-        if (last && last.key === key) {
-          last.span += 1;
-        } else {
-          segs.push({ key, label, span: 1 });
-        }
-      });
-      return segs;
-    }
-
-    const srcCols =
-      manpowerOverviewViewMode === "week"
-        ? inventoryWeekColumns
-        : inventoryMonthColumns;
-    const segs = [];
-    srcCols.forEach((col) => {
-      const last = segs[segs.length - 1];
-      if (last && last.key === col.yearKey) {
-        last.span += 1;
-      } else {
-        segs.push({ key: col.yearKey, label: col.yearKey, span: 1 });
-      }
-    });
-    return segs;
-  }, [
-    manpowerOverviewViewMode,
-    inventoryDayColumns,
-    inventoryWeekColumns,
-    inventoryMonthColumns,
-  ]);
-
-  const manpowerOverviewActiveCols =
-    manpowerOverviewViewMode === "day"
-      ? inventoryDayColumns
-      : manpowerOverviewViewMode === "week"
-        ? inventoryWeekColumns
-        : inventoryMonthColumns;
-
-  const manpowerOverviewColWidth = COL_WIDTH[manpowerOverviewViewMode];
-  const manpowerOverviewTimelineWidth = Math.max(
-    680,
-    manpowerOverviewActiveCols.length * manpowerOverviewColWidth,
-  );
-
   const skillOverviewUpperSegments = useMemo(() => {
     if (skillOverviewViewMode === "day") {
       const segs = [];
@@ -1371,133 +1262,92 @@ const ProjectWorkbench = () => {
     skillOverviewActiveCols.length * skillOverviewColWidth,
   );
 
-  const skillOverviewRows = useMemo(() => {
-    if (!skillOverviewRowsReady) return [];
-
-    const minTime = inventoryOverviewBounds.minDate.getTime();
-    const maxTime = inventoryOverviewBounds.maxDate.getTime();
-    const taskById = tasks.reduce((acc, task) => {
-      const key = String(task?.projectTaskId || "").trim();
-      if (!key) return acc;
-      acc[key] = task;
-      return acc;
-    }, {});
-
-    const skillNameById = skillOverviewSkills.reduce((acc, skill) => {
-      const key = toLongIdKey(skill?.staffSkillId);
-      if (!key) return acc;
-      acc[key] = String(skill?.skillName || "").trim() || key;
-      return acc;
-    }, {});
-
-    const grouped = new Map();
-
-    skillOverviewData.forEach((item) => {
-      const taskId = String(item?.projectTaskId || "").trim();
-      const skillId = toLongId(item?.skillId);
-      if (!taskId || skillId === null) return;
-
-      const task = taskById[taskId];
-      if (!task) return;
-
-      const start = parseDate(task?.taskStartDate || task?.actualStartDate);
-      const end = parseDate(task?.taskEndDate || task?.actualEndDate) || start;
-      if (!start || !end) return;
-
-      const unitValue = Number(item?.unit || 0);
-      if (!Number.isFinite(unitValue) || unitValue <= 0) return;
-
-      if (!grouped.has(skillId)) {
-        grouped.set(skillId, {
-          key: String(skillId),
-          skillId,
-          skillName: skillNameById[String(skillId)] || String(skillId),
-          dayMap: new Map(),
+  const manpowerOverviewUpperSegments = useMemo(() => {
+    if (manpowerOverviewViewMode === "day") {
+      const segs = [];
+      inventoryDayColumns.forEach((col) => {
+        const key = `${col.date.getFullYear()}-${col.date.getMonth() + 1}`;
+        const label = col.date.toLocaleDateString(undefined, {
+          month: "short",
+          year: "numeric",
         });
-      }
+        const last = segs[segs.length - 1];
+        if (last && last.key === key) {
+          last.span += 1;
+        } else {
+          segs.push({ key, label, span: 1 });
+        }
+      });
+      return segs;
+    }
 
-      const target = grouped.get(skillId);
-      const taskName = String(task?.taskName || `Task ${taskId}`).trim();
-      const sTime = Math.max(start.getTime(), minTime);
-      const eTime = Math.min(end.getTime(), maxTime);
-      if (eTime < sTime) return;
-
-      const cur = new Date(sTime);
-      cur.setHours(0, 0, 0, 0);
-      while (cur.getTime() <= eTime) {
-        const timeKey = cur.getTime();
-        const existing = target.dayMap.get(timeKey) || [];
-        existing.push({ taskName, unit: unitValue });
-        target.dayMap.set(timeKey, existing);
-        cur.setDate(cur.getDate() + 1);
+    const srcCols =
+      manpowerOverviewViewMode === "week"
+        ? inventoryWeekColumns
+        : inventoryMonthColumns;
+    const segs = [];
+    srcCols.forEach((col) => {
+      const last = segs[segs.length - 1];
+      if (last && last.key === col.yearKey) {
+        last.span += 1;
+      } else {
+        segs.push({ key: col.yearKey, label: col.yearKey, span: 1 });
       }
     });
-
-    return Array.from(grouped.values()).sort((a, b) =>
-      String(a.skillName || "").localeCompare(
-        String(b.skillName || ""),
-        undefined,
-        { sensitivity: "base" },
-      ),
-    );
+    return segs;
   }, [
-    skillOverviewData,
-    skillOverviewSkills,
-    tasks,
-    inventoryOverviewBounds,
-    skillOverviewRowsReady,
+    manpowerOverviewViewMode,
+    inventoryDayColumns,
+    inventoryWeekColumns,
+    inventoryMonthColumns,
   ]);
 
-  const getSkillUsageValue = (row, col) => {
-    if (skillOverviewViewMode === "day") {
-      const tasksInCell = row.dayMap.get(col.time) || [];
-      return tasksInCell.reduce((sum, item) => sum + item.unit, 0);
-    }
+  const manpowerOverviewActiveCols =
+    manpowerOverviewViewMode === "day"
+      ? inventoryDayColumns
+      : manpowerOverviewViewMode === "week"
+        ? inventoryWeekColumns
+        : inventoryMonthColumns;
 
-    if (skillOverviewViewMode === "week") {
-      let total = 0;
-      row.dayMap.forEach((items, time) => {
-        if (time >= col.weekStart.getTime() && time <= col.weekEnd.getTime()) {
-          total += items.reduce((sum, item) => sum + item.unit, 0);
-        }
-      });
-      return total;
-    }
+  const manpowerOverviewColWidth = COL_WIDTH[manpowerOverviewViewMode];
+  const manpowerOverviewTimelineWidth = Math.max(
+    680,
+    manpowerOverviewActiveCols.length * manpowerOverviewColWidth,
+  );
 
-    let total = 0;
-    row.dayMap.forEach((items, time) => {
-      if (time >= col.monthStart.getTime() && time <= col.monthEnd.getTime()) {
-        total += items.reduce((sum, item) => sum + item.unit, 0);
-      }
-    });
-    return total;
-  };
+  const skillOverviewRows = useMemo(
+    () =>
+      buildSkillOverviewRows({
+        skillOverviewRowsReady,
+        inventoryOverviewBounds,
+        tasks,
+        streams,
+        skillOverviewSkills,
+        skillOverviewData,
+        parseDate,
+        toLongId,
+        toLongIdKey,
+      }),
+    [
+      skillOverviewData,
+      skillOverviewSkills,
+      tasks,
+      streams,
+      inventoryOverviewBounds,
+      skillOverviewRowsReady,
+    ],
+  );
+
+  const getSkillUsageValue = (row, col) =>
+    getSkillUsageValueByMode(row, col, skillOverviewViewMode);
 
   const getSkillUsageDetailsTable = (row, col) => {
-    const items = [];
-
-    if (skillOverviewViewMode === "day") {
-      items.push(...(row.dayMap.get(col.time) || []));
-    } else if (skillOverviewViewMode === "week") {
-      row.dayMap.forEach((dayItems, time) => {
-        if (time >= col.weekStart.getTime() && time <= col.weekEnd.getTime()) {
-          items.push(...dayItems);
-        }
-      });
-    } else {
-      row.dayMap.forEach((dayItems, time) => {
-        if (
-          time >= col.monthStart.getTime() &&
-          time <= col.monthEnd.getTime()
-        ) {
-          items.push(...dayItems);
-        }
-      });
-    }
+    const items = collectSkillUsageItems(row, col, skillOverviewViewMode);
 
     const grouped = new Map();
     items.forEach((entry) => {
-      const taskName = String(entry?.taskName || "-").trim() || "-";
+      const taskName =
+        String(entry?.resourceLabel || entry?.taskName || "-").trim() || "-";
       grouped.set(
         taskName,
         (grouped.get(taskName) || 0) + Number(entry?.unit || 0),
@@ -1556,7 +1406,14 @@ const ProjectWorkbench = () => {
               fontWeight: 600,
             }}
           >
-            <Box sx={{ display: "table-cell", px: 1, py: 0.4 }}>
+            <Box
+              sx={{
+                display: "table-cell",
+                px: 1,
+                py: 0.4,
+                colSpan: 2,
+              }}
+            >
               {periodLabel}
             </Box>
           </Box>
@@ -1570,7 +1427,7 @@ const ProjectWorkbench = () => {
                 borderRight: "1px solid rgba(255,255,255,0.2)",
               }}
             >
-              {t("projecttask.taskName", "Task")}
+              {t("projectPlanning.streamTaskLabel", "Stream / Task")}
             </Box>
             <Box
               sx={{
@@ -1621,162 +1478,39 @@ const ProjectWorkbench = () => {
     );
   };
 
-  const manpowerOverviewRows = useMemo(() => {
-    if (!manpowerOverviewRowsReady) return [];
+  const manpowerOverviewRows = useMemo(
+    () =>
+      buildManpowerOverviewRows({
+        manpowerOverviewRowsReady,
+        manpowerOverviewData,
+        manpowerOverviewStaffs,
+        manpowerOverviewSkillsByStaffId,
+        tasks,
+        streams,
+        inventoryOverviewBounds,
+        parseDate,
+      }),
+    [
+      manpowerOverviewRowsReady,
+      manpowerOverviewData,
+      manpowerOverviewStaffs,
+      manpowerOverviewSkillsByStaffId,
+      tasks,
+      streams,
+      inventoryOverviewBounds,
+    ],
+  );
 
-    const minTime = inventoryOverviewBounds.minDate.getTime();
-    const maxTime = inventoryOverviewBounds.maxDate.getTime();
-    const taskById = tasks.reduce((acc, task) => {
-      const key = String(task?.projectTaskId || "").trim();
-      if (!key) return acc;
-      acc[key] = task;
-      return acc;
-    }, {});
-    const staffById = manpowerOverviewStaffs.reduce((acc, staff) => {
-      const key = String(staff?.staffId || "").trim();
-      if (!key) return acc;
-      acc[key] = staff;
-      return acc;
-    }, {});
-
-    const grouped = new Map();
-
-    manpowerOverviewData.forEach((item) => {
-      const taskId = String(item?.projectTaskId || "").trim();
-      const staffId = String(item?.staffId || "").trim();
-      if (!taskId || !staffId) return;
-
-      const task = taskById[taskId];
-      if (!task) return;
-
-      const start = parseDate(task?.taskStartDate || task?.actualStartDate);
-      const end = parseDate(task?.taskEndDate || task?.actualEndDate) || start;
-      if (!start || !end) return;
-
-      const staffName =
-        String(staffById?.[staffId]?.staffName || "").trim() || staffId;
-      const skills = manpowerOverviewSkillsByStaffId?.[staffId] || [];
-      const key = staffId;
-
-      if (!grouped.has(key)) {
-        grouped.set(key, {
-          key,
-          staffId,
-          staffName,
-          skills,
-          dayMap: new Map(),
-        });
-      }
-
-      const target = grouped.get(key);
-      const loadingValue = Number(item?.loading || 1);
-      if (!Number.isFinite(loadingValue) || loadingValue <= 0) return;
-
-      const taskName = String(task?.taskName || `Task ${taskId}`).trim();
-      const sTime = Math.max(start.getTime(), minTime);
-      const eTime = Math.min(end.getTime(), maxTime);
-      if (eTime < sTime) return;
-
-      const cur = new Date(sTime);
-      cur.setHours(0, 0, 0, 0);
-      while (cur.getTime() <= eTime) {
-        const timeKey = cur.getTime();
-        const existing = target.dayMap.get(timeKey) || [];
-        existing.push({ taskName, loading: loadingValue });
-        target.dayMap.set(timeKey, existing);
-        cur.setDate(cur.getDate() + 1);
-      }
-    });
-
-    return Array.from(grouped.values()).sort((a, b) =>
-      String(a.staffName || "").localeCompare(
-        String(b.staffName || ""),
-        undefined,
-        {
-          sensitivity: "base",
-        },
-      ),
-    );
-  }, [
-    manpowerOverviewData,
-    manpowerOverviewStaffs,
-    manpowerOverviewSkillsByStaffId,
-    tasks,
-    inventoryOverviewBounds,
-    manpowerOverviewRowsReady,
-  ]);
-
-  const getManpowerUsageValue = (row, col) => {
-    if (manpowerOverviewViewMode === "day") {
-      const tasksInCell = row.dayMap.get(col.time) || [];
-      return tasksInCell.reduce((sum, item) => sum + item.loading, 0);
-    }
-
-    if (manpowerOverviewViewMode === "week") {
-      let total = 0;
-      row.dayMap.forEach((items, time) => {
-        if (time >= col.weekStart.getTime() && time <= col.weekEnd.getTime()) {
-          total += items.reduce((sum, item) => sum + item.loading, 0);
-        }
-      });
-      return total;
-    }
-
-    let total = 0;
-    row.dayMap.forEach((items, time) => {
-      if (time >= col.monthStart.getTime() && time <= col.monthEnd.getTime()) {
-        total += items.reduce((sum, item) => sum + item.loading, 0);
-      }
-    });
-    return total;
-  };
-
-  const isManpowerOverloaded = (row, col) => {
-    if (manpowerOverviewViewMode === "day") {
-      const dayItems = row.dayMap.get(col.time) || [];
-      const total = dayItems.reduce((sum, item) => sum + item.loading, 0);
-      return total > 1;
-    }
-
-    let overloaded = false;
-    row.dayMap.forEach((items, time) => {
-      if (overloaded) return;
-      const inBucket =
-        manpowerOverviewViewMode === "week"
-          ? time >= col.weekStart.getTime() && time <= col.weekEnd.getTime()
-          : time >= col.monthStart.getTime() && time <= col.monthEnd.getTime();
-      if (!inBucket) return;
-      const total = items.reduce((sum, item) => sum + item.loading, 0);
-      if (total > 1) overloaded = true;
-    });
-    return overloaded;
-  };
+  const getManpowerUsageValue = (row, col) =>
+    getManpowerUsageValueByMode(row, col, manpowerOverviewViewMode);
 
   const getManpowerUsageDetailsTable = (row, col) => {
-    const items = [];
-
-    if (manpowerOverviewViewMode === "day") {
-      items.push(...(row.dayMap.get(col.time) || []));
-    } else if (manpowerOverviewViewMode === "week") {
-      row.dayMap.forEach((dayItems, time) => {
-        if (time >= col.weekStart.getTime() && time <= col.weekEnd.getTime()) {
-          items.push(...dayItems);
-        }
-      });
-    } else {
-      row.dayMap.forEach((dayItems, time) => {
-        if (
-          time >= col.monthStart.getTime() &&
-          time <= col.monthEnd.getTime()
-        ) {
-          items.push(...dayItems);
-        }
-      });
-    }
+    const items = collectManpowerUsageItems(row, col, manpowerOverviewViewMode);
 
     const grouped = new Map();
     items.forEach((entry) => {
-      const taskName = String(entry?.taskName || "-").trim() || "-";
+      const taskName =
+        String(entry?.resourceLabel || entry?.taskName || "-").trim() || "-";
       grouped.set(
         taskName,
         (grouped.get(taskName) || 0) + Number(entry?.loading || 0),
@@ -1835,7 +1569,14 @@ const ProjectWorkbench = () => {
               fontWeight: 600,
             }}
           >
-            <Box sx={{ display: "table-cell", px: 1, py: 0.4 }}>
+            <Box
+              sx={{
+                display: "table-cell",
+                px: 1,
+                py: 0.4,
+                colSpan: 2,
+              }}
+            >
               {periodLabel}
             </Box>
           </Box>
@@ -1849,7 +1590,7 @@ const ProjectWorkbench = () => {
                 borderRight: "1px solid rgba(255,255,255,0.2)",
               }}
             >
-              {t("projecttask.taskName", "Task")}
+              {t("projectPlanning.streamTaskLabel", "Stream / Task")}
             </Box>
             <Box
               sx={{
@@ -1938,124 +1679,42 @@ const ProjectWorkbench = () => {
     return countSet;
   }, [firstWorkDay, lastWorkDay, workDaysPerWeek]);
 
-  const inventoryOverviewRows = useMemo(() => {
-    if (!inventoryOverviewRowsReady) return [];
+  const inventoryOverviewRows = useMemo(
+    () =>
+      buildInventoryOverviewRows({
+        inventoryOverviewRowsReady,
+        inventoryOverviewBounds,
+        inventoryOverviewData,
+        tasks,
+        streams,
+        parseDate,
+        workingDaySet,
+        dayMs: DAY_MS,
+      }),
+    [
+      inventoryOverviewData,
+      inventoryOverviewBounds,
+      workingDaySet,
+      tasks,
+      streams,
+      inventoryOverviewRowsReady,
+    ],
+  );
 
-    const minTime = inventoryOverviewBounds.minDate.getTime();
-    const maxTime = inventoryOverviewBounds.maxDate.getTime();
-    const grouped = new Map();
-
-    inventoryOverviewData.forEach((item) => {
-      const start = parseDate(item?.startDate || item?.actualStartDate);
-      const end = parseDate(item?.endDate || item?.actualEndDate) || start;
-      if (!start || !end) return;
-
-      const productName = String(item?.productName || "-").trim() || "-";
-      const uom = String(item?.productUom || "-").trim() || "-";
-      const productId = String(item?.productId || productName || "").trim();
-      const key = `${productId}__${uom}`;
-
-      if (!grouped.has(key)) {
-        grouped.set(key, {
-          key,
-          productName,
-          uom,
-          dayMap: new Map(),
-        });
-      }
-
-      const target = grouped.get(key);
-      const qty = Number(item?.quantity || 0);
-      if (!Number.isFinite(qty) || qty <= 0) return;
-
-      const activityName = String(item?.activityName || "-").trim() || "-";
-      const sTime = Math.max(start.getTime(), minTime);
-      const eTime = Math.min(end.getTime(), maxTime);
-      if (eTime < sTime) return;
-
-      const startDate = new Date(sTime);
-      startDate.setHours(0, 0, 0, 0);
-      let supplyTime = startDate.getTime();
-
-      if (!workingDaySet.has(startDate.getDay())) {
-        const prevTime = supplyTime - DAY_MS;
-        const prevDate = new Date(prevTime);
-        if (prevTime >= minTime && workingDaySet.has(prevDate.getDay())) {
-          supplyTime = prevTime;
-        }
-      }
-
-      const existing = target.dayMap.get(supplyTime) || [];
-      existing.push({ activityName, quantity: qty });
-      target.dayMap.set(supplyTime, existing);
-    });
-
-    return Array.from(grouped.values()).sort((a, b) => {
-      const n = String(a.productName || "").localeCompare(
-        String(b.productName || ""),
-        undefined,
-        { sensitivity: "base" },
-      );
-      if (n !== 0) return n;
-      return String(a.uom || "").localeCompare(String(b.uom || ""));
-    });
-  }, [
-    inventoryOverviewData,
-    inventoryOverviewBounds,
-    workingDaySet,
-    inventoryOverviewRowsReady,
-  ]);
-
-  const getUsageValue = (row, col) => {
-    if (inventoryOverviewViewMode === "day") {
-      const activities = row.dayMap.get(col.time) || [];
-      return activities.reduce((sum, a) => sum + a.quantity, 0);
-    }
-
-    if (inventoryOverviewViewMode === "week") {
-      let total = 0;
-      row.dayMap.forEach((activities, time) => {
-        if (time >= col.weekStart.getTime() && time <= col.weekEnd.getTime()) {
-          total += activities.reduce((sum, a) => sum + a.quantity, 0);
-        }
-      });
-      return total;
-    }
-
-    let total = 0;
-    row.dayMap.forEach((activities, time) => {
-      if (time >= col.monthStart.getTime() && time <= col.monthEnd.getTime()) {
-        total += activities.reduce((sum, a) => sum + a.quantity, 0);
-      }
-    });
-    return total;
-  };
+  const getUsageValue = (row, col) =>
+    getInventoryUsageValueByMode(row, col, inventoryOverviewViewMode);
 
   const getUsageDetailsTable = (row, col) => {
-    const activities = [];
-
-    if (inventoryOverviewViewMode === "day") {
-      activities.push(...(row.dayMap.get(col.time) || []));
-    } else if (inventoryOverviewViewMode === "week") {
-      row.dayMap.forEach((dayActivities, time) => {
-        if (time >= col.weekStart.getTime() && time <= col.weekEnd.getTime()) {
-          activities.push(...dayActivities);
-        }
-      });
-    } else {
-      row.dayMap.forEach((dayActivities, time) => {
-        if (
-          time >= col.monthStart.getTime() &&
-          time <= col.monthEnd.getTime()
-        ) {
-          activities.push(...dayActivities);
-        }
-      });
-    }
+    const activities = collectInventoryUsageItems(
+      row,
+      col,
+      inventoryOverviewViewMode,
+    );
 
     const grouped = new Map();
     activities.forEach((act) => {
-      const name = act.activityName || "-";
+      const name =
+        String(act?.resourceLabel || act?.activityName || "-").trim() || "-";
       grouped.set(name, (grouped.get(name) || 0) + act.quantity);
     });
 
@@ -2181,7 +1840,7 @@ const ProjectWorkbench = () => {
     );
   };
 
-  // ΓöÇΓöÇ Day view columns ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // G��G�� Day view columns G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��
   const dayColumns = useMemo(() => {
     const { minDate, maxDate } = timelineBounds;
     const span = Math.max(1, diffDays(minDate, maxDate) + 1);
@@ -2196,7 +1855,7 @@ const ProjectWorkbench = () => {
     });
   }, [timelineBounds]);
 
-  // ΓöÇΓöÇ Week view columns (Mon-aligned) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // G��G�� Week view columns (Mon-aligned) G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��
   const weekColumns = useMemo(() => {
     const { minDate, maxDate } = timelineBounds;
     // Snap start back to Monday of first week
@@ -2238,7 +1897,7 @@ const ProjectWorkbench = () => {
     return cols;
   }, [timelineBounds]);
 
-  // ΓöÇΓöÇ Month view columns ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // G��G�� Month view columns G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��
   const monthColumns = useMemo(() => {
     const { minDate, maxDate } = timelineBounds;
     const cols = [];
@@ -2262,10 +1921,10 @@ const ProjectWorkbench = () => {
     return cols;
   }, [timelineBounds]);
 
-  // ΓöÇΓöÇ Shared upper-header segments
-  // day   ΓåÆ group by month  (upper = month label)
-  // week  ΓåÆ group by year   (upper = year)
-  // month ΓåÆ group by year   (upper = year)
+  // G��G�� Shared upper-header segments
+  // day   G�� group by month  (upper = month label)
+  // week  G�� group by year   (upper = year)
+  // month G�� group by year   (upper = year)
   const upperSegments = useMemo(() => {
     if (viewMode === "day") {
       const segs = [];
@@ -2294,7 +1953,7 @@ const ProjectWorkbench = () => {
     return segs;
   }, [viewMode, dayColumns, weekColumns, monthColumns]);
 
-  // ΓöÇΓöÇ Bar geometry helpers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // G��G�� Bar geometry helpers G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��G��
   const colWidth = COL_WIDTH[viewMode];
   const today = useMemo(() => {
     const date = new Date();
@@ -2362,7 +2021,7 @@ const ProjectWorkbench = () => {
       const right = endFrac * colWidth;
       return { left, width: Math.max(colWidth / 7, right - left) };
     }
-    // month view ΓÇö fractional within each month by day-of-month
+    // month view G�� fractional within each month by day-of-month
     if (weekColumns.length === 0 && monthColumns.length === 0) return null;
     const startMonthIdx = monthColumns.findIndex(
       (col) => startDate >= col.monthStart && startDate <= col.monthEnd,
@@ -3109,7 +2768,8 @@ const ProjectWorkbench = () => {
     return Number(typeMeta?.manpowerRequired || 0);
   };
 
-  const getInventoryPlanningKey = (row) => {
+  const getInventoryPlanningKey = (row = inventoryPlanningTarget) => {
+    if (!row) return "";
     if (row?.type === "stream") {
       return `stream-${String(row?.raw?.projectStreamId || "")}`;
     }
@@ -3181,8 +2841,8 @@ const ProjectWorkbench = () => {
       .join(", ");
   };
 
-  const getInventoryRows = (section) => {
-    const key = getInventoryPlanningKey(inventoryPlanningTarget);
+  const getInventoryRows = (section, target = inventoryPlanningTarget) => {
+    const key = getInventoryPlanningKey(target);
     return inventoryPlanningRows?.[section]?.[key] || [];
   };
 
@@ -3317,8 +2977,12 @@ const ProjectWorkbench = () => {
     };
   };
 
-  const upsertInventoryRows = (section, nextRows) => {
-    const key = getInventoryPlanningKey(inventoryPlanningTarget);
+  const upsertInventoryRows = (
+    section,
+    nextRows,
+    target = inventoryPlanningTarget,
+  ) => {
+    const key = getInventoryPlanningKey(target);
     if (!key) return;
     setInventoryPlanningRows((prev) => ({
       ...prev,
@@ -3364,7 +3028,7 @@ const ProjectWorkbench = () => {
       for (const section of sectionsToLoad) {
         const config = getPlanningConfig(section, target);
         if (!config) {
-          upsertInventoryRows(section, []);
+          upsertInventoryRows(section, [], target);
           continue;
         }
         const res = await request("GET", config.listEndpoint).catch(() => ({
@@ -3402,6 +3066,7 @@ const ProjectWorkbench = () => {
               ),
               quantity: Number(item?.quantity || 1),
             })),
+            target,
           );
         } else {
           upsertInventoryRows(
@@ -3422,6 +3087,7 @@ const ProjectWorkbench = () => {
                 quantity: Number(item?.quantity || 1),
               };
             }),
+            target,
           );
         }
       }
@@ -3613,14 +3279,296 @@ const ProjectWorkbench = () => {
     });
   };
 
-  const normalizeSkillUnit = (value) => {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return 1;
-    return Math.max(1, Math.round(numeric));
+  const openManpowerPlanningDialog = async (row) => {
+    if (row?.type !== "task") {
+      setError(
+        t(
+          "projectPlanning.manpowerOnlyForTask",
+          "Manpower planning is only available for tasks.",
+        ),
+      );
+      return;
+    }
+
+    const taskId = getManpowerTaskId(row);
+    if (!taskId) return;
+
+    setManpowerPlanningTarget(row);
+    setManpowerPlanningOpen(true);
+    setManpowerPlanningError("");
+    setManpowerPlanningDate("");
+    setManpowerSkillFilter("");
+    setManpowerPlanningLoading(true);
+
+    try {
+      const [
+        staffsRes,
+        manpowerRes,
+        projectSkillsRes,
+        staffSkillsRes,
+        staffSkillProfileViewsRes,
+      ] = await Promise.all([
+        request("GET", "/api/staffs").catch(() => ({ data: [] })),
+        request("GET", `/api/projectmanpowers/task/${taskId}`).catch(() => ({
+          data: [],
+        })),
+        request("GET", `/api/projectskills/task/${taskId}`).catch(() => ({
+          data: [],
+        })),
+        request("GET", "/api/staffskills").catch(() => ({ data: [] })),
+        request("GET", "/api/staffskillprofileviews").catch(() => ({
+          data: [],
+        })),
+      ]);
+
+      const staffs = Array.isArray(staffsRes?.data) ? staffsRes.data : [];
+      const rows = Array.isArray(manpowerRes?.data) ? manpowerRes.data : [];
+      const projectSkillRows = Array.isArray(projectSkillsRes?.data)
+        ? projectSkillsRes.data
+        : [];
+      const staffSkillRows = Array.isArray(staffSkillsRes?.data)
+        ? staffSkillsRes.data
+        : [];
+      const staffSkillProfileViewRows = Array.isArray(
+        staffSkillProfileViewsRes?.data,
+      )
+        ? staffSkillProfileViewsRes.data
+        : [];
+
+      const {
+        manpowerProjectSkillChips,
+        normalizedRows,
+        availableDates,
+        staffSkillMap,
+        dropdownOptions,
+      } = buildManpowerDialogData({
+        taskId,
+        staffs,
+        rows,
+        projectSkillRows,
+        staffSkillRows,
+        staffSkillProfileViewRows,
+        toLongId,
+        normalizeManpowerLoading,
+        noSkillProfileLabel: t(
+          "projectPlanning.noSkillProfile",
+          "No Skill Profile",
+        ),
+        noneLabel: t("basic.none", "None"),
+      });
+
+      setManpowerProjectSkills(manpowerProjectSkillChips);
+      setManpowerStaffOptions(staffs);
+      setManpowerPlanningRows(normalizedRows);
+      setManpowerPlanningDate(availableDates[0] || "");
+      setManpowerStaffSkillMap(staffSkillMap);
+      setManpowerDropdownOptions(dropdownOptions);
+    } catch {
+      setManpowerPlanningError(
+        t(
+          "projectPlanning.manpowerLoadFailed",
+          "Failed to load project manpower.",
+        ),
+      );
+      setManpowerStaffOptions([]);
+      setManpowerPlanningRows([]);
+      setManpowerPlanningDate("");
+      setManpowerSkillFilter("");
+      setManpowerProjectSkills([]);
+      setManpowerStaffSkillMap({});
+      setManpowerDropdownOptions([]);
+    } finally {
+      setManpowerPlanningLoading(false);
+    }
   };
 
-  const getSkillTaskId = (target) =>
-    Number(target?.raw?.projectTaskId || 0) || null;
+  const updateManpowerRow = (apiId, patch) => {
+    setManpowerPlanningRows((prev) =>
+      prev.map((row) =>
+        String(row?.apiId || "") === String(apiId || "")
+          ? { ...row, ...patch }
+          : row,
+      ),
+    );
+  };
+
+  const saveManpowerDeploymentPlan = async () => {
+    const taskId = getManpowerTaskId(manpowerPlanningTarget);
+    if (!taskId) return;
+
+    const targetRows = manpowerRowsForActiveDate;
+
+    if (targetRows.length === 0) {
+      setManpowerPlanningError(
+        t("projectPlanning.noManpowerSelected", "No manpower selected."),
+      );
+      return;
+    }
+
+    if (hasDuplicateStaffSelection(targetRows)) {
+      setManpowerPlanningError(
+        t(
+          "projectPlanning.manpowerDuplicateStaff",
+          "This staff has already been added.",
+        ),
+      );
+      return;
+    }
+
+    if (hasInvalidManpowerLoading(targetRows)) {
+      setManpowerPlanningError(
+        t(
+          "projectPlanning.manpowerLoadingHint",
+          "Loading must be between 0.0 and 1.0.",
+        ),
+      );
+      return;
+    }
+
+    if (hasEmptyStaffSelection(targetRows)) {
+      setManpowerPlanningError(
+        t("projectPlanning.staffName", "Staff Name") + " is required",
+      );
+      return;
+    }
+
+    setManpowerPlanningError("");
+    setManpowerPlanningLoading(true);
+
+    try {
+      const savedRows = await Promise.all(
+        targetRows.map(async (row) => {
+          const payload = buildManpowerSavePayload({
+            row,
+            taskId,
+            normalizeManpowerLoading,
+          });
+
+          const res = await request(
+            "PUT",
+            `/api/projectmanpowers/${row.apiId}`,
+            payload,
+          );
+          const saved = res?.data || payload;
+
+          return normalizeSavedManpowerRow({
+            saved,
+            row,
+            payload,
+            taskId,
+            toLongId,
+            normalizeManpowerLoading,
+          });
+        }),
+      );
+
+      const savedRowByApiId = new Map(
+        savedRows.map((item) => [String(item?.apiId || ""), item]),
+      );
+
+      setManpowerPlanningRows((prev) =>
+        prev.map((item) => {
+          const apiId = String(item?.apiId || "");
+          return savedRowByApiId.get(apiId) || item;
+        }),
+      );
+      await syncWorkbenchFromServer();
+    } catch {
+      setManpowerPlanningError(
+        t(
+          "projectPlanning.manpowerSaveFailed",
+          "Failed to save project manpower.",
+        ),
+      );
+    } finally {
+      setManpowerPlanningLoading(false);
+    }
+  };
+
+  const skillPlanningTaskId = getSkillTaskId(skillPlanningTarget);
+  const skillPlanningTaskRecord =
+    tasks.find(
+      (task) =>
+        String(task?.projectTaskId || "") === String(skillPlanningTaskId || ""),
+    ) || null;
+
+  const manpowerPlanningDates = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          manpowerPlanningRows
+            .map((item) => String(item?.workDate || "").trim())
+            .filter(Boolean),
+        ),
+      ).sort((a, b) => a.localeCompare(b)),
+    [manpowerPlanningRows],
+  );
+
+  const activeManpowerPlanningDate =
+    manpowerPlanningDate || manpowerPlanningDates[0] || "";
+
+  const manpowerRowsForActiveDate = useMemo(
+    () =>
+      getManpowerRowsForActiveDate(
+        manpowerPlanningRows,
+        activeManpowerPlanningDate,
+      ),
+    [manpowerPlanningRows, activeManpowerPlanningDate],
+  );
+
+  const manpowerProjectSkillFilters = useMemo(() => {
+    const seen = new Set();
+    const items = manpowerProjectSkills
+      .filter((row) => row.label)
+      .filter((row) => {
+        const key = `${row.id}|${row.label}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => {
+        if (a.order !== b.order) return a.order - b.order;
+        return a.label.localeCompare(b.label, undefined, {
+          sensitivity: "base",
+        });
+      });
+
+    return items;
+  }, [manpowerProjectSkills]);
+
+  const manpowerDropdownOptionsForActiveDate = useMemo(
+    () => [...manpowerDropdownOptions],
+    [manpowerDropdownOptions],
+  );
+
+  const manpowerStaffNameById = useMemo(() => {
+    const map = manpowerDropdownOptions.reduce((acc, option) => {
+      const value = String(option?.value || "").trim();
+      if (!value) return acc;
+      acc[value] =
+        String(option?.staffName || option?.label || "").trim() || value;
+      return acc;
+    }, {});
+    map[""] = t("basic.none", "None");
+    return map;
+  }, [manpowerDropdownOptions, t]);
+
+  const manpowerStaffSkillsById = useMemo(() => {
+    const map = manpowerDropdownOptions.reduce((acc, option) => {
+      const value = String(option?.value || "").trim();
+      if (!value) return acc;
+      const profiles = Array.isArray(option?.skillProfiles)
+        ? option.skillProfiles
+        : [];
+      acc[value] = profiles;
+      return acc;
+    }, {});
+    return map;
+  }, [manpowerDropdownOptions]);
+
+  const skillSaveLockedByManpower = isManpowerTouched(
+    skillPlanningTaskRecord || skillPlanningTarget,
+  );
 
   const openSkillPlanningDialog = async (row) => {
     if (row?.type !== "task") {
@@ -3665,28 +3613,16 @@ const ProjectWorkbench = () => {
         ? projectSkillsRes.data
         : [];
 
-      const skillNameById = skills.reduce((acc, skill) => {
-        const id = toLongIdKey(skill?.staffSkillId);
-        if (!id) return acc;
-        acc[id] = String(skill?.skillName || "").trim() || id;
-        return acc;
-      }, {});
-
       setSkillOptions(skills);
       setSkillPlanningRows(
-        rows
-          .map((item) => {
-            const skillId = toLongId(item?.skillId);
-            if (skillId === null) return null;
-            return {
-              apiId: item?.projectSkillId,
-              projectTaskId: Number(item?.projectTaskId || taskId) || taskId,
-              skillId,
-              skillName: skillNameById[String(skillId)] || String(skillId),
-              unit: String(normalizeSkillUnit(item?.unit || 1)),
-            };
-          })
-          .filter(Boolean),
+        buildSkillPlanningRowsFromApi({
+          rows,
+          taskId,
+          skills,
+          toLongId,
+          toLongIdKey,
+          normalizeSkillUnit,
+        }),
       );
     } catch {
       setSkillPlanningError(
@@ -3779,11 +3715,12 @@ const ProjectWorkbench = () => {
       return;
     }
 
-    const duplicateRow = skillPlanningRows.find(
-      (item) =>
-        toLongId(item?.skillId) === skillId &&
-        String(item?.apiId || "") !== String(apiId || ""),
-    );
+    const duplicateRow = findDuplicateSkillAssignment({
+      skillPlanningRows,
+      skillId,
+      apiId,
+      toLongId,
+    });
     if (duplicateRow) {
       setSkillPlanningError(
         t(
@@ -3794,12 +3731,13 @@ const ProjectWorkbench = () => {
       return;
     }
 
-    const payload = {
-      ...(apiId ? { projectSkillId: apiId } : {}),
-      projectTaskId: taskId,
+    const payload = buildSkillSavePayload({
+      apiId,
+      taskId,
       skillId,
-      unit: normalizeSkillUnit(unit),
-    };
+      unit,
+      normalizeSkillUnit,
+    });
 
     setSkillPlanningError("");
     setSkillPlanningLoading(true);
@@ -3809,27 +3747,23 @@ const ProjectWorkbench = () => {
         : await request("POST", "/api/projectskills", payload);
 
       const saved = res?.data || payload;
-      const resolvedSkillId = toLongId(saved?.skillId ?? skillId) ?? skillId;
-      const nextRow = {
-        apiId: saved?.projectSkillId || apiId,
-        projectTaskId: taskId,
-        skillId: resolvedSkillId,
-        skillName:
-          String(skillById?.[resolvedSkillId]?.skillName || "").trim() ||
-          String(resolvedSkillId),
-        unit: String(normalizeSkillUnit(saved?.unit ?? payload.unit)),
-      };
+      const nextRow = buildSavedSkillRow({
+        saved,
+        payload,
+        apiId,
+        taskId,
+        skillId,
+        skillById,
+        toLongId,
+        normalizeSkillUnit,
+      });
 
       setSkillPlanningRows((prev) => {
-        const idx = prev.findIndex(
-          (item) => String(item?.apiId || "") === String(apiId || ""),
-        );
-        if (idx < 0) {
-          return [...prev, nextRow];
-        }
-        const next = [...prev];
-        next[idx] = nextRow;
-        return next;
+        return upsertSkillPlanningRow({
+          prevRows: prev,
+          nextRow,
+          apiId,
+        });
       });
 
       setSkillDraft({
@@ -3853,7 +3787,7 @@ const ProjectWorkbench = () => {
 
     if (!apiId) {
       setSkillPlanningRows((prev) =>
-        prev.filter((item) => toLongId(item?.skillId) !== skillId),
+        removeSkillPlanningRowsBySkillId({ prevRows: prev, skillId, toLongId }),
       );
       return;
     }
@@ -3862,252 +3796,13 @@ const ProjectWorkbench = () => {
     try {
       await request("DELETE", `/api/projectskills/${apiId}`);
       setSkillPlanningRows((prev) =>
-        prev.filter((item) => toLongId(item?.skillId) !== skillId),
+        removeSkillPlanningRowsBySkillId({ prevRows: prev, skillId, toLongId }),
       );
     } catch {
       setSkillPlanningError(
         t(
           "projectPlanning.skillDeleteFailed",
           "Failed to delete project skills.",
-        ),
-      );
-    }
-  };
-
-  const normalizeManpowerRole = (value) => {
-    const raw = String(value || "")
-      .trim()
-      .toLowerCase();
-    if (raw === "s" || raw === "supervisor") return "supervisor";
-    return "worker";
-  };
-
-  const normalizeManpowerLoading = (value) => {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return 1;
-    return Math.max(0, Math.min(1, numeric));
-  };
-
-  const getManpowerTaskId = (target) =>
-    Number(target?.raw?.projectTaskId || 0) || null;
-
-  const openManpowerPlanningDialog = async (row) => {
-    if (row?.type !== "task") {
-      setError(
-        t(
-          "projectPlanning.manpowerOnlyForTask",
-          "Manpower planning is only available for tasks.",
-        ),
-      );
-      return;
-    }
-
-    const taskId = getManpowerTaskId(row);
-    if (!taskId) return;
-
-    setManpowerPlanningTarget(row);
-    setManpowerPlanningOpen(true);
-    setManpowerPlanningError("");
-    setManpowerSkillFilter([]);
-    setManpowerStaffDropdownOpen(false);
-    setManpowerDraft({
-      apiId: null,
-      staffId: "",
-      role: "worker",
-      loading: "1",
-    });
-    setManpowerPlanningLoading(true);
-
-    try {
-      const [staffsRes, manpowerRes, skillsRes] = await Promise.all([
-        request("GET", "/api/staffs").catch(() => ({ data: [] })),
-        request("GET", `/api/projectmanpowers/task/${taskId}`).catch(() => ({
-          data: [],
-        })),
-        request("GET", "/api/staffskills").catch(() => ({ data: [] })),
-      ]);
-
-      const staffs = Array.isArray(staffsRes?.data) ? staffsRes.data : [];
-      const rows = Array.isArray(manpowerRes?.data) ? manpowerRes.data : [];
-      const skillRows = Array.isArray(skillsRes?.data) ? skillsRes.data : [];
-
-      const skillNameById = skillRows.reduce((acc, skill) => {
-        const id = String(skill?.staffSkillId || "").trim();
-        if (!id) return acc;
-        acc[id] = String(skill?.skillName || "").trim() || id;
-        return acc;
-      }, {});
-
-      const profileByStaffIdEntries = await Promise.all(
-        staffs.map(async (staff) => {
-          const staffId = String(staff?.staffId || "").trim();
-          if (!staffId) return null;
-
-          const profileRes = await request(
-            "GET",
-            `/api/staffskillprofiles/staffid/${encodeURIComponent(staffId)}`,
-          ).catch(() => ({ data: [] }));
-
-          const profileRows = Array.isArray(profileRes?.data)
-            ? profileRes.data
-            : [];
-          const names = Array.from(
-            new Set(
-              profileRows
-                .map((profileRow) => {
-                  const skillId = String(profileRow?.staffSkillId || "").trim();
-                  if (skillId && skillNameById[skillId]) {
-                    return skillNameById[skillId];
-                  }
-                  return String(profileRow?.skillName || "").trim();
-                })
-                .filter(Boolean),
-            ),
-          );
-          return [staffId, names];
-        }),
-      );
-
-      const skillsByStaff = Object.fromEntries(
-        profileByStaffIdEntries.filter(Boolean),
-      );
-
-      setManpowerStaffOptions(staffs);
-      setManpowerSkillsByStaffId(skillsByStaff);
-      setManpowerPlanningRows(
-        rows.map((item) => ({
-          apiId: item?.projectManpowerId,
-          projectTaskId: Number(item?.projectTaskId || taskId) || taskId,
-          staffId: String(item?.staffId || "").trim(),
-          role: normalizeManpowerRole(item?.role),
-          loading: String(normalizeManpowerLoading(item?.loading ?? 1)),
-        })),
-      );
-    } catch {
-      setManpowerPlanningError(
-        t(
-          "projectPlanning.manpowerLoadFailed",
-          "Failed to load project manpower.",
-        ),
-      );
-      setManpowerStaffOptions([]);
-      setManpowerSkillsByStaffId({});
-      setManpowerPlanningRows([]);
-    } finally {
-      setManpowerPlanningLoading(false);
-    }
-  };
-
-  const saveManpowerAssignment = async () => {
-    const taskId = getManpowerTaskId(manpowerPlanningTarget);
-    const apiId = manpowerDraft.apiId;
-    const staffId = String(manpowerDraft.staffId || "").trim();
-    const role = normalizeManpowerRole(manpowerDraft.role);
-    const loading = Number(manpowerDraft.loading);
-
-    if (!taskId || !staffId) return;
-    if (!Number.isFinite(loading) || loading < 0 || loading > 1) {
-      setManpowerPlanningError(
-        t(
-          "projectPlanning.manpowerLoadingHint",
-          "Loading must be between 0.0 and 1.0.",
-        ),
-      );
-      return;
-    }
-
-    const duplicateRow = manpowerPlanningRows.find(
-      (item) =>
-        String(item?.staffId || "") === staffId &&
-        String(item?.apiId || "") !== String(apiId || ""),
-    );
-    if (duplicateRow) {
-      setManpowerPlanningError(
-        t(
-          "projectPlanning.manpowerDuplicateStaff",
-          "This staff has already been added.",
-        ),
-      );
-      return;
-    }
-
-    const payload = {
-      ...(apiId ? { projectManpowerId: apiId } : {}),
-      projectTaskId: taskId,
-      staffId,
-      role,
-      loading,
-    };
-
-    setManpowerPlanningError("");
-    setManpowerPlanningLoading(true);
-    try {
-      const res = apiId
-        ? await request("PUT", `/api/projectmanpowers/${apiId}`, payload)
-        : await request("POST", "/api/projectmanpowers", payload);
-
-      const saved = res?.data || payload;
-      const nextRow = {
-        apiId: saved?.projectManpowerId || apiId,
-        projectTaskId: taskId,
-        staffId,
-        role: normalizeManpowerRole(saved?.role ?? role),
-        loading: String(normalizeManpowerLoading(saved?.loading ?? loading)),
-      };
-
-      setManpowerPlanningRows((prev) => {
-        const idx = prev.findIndex(
-          (item) => String(item?.apiId || "") === String(apiId || ""),
-        );
-        if (idx < 0) {
-          return [...prev, nextRow];
-        }
-        const next = [...prev];
-        next[idx] = nextRow;
-        return next;
-      });
-
-      setManpowerDraft({
-        apiId: null,
-        staffId: "",
-        role: "worker",
-        loading: "1",
-      });
-    } catch {
-      setManpowerPlanningError(
-        t(
-          "projectPlanning.manpowerSaveFailed",
-          "Failed to save project manpower.",
-        ),
-      );
-    } finally {
-      setManpowerPlanningLoading(false);
-    }
-  };
-
-  const removeManpowerAssignment = async (row) => {
-    const apiId = row?.apiId;
-    const staffId = String(row?.staffId || "").trim();
-    if (!staffId) return;
-
-    if (!apiId) {
-      setManpowerPlanningRows((prev) =>
-        prev.filter((item) => String(item?.staffId || "") !== staffId),
-      );
-      return;
-    }
-
-    setManpowerPlanningError("");
-    try {
-      await request("DELETE", `/api/projectmanpowers/${apiId}`);
-      setManpowerPlanningRows((prev) =>
-        prev.filter((item) => String(item?.staffId || "") !== staffId),
-      );
-    } catch {
-      setManpowerPlanningError(
-        t(
-          "projectPlanning.manpowerDeleteFailed",
-          "Failed to delete project manpower.",
         ),
       );
     }
@@ -4198,6 +3893,25 @@ const ProjectWorkbench = () => {
     return "";
   };
 
+  const handleDeleteTaskFromMenu = async (taskRow) => {
+    const taskId = taskRow?.raw?.projectTaskId;
+    if (!taskId) return;
+    const blockedReason = taskDeleteBlockedReason(taskRow);
+    if (blockedReason) {
+      setError(blockedReason);
+      closeSettingsMenu();
+      return;
+    }
+    try {
+      await request("DELETE", `/api/projecttasks/${taskId}`);
+      await syncWorkbenchFromServer();
+    } catch {
+      setError(t("basic.deleteFailed", "Delete failed"));
+    } finally {
+      closeSettingsMenu();
+    }
+  };
+
   const isDescendant = (candidateTaskId, sourceTaskId) => {
     const childMap = new Map();
     tasks.forEach((task) => {
@@ -4266,6 +3980,229 @@ const ProjectWorkbench = () => {
     }
   };
 
+  const projectSummaryProps = {
+    project,
+    projectCode,
+    customerDisplayName,
+    formatDate,
+    statusLabel,
+    toStatusColor,
+    onBack: () => navigate("/projectplanning"),
+    onHelp: () => setWorkbenchHelpOpen(true),
+  };
+
+  const timelinePanelProps = {
+    viewMode,
+    setViewMode,
+    onAddStream: () =>
+      openAddStreamDialog({
+        type: "stream",
+        raw: { streamType: "S" },
+      }),
+    onOpenInventoryOverview: () => setInventoryOverviewOpen(true),
+    onOpenSkillOverview: () => setSkillOverviewOpen(true),
+    onOpenManpowerOverview: () => setManpowerOverviewOpen(true),
+    moveSourceTaskId,
+    moveSourceTask,
+    clearMoveMode,
+    rows,
+    ganttScrollRef,
+    timelineWidth,
+    upperSegments,
+    colWidth,
+    activeCols,
+    isCurrentPeriodColumn,
+    getTaskBarGeometry,
+    isValidMoveTarget,
+    getTaskTypeIcon,
+    getInventoryIconMeta,
+    getRowInventoryType,
+    getRowManpowerRequired,
+    hoveredParentTaskId,
+    hoveredLinkedTaskIds,
+    moveTaskToTargetParent,
+    onTaskIconHoverStart,
+    onTaskIconHoverEnd,
+    tasks,
+    getTaskTypeDisplay,
+    getDurationDays,
+    openSettingsMenu,
+    openInventoryPlanningDialog,
+    openSkillPlanningDialog,
+    openManpowerPlanningDialog,
+    formatDate,
+    ganttCurrentPeriodOverlay,
+  };
+
+  const {
+    dialogsHostBaseProps,
+    settingsDialogProps,
+    inventoryPlanningDialogProps,
+    manpowerPlanningDialogProps,
+    skillPlanningDialogProps,
+    skillCreateDialogProps,
+    settingsMenuProps,
+    inventoryOverviewDialogProps,
+    manpowerOverviewDialogProps,
+    skillOverviewDialogProps,
+  } = buildWorkbenchDialogProps({
+    workbenchHelpOpen,
+    setWorkbenchHelpOpen,
+    formatDate,
+    projectCode,
+    isCurrentPeriodColumn,
+    settingsOpen,
+    closeSettings,
+    dialogMode,
+    settingsTarget,
+    settingsError,
+    formData,
+    setFormData,
+    taskTypeMetaByCode,
+    taskAssigneeOptions,
+    parentCandidates,
+    milestoneCandidates,
+    childTaskData,
+    setChildTaskData,
+    streamCreatableTaskTypeOptions,
+    taskCreatableTaskTypeOptions,
+    saving,
+    createChildTask,
+    addNewStream,
+    replicateStream,
+    saveStreamInfo,
+    saveTaskInfo,
+    removeMilestoneLink,
+    saveMilestoneLink,
+    addDays,
+    toApiDate,
+    inventoryPlanningOpen,
+    setInventoryPlanningOpen,
+    inventoryPlanningTarget,
+    inventoryPlanningError,
+    inventoryPlanningTab,
+    setInventoryPlanningTab,
+    inventoryPlanningLoading,
+    inventoryDraft,
+    setInventoryDraft,
+    setInventoryPlanningError,
+    getAvailableProductOptions,
+    stockProductOptions,
+    assetProductOptions,
+    getInventoryRows,
+    addPlanningProduct,
+    removePlanningRow,
+    getAvailableBundleOptions,
+    getBundleId,
+    getBundleName,
+    addPlanningBundle,
+    manpowerPlanningOpen,
+    setManpowerPlanningOpen,
+    manpowerPlanningTarget,
+    manpowerPlanningError,
+    manpowerPlanningDates,
+    activeManpowerPlanningDate,
+    setManpowerPlanningDate,
+    manpowerProjectSkillFilters,
+    manpowerSkillFilter,
+    setManpowerSkillFilter,
+    manpowerPlanningLoading,
+    manpowerRowsForActiveDate,
+    manpowerPlanningRows,
+    manpowerDropdownOptionsForActiveDate,
+    manpowerStaffNameById,
+    manpowerStaffSkillsById,
+    manpowerStaffOptions,
+    manpowerStaffSkillMap,
+    updateManpowerRow,
+    saveManpowerDeploymentPlan,
+    skillPlanningOpen,
+    setSkillPlanningOpen,
+    skillPlanningTarget,
+    skillPlanningLoading,
+    skillPlanningError,
+    skillDraft,
+    setSkillDraft,
+    availableSkillOptions,
+    toLongId,
+    skillPlanningRows,
+    setSkillPlanningError,
+    skillSaveLockedByManpower,
+    saveSkillAssignment,
+    removeSkillAssignment,
+    openCreateSkillDialog,
+    skillById,
+    skillCreateOpen,
+    skillCreateLoading,
+    skillCreateError,
+    skillCreateForm,
+    skillCategoryOptions,
+    setSkillCreateOpen,
+    setSkillCreateError,
+    setSkillCreateForm,
+    saveNewSkillDefinition,
+    menuAnchorEl,
+    menuTarget,
+    closeSettingsMenu,
+    collapsedStreamIds,
+    tasks,
+    openAddTaskDialog,
+    openStreamEditor,
+    openReplicateStreamDialog,
+    toggleStreamTasks,
+    removeStream,
+    openTaskEditor,
+    openMilestoneDialog,
+    startMoveMode,
+    handleDeleteTaskFromMenu,
+    taskDeleteBlockedReason,
+    inventoryOverviewOpen,
+    setInventoryOverviewOpen,
+    setInventoryOverviewRowsReady,
+    inventoryOverviewViewMode,
+    setInventoryOverviewViewMode,
+    inventoryOverviewLoading,
+    inventoryOverviewRowsReady,
+    inventoryOverviewError,
+    inventoryOverviewRows,
+    inventoryOverviewTimelineWidth,
+    inventoryOverviewUpperSegments,
+    inventoryOverviewActiveCols,
+    inventoryOverviewColWidth,
+    getUsageValue,
+    getUsageDetailsTable,
+    manpowerOverviewOpen,
+    setManpowerOverviewOpen,
+    setManpowerOverviewRowsReady,
+    manpowerOverviewViewMode,
+    setManpowerOverviewViewMode,
+    manpowerOverviewLoading,
+    manpowerOverviewRowsReady,
+    manpowerOverviewError,
+    manpowerOverviewRows,
+    manpowerOverviewTimelineWidth,
+    manpowerOverviewUpperSegments,
+    manpowerOverviewActiveCols,
+    manpowerOverviewColWidth,
+    getManpowerUsageValue,
+    getManpowerUsageDetailsTable,
+    skillOverviewOpen,
+    setSkillOverviewOpen,
+    setSkillOverviewRowsReady,
+    skillOverviewViewMode,
+    setSkillOverviewViewMode,
+    skillOverviewLoading,
+    skillOverviewRowsReady,
+    skillOverviewError,
+    skillOverviewRows,
+    skillOverviewTimelineWidth,
+    skillOverviewUpperSegments,
+    skillOverviewActiveCols,
+    skillOverviewColWidth,
+    getSkillUsageValue,
+    getSkillUsageDetailsTable,
+  });
+
   return (
     <Box>
       {error && (
@@ -4279,4638 +4216,20 @@ const ProjectWorkbench = () => {
           <CircularProgress />
         </Box>
       ) : (
-        <>
-          <Box
-            sx={{
-              p: 2,
-              mb: 2,
-              borderRadius: 2,
-              bgcolor: "background.paper",
-              border: "1px solid",
-              borderColor: "divider",
-            }}
-          >
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr", md: "96px 1fr" },
-                gap: 1.5,
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "center",
-                }}
-              >
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<ArrowBackIcon fontSize="small" />}
-                  onClick={() => navigate("/projectplanning")}
-                  sx={{ minWidth: 0, px: 1 }}
-                >
-                  {t("basic.back", "Back")}
-                </Button>
-              </Box>
-
-              <Box>
-                <Box
-                  sx={{
-                    mb: 1.5,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                  }}
-                >
-                  <Typography variant="h6">
-                    {t("projectPlanning.projectSummary", "Project Planning")}
-                  </Typography>
-                  <IconButton
-                    size="small"
-                    aria-label={t(
-                      "projectPlanning.workbenchHelp",
-                      "Project Workbench Help",
-                    )}
-                    onClick={() => setWorkbenchHelpOpen(true)}
-                  >
-                    <HelpOutlineIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: {
-                      xs: "1fr",
-                      md: "repeat(3, minmax(0, 1fr))",
-                    },
-                    gap: 1.5,
-                  }}
-                >
-                  <Typography variant="body2">
-                    <strong>{t("project.projectCode", "Project Code")}:</strong>{" "}
-                    {project?.projectCode || projectCode}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>{t("project.projectName", "Project Name")}:</strong>{" "}
-                    {project?.projectName || "-"}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>
-                      {t("project.customerName", "Customer Name")}:
-                    </strong>{" "}
-                    {customerDisplayName}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>{t("project.startDate", "Start Date")}:</strong>{" "}
-                    {formatDate(project?.startDate)}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>{t("project.endDate", "End Date")}:</strong>{" "}
-                    {formatDate(project?.endDate)}
-                  </Typography>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <strong>{t("project.status", "Status")}:</strong>
-                    <Chip
-                      label={
-                        statusLabel[
-                          String(project?.status || "").toUpperCase()
-                        ] ||
-                        project?.status ||
-                        "-"
-                      }
-                      color={toStatusColor(project?.status)}
-                      size="small"
-                    />
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-
-          <Box
-            sx={{
-              borderRadius: 2,
-              bgcolor: "background.paper",
-              border: "1px solid",
-              borderColor: "divider",
-              overflow: "hidden",
-            }}
-          >
-            <Box
-              sx={{
-                px: 2,
-                py: 1.25,
-                borderBottom: "1px solid",
-                borderColor: "divider",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 2,
-                flexWrap: "wrap",
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  flexWrap: "wrap",
-                }}
-              >
-                <Typography variant="subtitle1" sx={{ lineHeight: 1.25 }}>
-                  {t("projectPlanning.ganttTitle", "Streams & Tasks Timeline")}
-                </Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon fontSize="small" />}
-                  onClick={() =>
-                    openAddStreamDialog({
-                      type: "stream",
-                      raw: { streamType: "S" },
-                    })
-                  }
-                  sx={{ minWidth: 140, fontWeight: 600 }}
-                >
-                  {t("projectPlanning.addStream", "Add Stream")}
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => setInventoryOverviewOpen(true)}
-                  sx={{ minWidth: 170, fontWeight: 600 }}
-                >
-                  {t("projectPlanning.inventoryOverview", "Inventory Overview")}
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => setSkillOverviewOpen(true)}
-                  sx={{ minWidth: 170, fontWeight: 600 }}
-                >
-                  {t("projectPlanning.skillOverview", "Skill Overview")}
-                </Button>
-              </Box>
-              <ToggleButtonGroup
-                value={viewMode}
-                exclusive
-                onChange={(_, val) => {
-                  if (val) setViewMode(val);
-                }}
-                size="small"
-              >
-                <ToggleButton value="day">
-                  {t("projectPlanning.viewDay", "Day")}
-                </ToggleButton>
-                <ToggleButton value="week">
-                  {t("projectPlanning.viewWeek", "Week")}
-                </ToggleButton>
-                <ToggleButton value="month">
-                  {t("projectPlanning.viewMonth", "Month")}
-                </ToggleButton>
-              </ToggleButtonGroup>
-            </Box>
-
-            {moveSourceTaskId && (
-              <Alert
-                severity="info"
-                sx={{ mx: 2, mt: 1.5, mb: 0.5 }}
-                action={
-                  <Button color="inherit" size="small" onClick={clearMoveMode}>
-                    {t("basic.cancel", "Cancel")}
-                  </Button>
-                }
-              >
-                {t("projectPlanning.moveModeActive", "Move mode active")}
-                {": "}
-                <strong>{moveSourceTask?.taskName || moveSourceTaskId}</strong>
-                {". "}
-                {t(
-                  "projectPlanning.selectMoveTarget",
-                  "Hover valid tasks for 'Move here' and click to move.",
-                )}
-              </Alert>
-            )}
-
-            {rows.length === 0 ? (
-              <Box sx={{ p: 2 }}>
-                <Alert severity="info">
-                  {t(
-                    "projectPlanning.noStreamsTasks",
-                    "No project streams/tasks found for this project.",
-                  )}
-                </Alert>
-              </Box>
-            ) : (
-              <Box
-                sx={{ overflow: "auto", maxHeight: "58vh" }}
-                ref={ganttScrollRef}
-              >
-                <Box sx={{ minWidth: 420 + timelineWidth }}>
-                  {/* Upper header: month (day/week) or year (month) */}
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: `420px ${timelineWidth}px`,
-                      borderBottom: "1px solid",
-                      borderColor: "divider",
-                      position: "sticky",
-                      top: 0,
-                      zIndex: 6,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        px: 1,
-                        py: 0.75,
-                        borderRight: "1px solid",
-                        borderColor: "divider",
-                        bgcolor: "background.default",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        position: "sticky",
-                        left: 0,
-                        zIndex: 7,
-                      }}
-                    >
-                      <Typography variant="caption" fontWeight={700}>
-                        {t("projectPlanning.timeline", "Timeline")}
-                      </Typography>
-                    </Box>
-                    <Box
-                      sx={{ display: "flex", bgcolor: "background.default" }}
-                    >
-                      {upperSegments.map((seg) => (
-                        <Box
-                          key={seg.key}
-                          sx={{
-                            width: seg.span * colWidth,
-                            px: 0.5,
-                            py: 0.5,
-                            borderLeft: "1px solid",
-                            borderColor: "divider",
-                            textAlign: "center",
-                            overflow: "hidden",
-                          }}
-                        >
-                          <Typography
-                            variant="caption"
-                            sx={{ fontSize: "0.64rem", whiteSpace: "nowrap" }}
-                          >
-                            {seg.label}
-                          </Typography>
-                        </Box>
-                      ))}
-                    </Box>
-                  </Box>
-
-                  {/* Lower header: day number / week range / month name */}
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: `420px ${timelineWidth}px`,
-                      borderBottom: "1px solid",
-                      borderColor: "divider",
-                      position: "sticky",
-                      top: 30,
-                      zIndex: 5,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        px: 1,
-                        py: 0.75,
-                        bgcolor: "background.default",
-                        display: "grid",
-                        gridTemplateColumns: "minmax(0, 1fr) 54px 84px 84px",
-                        gap: 1,
-                        position: "sticky",
-                        left: 0,
-                        zIndex: 6,
-                        borderRight: "1px solid",
-                        borderColor: "divider",
-                      }}
-                    >
-                      <Typography variant="caption" fontWeight={700}>
-                        {t("projectPlanning.leftHeaderName", "Name")}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        fontWeight={700}
-                        textAlign="center"
-                      >
-                        {t("basic.settings", "Settings")}
-                      </Typography>
-                      <Typography variant="caption" fontWeight={700}>
-                        {t("projectPlanning.leftHeaderStart", "Start")}
-                      </Typography>
-                      <Typography variant="caption" fontWeight={700}>
-                        {t("projectPlanning.leftHeaderEnd", "End")}
-                      </Typography>
-                    </Box>
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: `repeat(${activeCols.length}, ${colWidth}px)`,
-                        bgcolor: "background.default",
-                      }}
-                    >
-                      {activeCols.map((col, idx) => (
-                        <Box
-                          key={col.key}
-                          sx={{
-                            px: 0,
-                            py: 0.5,
-                            bgcolor: isCurrentPeriodColumn(viewMode, col)
-                              ? "action.selected"
-                              : "transparent",
-                            borderLeft: "1px solid",
-                            borderColor: (
-                              viewMode === "day" ? col.isMonthStart : idx === 0
-                            )
-                              ? "divider"
-                              : "transparent",
-                            textAlign: "center",
-                            overflow: "hidden",
-                          }}
-                        >
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              fontSize: "0.58rem",
-                              lineHeight: 1,
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {col.label}
-                          </Typography>
-                        </Box>
-                      ))}
-                    </Box>
-                  </Box>
-
-                  {/* Data rows */}
-                  {rows.map((row) => {
-                    const geo = getTaskBarGeometry(row);
-                    const validMoveTarget = isValidMoveTarget(row);
-                    const taskTypeIconMeta =
-                      row.type === "task" ? getTaskTypeIcon(row.raw) : null;
-                    const inventoryIconMeta = getInventoryIconMeta(
-                      getRowInventoryType(row),
-                    );
-                    const manpowerRequired = getRowManpowerRequired(row);
-                    const rowTaskId = String(
-                      row?.raw?.projectTaskId || "",
-                    ).trim();
-                    const isParentHighlight =
-                      row.type === "task" &&
-                      rowTaskId &&
-                      rowTaskId === hoveredParentTaskId;
-                    const isLinkedHighlight =
-                      row.type === "task" &&
-                      hoveredLinkedTaskIds.has(rowTaskId);
-                    const taskTypeCode = String(row?.raw?.taskType || "")
-                      .trim()
-                      .toUpperCase();
-                    const isMilestoneTaskType =
-                      row.type === "task" && taskTypeCode === "M";
-                    return (
-                      <Box
-                        key={row.id}
-                        sx={{
-                          display: "grid",
-                          gridTemplateColumns: `420px ${timelineWidth}px`,
-                          borderTop: "1px solid",
-                          borderColor: "divider",
-                          minHeight: 36,
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            px: 1,
-                            py: 0.6,
-                            display: "grid",
-                            gridTemplateColumns:
-                              "minmax(0, 1fr) 54px 84px 84px",
-                            gap: 1,
-                            alignItems: "center",
-                            bgcolor: isParentHighlight
-                              ? "info.light"
-                              : isLinkedHighlight
-                                ? "success.light"
-                                : row.type === "stream"
-                                  ? "var(--color-gray-100)"
-                                  : "background.paper",
-                            cursor: validMoveTarget ? "pointer" : "default",
-                            position: "sticky",
-                            left: 0,
-                            zIndex: 2,
-                            borderRight: "1px solid",
-                            borderColor: "divider",
-                          }}
-                          onClick={() => {
-                            if (validMoveTarget) moveTaskToTargetParent(row);
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 0.5,
-                            }}
-                          >
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                fontWeight: row.type === "stream" ? 700 : 400,
-                                pl: row.type === "task" ? 2 : 0,
-                                fontSize: "0.78rem",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 0.5,
-                              }}
-                            >
-                              {taskTypeIconMeta && (
-                                <Box
-                                  component="span"
-                                  onMouseEnter={() =>
-                                    onTaskIconHoverStart(row.raw)
-                                  }
-                                  onMouseLeave={onTaskIconHoverEnd}
-                                  sx={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    color: taskTypeIconMeta.color,
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  {(() => {
-                                    const TypeIcon = taskTypeIconMeta.icon;
-                                    return <TypeIcon fontSize="inherit" />;
-                                  })()}
-                                </Box>
-                              )}
-                              <Tooltip
-                                title={
-                                  <Box>
-                                    {validMoveTarget && (
-                                      <Typography
-                                        variant="caption"
-                                        sx={{
-                                          display: "block",
-                                          fontWeight: 700,
-                                        }}
-                                      >
-                                        {t(
-                                          "projectPlanning.moveHere",
-                                          "Move here",
-                                        )}
-                                      </Typography>
-                                    )}
-                                    {row.type === "stream" ? (
-                                      <>
-                                        <Typography
-                                          variant="caption"
-                                          sx={{
-                                            display: "block",
-                                            fontWeight: 700,
-                                          }}
-                                        >
-                                          {row?.raw?.streamName || row.name}
-                                        </Typography>
-                                        <Typography
-                                          variant="caption"
-                                          sx={{ display: "block" }}
-                                        >
-                                          {t(
-                                            "projectstream.streamType",
-                                            "Stream Type",
-                                          )}
-                                          : {row?.raw?.streamType || "-"}
-                                        </Typography>
-                                        <Typography
-                                          variant="caption"
-                                          sx={{ display: "block" }}
-                                        >
-                                          {t(
-                                            "projectPlanning.taskCount",
-                                            "Task Count",
-                                          )}
-                                          :{" "}
-                                          {
-                                            tasks.filter(
-                                              (task) =>
-                                                String(
-                                                  task?.projectStreamId || "",
-                                                ) ===
-                                                String(
-                                                  row?.raw?.projectStreamId ||
-                                                    "",
-                                                ),
-                                            ).length
-                                          }
-                                        </Typography>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Typography
-                                          variant="caption"
-                                          sx={{
-                                            display: "block",
-                                            fontWeight: 700,
-                                          }}
-                                        >
-                                          {row?.raw?.taskName || row.name}
-                                        </Typography>
-                                        <Typography
-                                          variant="caption"
-                                          sx={{ display: "block" }}
-                                        >
-                                          {t(
-                                            "projecttask.taskType",
-                                            "Task Type",
-                                          )}
-                                          :{" "}
-                                          {getTaskTypeDisplay(
-                                            row?.raw?.taskType,
-                                          )}
-                                        </Typography>
-                                        <Typography
-                                          variant="caption"
-                                          sx={{ display: "block" }}
-                                        >
-                                          {t(
-                                            "projecttask.taskStatus",
-                                            "Task Status",
-                                          )}
-                                          : {row?.raw?.taskStatus || "-"}
-                                        </Typography>
-                                        <Typography
-                                          variant="caption"
-                                          sx={{ display: "block" }}
-                                        >
-                                          {t(
-                                            "projecttask.taskDuration",
-                                            "Task Duration (days)",
-                                          )}
-                                          :{" "}
-                                          {row?.raw?.taskDuration ||
-                                            getDurationDays(
-                                              row?.raw?.taskStartDate,
-                                              row?.raw?.taskEndDate,
-                                            ) ||
-                                            "-"}
-                                        </Typography>
-                                      </>
-                                    )}
-                                  </Box>
-                                }
-                              >
-                                <Box component="span">{row.name}</Box>
-                              </Tooltip>
-                            </Typography>
-                          </Box>
-                          <Box
-                            sx={{
-                              display: "grid",
-                              gridTemplateColumns: "18px 18px 18px",
-                              justifyItems: "center",
-                              alignItems: "center",
-                              width: 54,
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                width: 18,
-                                height: 18,
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
-                            >
-                              <IconButton
-                                size="small"
-                                onClick={(event) =>
-                                  openSettingsMenu(event, row)
-                                }
-                                aria-label={t("basic.settings", "Settings")}
-                                sx={{
-                                  width: 16,
-                                  height: 16,
-                                  color: "text.secondary",
-                                  opacity: 0.62,
-                                  p: 0,
-                                  m: "1px",
-                                  "&:hover": {
-                                    opacity: 0.85,
-                                    bgcolor: "action.hover",
-                                  },
-                                }}
-                              >
-                                <SettingsIcon sx={{ fontSize: "0.875rem" }} />
-                              </IconButton>
-                            </Box>
-
-                            {inventoryIconMeta ? (
-                              <Tooltip
-                                title={t(
-                                  "projectPlanning.openInventoryPlanning",
-                                  "Open inventory planning",
-                                )}
-                              >
-                                <IconButton
-                                  size="small"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    openInventoryPlanningDialog(row);
-                                  }}
-                                  sx={{
-                                    width: 16,
-                                    height: 16,
-                                    color: inventoryIconMeta.color,
-                                    p: 0,
-                                    m: "1px",
-                                    "&:hover": {
-                                      bgcolor: "action.hover",
-                                    },
-                                  }}
-                                >
-                                  {(() => {
-                                    const InventoryIcon =
-                                      inventoryIconMeta.icon;
-                                    return (
-                                      <InventoryIcon
-                                        sx={{ fontSize: "0.875rem" }}
-                                      />
-                                    );
-                                  })()}
-                                </IconButton>
-                              </Tooltip>
-                            ) : (
-                              <Box
-                                component="span"
-                                sx={{
-                                  width: 18,
-                                  height: 18,
-                                  display: "inline-flex",
-                                  flexShrink: 0,
-                                  m: "1px",
-                                }}
-                              />
-                            )}
-
-                            {manpowerRequired > 0 ? (
-                              <Tooltip
-                                title={t(
-                                  "projectPlanning.openSkillPlanning",
-                                  "Open skill workspace",
-                                )}
-                              >
-                                <IconButton
-                                  size="small"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    openSkillPlanningDialog(row);
-                                  }}
-                                  sx={{
-                                    width: 16,
-                                    height: 16,
-                                    color: "secondary.main",
-                                    p: 0,
-                                    m: "1px",
-                                    "&:hover": {
-                                      bgcolor: "action.hover",
-                                    },
-                                  }}
-                                >
-                                  <PsychologyAltOutlinedIcon
-                                    sx={{ fontSize: "0.875rem" }}
-                                  />
-                                </IconButton>
-                              </Tooltip>
-                            ) : (
-                              <Box
-                                component="span"
-                                sx={{
-                                  width: 18,
-                                  height: 18,
-                                  display: "inline-flex",
-                                  flexShrink: 0,
-                                  m: "1px",
-                                }}
-                              />
-                            )}
-                          </Box>
-                          <Typography
-                            variant="caption"
-                            sx={{ textAlign: "right" }}
-                          >
-                            {formatDate(row.startDate)}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            sx={{ textAlign: "right" }}
-                          >
-                            {formatDate(row.endDate)}
-                          </Typography>
-                        </Box>
-
-                        <Box
-                          sx={{
-                            position: "relative",
-                            backgroundImage: `repeating-linear-gradient(to right, transparent, transparent ${colWidth - 1}px, rgba(0,0,0,0.06) ${colWidth - 1}px, rgba(0,0,0,0.06) ${colWidth}px)`,
-                          }}
-                        >
-                          {ganttCurrentPeriodOverlay && (
-                            <Box
-                              sx={{
-                                position: "absolute",
-                                left: ganttCurrentPeriodOverlay.left,
-                                top: 0,
-                                bottom: 0,
-                                width: ganttCurrentPeriodOverlay.width,
-                                bgcolor: "action.selected",
-                                pointerEvents: "none",
-                              }}
-                            />
-                          )}
-                          {geo && !isMilestoneTaskType && (
-                            <Box
-                              sx={{
-                                position: "absolute",
-                                left: geo.left,
-                                top: "50%",
-                                transform: "translateY(-50%)",
-                                height: row.type === "stream" ? 14 : 9,
-                                width: geo.width,
-                                borderRadius: row.type === "stream" ? 1 : 999,
-                                bgcolor: isParentHighlight
-                                  ? "info.main"
-                                  : isLinkedHighlight
-                                    ? "success.main"
-                                    : row.type === "stream"
-                                      ? "transparent"
-                                      : "secondary.main",
-                                border:
-                                  row.type === "stream" ? "2px solid" : "none",
-                                borderColor: isParentHighlight
-                                  ? "info.dark"
-                                  : isLinkedHighlight
-                                    ? "success.dark"
-                                    : row.type === "stream"
-                                      ? "primary.main"
-                                      : "transparent",
-                                opacity: row.type === "stream" ? 1 : 0.65,
-                              }}
-                            />
-                          )}
-                          {geo && isMilestoneTaskType && (
-                            <Box
-                              sx={{
-                                position: "absolute",
-                                left: geo.left + Math.max(geo.width / 2 - 5, 0),
-                                top: "50%",
-                                width: 10,
-                                height: 10,
-                                transform: "translateY(-50%) rotate(45deg)",
-                                bgcolor: "secondary.main",
-                                border: "1px solid",
-                                borderColor: "secondary.dark",
-                              }}
-                            />
-                          )}
-                        </Box>
-                      </Box>
-                    );
-                  })}
-                </Box>
-              </Box>
-            )}
-          </Box>
-
-          <Dialog
-            open={workbenchHelpOpen}
-            onClose={() => setWorkbenchHelpOpen(false)}
-            fullWidth
-            maxWidth="md"
-          >
-            <DialogTitle>
-              {t("projectPlanning.workbenchHelp", "Project Workbench Help")}
-            </DialogTitle>
-            <DialogContent dividers>
-              <Stack spacing={1.5}>
-                <Typography variant="body2">
-                  {t(
-                    "projectPlanning.helpIntro",
-                    "Use Project Workbench to plan streams and tasks, manage dependencies, and review the timeline in Day/Week/Month views.",
-                  )}
-                </Typography>
-                <Typography variant="subtitle2">
-                  {t(
-                    "projectPlanning.helpSectionNavigation",
-                    "Navigation & Layout",
-                  )}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    "projectPlanning.helpNavigationBody",
-                    "Use Back to return to project planning. The left panel stays fixed while the timeline scrolls horizontally.",
-                  )}
-                </Typography>
-                <Typography variant="subtitle2">
-                  {t("projectPlanning.helpSectionWorkflow", "Quick Workflow")}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    "projectPlanning.helpWorkflowBody",
-                    "Start by adding streams, then create tasks inside each stream, assign person in-charge, set duration/status, and use timeline bars to validate overlaps before execution.",
-                  )}
-                </Typography>
-                <Typography variant="subtitle2">
-                  {t("projectPlanning.helpSectionTimeline", "Timeline Views")}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    "projectPlanning.helpTimelineBody",
-                    "Switch between Day, Week, and Month. Milestone tasks render as diamonds; other task types render as bars.",
-                  )}
-                </Typography>
-                <Typography variant="subtitle2">
-                  {t(
-                    "projectPlanning.helpSectionCurrentPeriod",
-                    "Current Period Highlight",
-                  )}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    "projectPlanning.helpCurrentPeriodBody",
-                    "The current period is highlighted automatically: today in Day view, the current week in Week view, and the current month in Month view. The same highlight appears in Gantt, Inventory Overview, and Skill Overview.",
-                  )}
-                </Typography>
-                <Typography variant="subtitle2">
-                  {t("projectPlanning.helpSectionActions", "Row Actions")}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    "projectPlanning.helpActionsBody",
-                    "Open the settings menu on each stream or task row to create tasks, edit details, link milestones, move tasks, or remove items.",
-                  )}
-                </Typography>
-                <Typography variant="subtitle2">
-                  {t(
-                    "projectPlanning.helpSectionStreamActions",
-                    "Stream Actions",
-                  )}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    "projectPlanning.helpStreamActionsBody",
-                    "For each stream you can create task, edit stream info, replicate stream (copy stream by entering a new stream name), show/hide tasks, and remove stream when it has no tasks.",
-                  )}
-                </Typography>
-                <Typography variant="subtitle2">
-                  {t("projectPlanning.helpSectionTaskActions", "Task Actions")}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    "projectPlanning.helpTaskActionsBody",
-                    "For each task you can create child task, edit task, link milestone task, move to another parent task, and remove current task when task-type and dependency rules allow.",
-                  )}
-                </Typography>
-                <Typography variant="subtitle2">
-                  {t(
-                    "projectPlanning.helpSectionDependencies",
-                    "Dependencies & Highlights",
-                  )}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    "projectPlanning.helpDependenciesBody",
-                    "Hover task type icons to highlight parent and linked tasks. Hover task names to view task details.",
-                  )}
-                </Typography>
-                <Typography variant="subtitle2">
-                  {t("projectPlanning.helpSectionRules", "Create/Edit Rules")}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    "projectPlanning.helpRulesBody",
-                    "Task type, duration limits, start-date editability, and delete permissions are controlled by task-type settings.",
-                  )}
-                </Typography>
-                <Typography variant="subtitle2">
-                  {t(
-                    "projectPlanning.helpSectionPlanningWorkspaces",
-                    "Planning Workspaces",
-                  )}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    "projectPlanning.helpPlanningWorkspacesBody",
-                    "Inventory Planning lets you add stock/asset/bundle requirements on a selected task or stream. Skill Workspace lets you assign required skills and units for a task.",
-                  )}
-                </Typography>
-                <Typography variant="subtitle2">
-                  {t(
-                    "projectPlanning.helpSectionOverviews",
-                    "Inventory & Skill Overviews",
-                  )}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    "projectPlanning.helpOverviewsBody",
-                    "Inventory Overview summarizes planned quantities by period and shows details on hover. Skill Overview aggregates required units by skill across each period.",
-                  )}
-                </Typography>
-                <Typography variant="subtitle2">
-                  {t(
-                    "projectPlanning.helpSectionHowReplicateStream",
-                    "How To: Replicate A Stream",
-                  )}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    "projectPlanning.helpHowReplicateStreamBody",
-                    "1. Open the stream row settings menu. 2. Click Replicate Stream. 3. Enter the new stream name in the dialog. 4. Click Save to copy the selected stream.",
-                  )}
-                </Typography>
-                <Typography variant="subtitle2">
-                  {t(
-                    "projectPlanning.helpSectionHowManageTasks",
-                    "How To: Create And Manage Tasks",
-                  )}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    "projectPlanning.helpHowManageTasksBody",
-                    "1. Open stream settings and click Create Task (or open a task and click Create Child Task). 2. Fill task name/type/start/duration/person in-charge. 3. Save the task. 4. Use task settings to edit, link milestone, move, or remove when allowed.",
-                  )}
-                </Typography>
-                <Typography variant="subtitle2">
-                  {t(
-                    "projectPlanning.helpSectionHowMoveTask",
-                    "How To: Move A Task",
-                  )}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    "projectPlanning.helpHowMoveTaskBody",
-                    "1. Open task settings and click Move To. 2. Move mode activates. 3. Click a valid target parent task in the grid. 4. The system recalculates and updates the task hierarchy.",
-                  )}
-                </Typography>
-                <Typography variant="subtitle2">
-                  {t(
-                    "projectPlanning.helpSectionHowInventoryPlanning",
-                    "How To: Plan Inventory",
-                  )}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    "projectPlanning.helpHowInventoryPlanningBody",
-                    "1. Click the inventory icon on a stream/task row. 2. Select Stock, Asset, or Bundle tab as needed. 3. Add required items and quantities. 4. Remove or adjust entries before closing.",
-                  )}
-                </Typography>
-                <Typography variant="subtitle2">
-                  {t(
-                    "projectPlanning.helpSectionHowManpowerPlanning",
-                    "How To: Plan Skills",
-                  )}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    "projectPlanning.helpHowManpowerPlanningBody",
-                    "1. Click the skill icon on a task row. 2. Select required skill(s). 3. Set unit values. 4. Save or remove entries as needed.",
-                  )}
-                </Typography>
-                <Typography variant="subtitle2">
-                  {t(
-                    "projectPlanning.helpSectionHowReadOverviews",
-                    "How To: Read Overview Grids",
-                  )}
-                </Typography>
-                <Typography variant="body2">
-                  {t(
-                    "projectPlanning.helpHowReadOverviewsBody",
-                    "1. Open Inventory Overview or Skill Overview from the header actions. 2. Switch Day/Week/Month to change granularity. 3. Follow the highlighted current period column for present-time tracking. 4. Hover populated cells to view detail breakdown.",
-                  )}
-                </Typography>
-              </Stack>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setWorkbenchHelpOpen(false)}>
-                {t("basic.close", "Close")}
-              </Button>
-            </DialogActions>
-          </Dialog>
-
-          <Dialog
-            open={settingsOpen}
-            onClose={closeSettings}
-            fullWidth
-            maxWidth="md"
-          >
-            <DialogTitle>
-              {dialogMode === "add-stream"
-                ? t("projectPlanning.addStream", "Add Stream")
-                : dialogMode === "replicate-stream"
-                  ? t("projectPlanning.replicateStream", "Replicate Stream")
-                  : dialogMode === "add-task"
-                    ? t("projectPlanning.createTask", "Create Task")
-                    : settingsTarget?.type === "stream"
-                      ? t("projectPlanning.streamSettings", "Stream Settings")
-                      : t("projectPlanning.taskSettings", "Task Settings")}
-            </DialogTitle>
-            <DialogContent dividers>
-              {settingsError && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {settingsError}
-                </Alert>
-              )}
-
-              {dialogMode === "add-stream" && (
-                <Stack spacing={2}>
-                  <TextField
-                    label={t("projectstream.streamName", "Stream Name")}
-                    value={formData.streamName || ""}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        streamName: e.target.value,
-                      }))
-                    }
-                    size="small"
-                    fullWidth
-                    autoFocus
-                    required
-                  />
-                  <TextField
-                    label={t(
-                      "projectstream.streamDescription",
-                      "Stream Description",
-                    )}
-                    value={formData.streamDescription || ""}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        streamDescription: e.target.value,
-                      }))
-                    }
-                    size="small"
-                    fullWidth
-                    multiline
-                    minRows={2}
-                  />
-                </Stack>
-              )}
-
-              {dialogMode === "replicate-stream" &&
-                settingsTarget?.type === "stream" && (
-                  <Stack spacing={2}>
-                    <TextField
-                      label={t("projectstream.streamName", "Stream Name")}
-                      value={formData.streamName || ""}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          streamName: e.target.value,
-                        }))
-                      }
-                      size="small"
-                      fullWidth
-                      autoFocus
-                      required
-                    />
-                  </Stack>
-                )}
-
-              {dialogMode === "edit-stream" &&
-                settingsTarget?.type === "stream" && (
-                  <Stack spacing={2}>
-                    <TextField
-                      label={t("projectstream.streamName", "Stream Name")}
-                      value={formData.streamName || ""}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          streamName: e.target.value,
-                        }))
-                      }
-                      size="small"
-                      fullWidth
-                    />
-                    <TextField
-                      label={t(
-                        "projectstream.streamDescription",
-                        "Stream Description",
-                      )}
-                      value={formData.streamDescription || ""}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          streamDescription: e.target.value,
-                        }))
-                      }
-                      size="small"
-                      fullWidth
-                      multiline
-                      minRows={2}
-                    />
-                  </Stack>
-                )}
-
-              {dialogMode === "edit-task" &&
-                settingsTarget?.type === "task" && (
-                  <Stack spacing={2}>
-                    <TextField
-                      label={t("projecttask.taskName", "Task Name")}
-                      value={formData.taskName || ""}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          taskName: e.target.value,
-                        }))
-                      }
-                      size="small"
-                      fullWidth
-                    />
-
-                    <Stack
-                      direction={{ xs: "column", md: "row" }}
-                      spacing={1.5}
-                    >
-                      <TextField
-                        label={t("projecttask.taskType", "Task Type")}
-                        value={(() => {
-                          const taskType =
-                            taskTypeMetaByCode[
-                              String(formData.taskType || "").trim()
-                            ];
-                          if (!taskType) return formData.taskType || "";
-                          return `${taskType.projectTaskCode}${taskType.projectTaskDescription ? ` - ${taskType.projectTaskDescription}` : ""}`;
-                        })()}
-                        size="small"
-                        fullWidth
-                        disabled
-                      />
-                      <FormControl size="small" fullWidth>
-                        <InputLabel>
-                          {t("projecttask.taskStatus", "Task Status")}
-                        </InputLabel>
-                        <Select
-                          label={t("projecttask.taskStatus", "Task Status")}
-                          value={formData.taskStatus || "Not Started"}
-                          onChange={(e) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              taskStatus: e.target.value,
-                            }))
-                          }
-                        >
-                          <MenuItem value="Not Started">Not Started</MenuItem>
-                          <MenuItem value="In Progress">In Progress</MenuItem>
-                          <MenuItem value="Completed">Completed</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Stack>
-
-                    <Stack
-                      direction={{ xs: "column", md: "row" }}
-                      spacing={1.5}
-                    >
-                      <TextField
-                        type="date"
-                        size="small"
-                        label={t("projecttask.taskStartDate", "Start Date")}
-                        value={formData.taskStartDate || ""}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            taskStartDate: e.target.value,
-                          }))
-                        }
-                        fullWidth
-                        InputLabelProps={{ shrink: true }}
-                        disabled={
-                          String(
-                            taskTypeMetaByCode[
-                              String(formData.taskType || "").trim()
-                            ]?.editStartDate ?? "",
-                          ).trim() !== "1"
-                        }
-                      />
-                      <TextField
-                        type="number"
-                        size="small"
-                        label={t(
-                          "projecttask.taskDuration",
-                          "Task Duration (days)",
-                        )}
-                        value={formData.taskDuration || 1}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            taskDuration: e.target.value,
-                          }))
-                        }
-                        fullWidth
-                        inputProps={{
-                          min:
-                            Number(
-                              taskTypeMetaByCode[
-                                String(formData.taskType || "").trim()
-                              ]?.minimumDays || 1,
-                            ) || 1,
-                          max:
-                            Number(
-                              taskTypeMetaByCode[
-                                String(formData.taskType || "").trim()
-                              ]?.maximumDays || 0,
-                            ) || undefined,
-                        }}
-                        helperText={(() => {
-                          const typeMeta =
-                            taskTypeMetaByCode[
-                              String(formData.taskType || "").trim()
-                            ];
-                          const minDays = Number(typeMeta?.minimumDays || 0);
-                          const maxDays = Number(typeMeta?.maximumDays || 0);
-                          if (minDays > 0 && maxDays > 0)
-                            return `${minDays}-${maxDays} days`;
-                          if (minDays > 0) return `Min ${minDays} days`;
-                          if (maxDays > 0) return `Max ${maxDays} days`;
-                          return "";
-                        })()}
-                      />
-                      <TextField
-                        type="date"
-                        size="small"
-                        label={t("projecttask.taskEndDate", "End Date")}
-                        value={(() => {
-                          const endDate = addDays(
-                            formData.taskStartDate ||
-                              settingsTarget?.raw?.taskStartDate ||
-                              "",
-                            formData.taskDuration || 1,
-                          );
-                          return toApiDate(endDate);
-                        })()}
-                        fullWidth
-                        InputLabelProps={{ shrink: true }}
-                        disabled
-                      />
-                    </Stack>
-
-                    <FormControl size="small" fullWidth>
-                      <InputLabel>
-                        {t("projecttask.staffId", "Person In-charge")}
-                      </InputLabel>
-                      <Select
-                        label={t("projecttask.staffId", "Person In-charge")}
-                        value={String(
-                          formData.staffId ||
-                            taskAssigneeOptions[0]?.staffId ||
-                            "",
-                        )}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            staffId: e.target.value,
-                          }))
-                        }
-                      >
-                        {taskAssigneeOptions.map((option) => (
-                          <MenuItem key={option.staffId} value={option.staffId}>
-                            {option.name} ({option.roleLabel})
-                          </MenuItem>
-                        ))}
-                        {String(formData.staffId || "") &&
-                          !taskAssigneeOptions.some(
-                            (option) =>
-                              String(option.staffId) ===
-                              String(formData.staffId || ""),
-                          ) && (
-                            <MenuItem value={String(formData.staffId || "")}>
-                              {String(formData.staffId || "")}
-                            </MenuItem>
-                          )}
-                      </Select>
-                    </FormControl>
-
-                    <FormControl size="small" fullWidth>
-                      <InputLabel>
-                        {t("projecttask.parentTask", "Parent Task")}
-                      </InputLabel>
-                      <Select
-                        label={t("projecttask.parentTask", "Parent Task")}
-                        value={String(formData.parentTaskId || "")}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            parentTaskId: e.target.value,
-                          }))
-                        }
-                        disabled={String(formData.taskType || "D") !== "D"}
-                      >
-                        <MenuItem value="">-</MenuItem>
-                        {parentCandidates.map((task) => (
-                          <MenuItem
-                            key={task.projectTaskId}
-                            value={String(task.projectTaskId)}
-                          >
-                            {task.taskName} ({task.projectStreamId})
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-
-                    <TextField
-                      label={t("projecttask.remarks", "Remarks")}
-                      value={formData.remarks || ""}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          remarks: e.target.value,
-                        }))
-                      }
-                      size="small"
-                      fullWidth
-                      multiline
-                      minRows={2}
-                    />
-                  </Stack>
-                )}
-
-              {dialogMode === "edit-milestone" && (
-                <Stack spacing={1.5}>
-                  <Alert severity="info">
-                    {t(
-                      "projectPlanning.milestoneDialogHelp",
-                      "Select a milestone task for this task and save.",
-                    )}
-                  </Alert>
-                  {milestoneCandidates.length === 0 ? (
-                    <Alert severity="warning">
-                      {t(
-                        "projectPlanning.noMilestoneTaskAvailable",
-                        "No milestone task is available for selection.",
-                      )}
-                    </Alert>
-                  ) : (
-                    <FormControl size="small" fullWidth>
-                      <InputLabel>
-                        {t("projecttask.milestoneTask", "Milestone Task")}
-                      </InputLabel>
-                      <Select
-                        label={t("projecttask.milestoneTask", "Milestone Task")}
-                        value={String(formData.milestoneTaskId || "")}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            milestoneTaskId: e.target.value,
-                          }))
-                        }
-                      >
-                        {milestoneCandidates.map((task) => (
-                          <MenuItem
-                            key={task.projectTaskId}
-                            value={String(task.projectTaskId)}
-                          >
-                            {task.taskName} ({task.projectStreamId})
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  )}
-                </Stack>
-              )}
-
-              {dialogMode === "add-task" && (
-                <Box
-                  sx={{
-                    border: "1px dashed",
-                    borderColor: "divider",
-                    borderRadius: 1,
-                    p: 1.5,
-                  }}
-                >
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    {settingsTarget?.type === "task"
-                      ? t(
-                          "projectPlanning.createChildTask",
-                          "Create Child Task",
-                        )
-                      : t("projectPlanning.createTask", "Create Task")}
-                  </Typography>
-                  <Stack spacing={1.25}>
-                    <TextField
-                      label={t("projecttask.childTaskName", "Child Task Name")}
-                      size="small"
-                      value={childTaskData.taskName}
-                      onChange={(e) =>
-                        setChildTaskData((prev) => ({
-                          ...prev,
-                          taskName: e.target.value,
-                        }))
-                      }
-                      fullWidth
-                    />
-
-                    <Stack
-                      direction={{ xs: "column", md: "row" }}
-                      spacing={1.25}
-                    >
-                      <FormControl size="small" fullWidth>
-                        <InputLabel>
-                          {t("projecttask.taskType", "Task Type")}
-                        </InputLabel>
-                        <Select
-                          label={t("projecttask.taskType", "Task Type")}
-                          value={childTaskData.taskType}
-                          onChange={(e) =>
-                            setChildTaskData((prev) => ({
-                              ...prev,
-                              taskType: e.target.value,
-                            }))
-                          }
-                        >
-                          {(settingsTarget?.type === "stream"
-                            ? streamCreatableTaskTypeOptions
-                            : taskCreatableTaskTypeOptions
-                          ).map((taskType) => (
-                            <MenuItem
-                              key={taskType.projectTaskCode}
-                              value={taskType.projectTaskCode}
-                            >
-                              {taskType.projectTaskCode}
-                              {taskType.projectTaskDescription
-                                ? ` - ${taskType.projectTaskDescription}`
-                                : ""}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                      <TextField
-                        type="date"
-                        size="small"
-                        label={t("projecttask.taskStartDate", "Start Date")}
-                        value={childTaskData.taskStartDate || ""}
-                        onChange={(e) =>
-                          setChildTaskData((prev) => ({
-                            ...prev,
-                            taskStartDate: e.target.value,
-                          }))
-                        }
-                        fullWidth
-                        InputLabelProps={{ shrink: true }}
-                        disabled={
-                          String(
-                            taskTypeMetaByCode[
-                              String(childTaskData.taskType || "").trim()
-                            ]?.editStartDate ?? "",
-                          ).trim() !== "1"
-                        }
-                      />
-                      <TextField
-                        type="number"
-                        label={t(
-                          "projecttask.taskDuration",
-                          "Task Duration (days)",
-                        )}
-                        size="small"
-                        value={childTaskData.durationDays}
-                        onChange={(e) =>
-                          setChildTaskData((prev) => ({
-                            ...prev,
-                            durationDays: e.target.value,
-                          }))
-                        }
-                        inputProps={{
-                          min:
-                            Number(
-                              taskTypeMetaByCode[
-                                String(childTaskData.taskType || "").trim()
-                              ]?.minimumDays || 1,
-                            ) || 1,
-                          max:
-                            Number(
-                              taskTypeMetaByCode[
-                                String(childTaskData.taskType || "").trim()
-                              ]?.maximumDays || 0,
-                            ) || undefined,
-                        }}
-                        helperText={(() => {
-                          const typeMeta =
-                            taskTypeMetaByCode[
-                              String(childTaskData.taskType || "").trim()
-                            ];
-                          const minDays = Number(typeMeta?.minimumDays || 0);
-                          const maxDays = Number(typeMeta?.maximumDays || 0);
-                          if (minDays > 0 && maxDays > 0)
-                            return `${minDays}-${maxDays} days`;
-                          if (minDays > 0) return `Min ${minDays} days`;
-                          if (maxDays > 0) return `Max ${maxDays} days`;
-                          return "";
-                        })()}
-                        fullWidth
-                      />
-                    </Stack>
-
-                    <Stack
-                      direction={{ xs: "column", md: "row" }}
-                      spacing={1.25}
-                    >
-                      <FormControl size="small" fullWidth>
-                        <InputLabel>
-                          {t("projecttask.staffId", "Person In-charge")}
-                        </InputLabel>
-                        <Select
-                          label={t("projecttask.staffId", "Person In-charge")}
-                          value={String(
-                            childTaskData.staffId ||
-                              taskAssigneeOptions[0]?.staffId ||
-                              "",
-                          )}
-                          onChange={(e) =>
-                            setChildTaskData((prev) => ({
-                              ...prev,
-                              staffId: e.target.value,
-                            }))
-                          }
-                        >
-                          {taskAssigneeOptions.map((option) => (
-                            <MenuItem
-                              key={option.staffId}
-                              value={option.staffId}
-                            >
-                              {option.name} ({option.roleLabel})
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-
-                      {settingsTarget?.type === "task" ? (
-                        <TextField
-                          size="small"
-                          fullWidth
-                          label={t(
-                            "projectPlanning.attachNewParent",
-                            "Parent Task",
-                          )}
-                          value={
-                            settingsTarget?.raw?.taskName ||
-                            t(
-                              "projectPlanning.currentTaskAsParent",
-                              "Current task as parent",
-                            )
-                          }
-                          InputLabelProps={{ shrink: true }}
-                          disabled
-                        />
-                      ) : (
-                        <FormControl size="small" fullWidth>
-                          <InputLabel>
-                            {t(
-                              "projectPlanning.attachNewParent",
-                              "Parent Task",
-                            )}
-                          </InputLabel>
-                          <Select
-                            label={t(
-                              "projectPlanning.attachNewParent",
-                              "Parent Task",
-                            )}
-                            value={String(
-                              childTaskData.attachToParentTaskId || "",
-                            )}
-                            onChange={(e) =>
-                              setChildTaskData((prev) => ({
-                                ...prev,
-                                attachToParentTaskId: e.target.value,
-                              }))
-                            }
-                          >
-                            <MenuItem value="">
-                              {t(
-                                "projectPlanning.currentTaskAsParent",
-                                "Current task as parent",
-                              )}
-                            </MenuItem>
-                            {parentCandidates.map((task) => (
-                              <MenuItem
-                                key={task.projectTaskId}
-                                value={String(task.projectTaskId)}
-                              >
-                                {task.taskName} ({task.projectStreamId})
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      )}
-                    </Stack>
-
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      size="medium"
-                      startIcon={<AddIcon fontSize="small" />}
-                      onClick={createChildTask}
-                      disabled={saving}
-                      sx={{
-                        alignSelf: "flex-end",
-                        minWidth: 180,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {settingsTarget?.type === "task"
-                        ? t(
-                            "projectPlanning.createChildTask",
-                            "Create Child Task",
-                          )
-                        : t("projectPlanning.createTask", "Create Task")}
-                    </Button>
-                  </Stack>
-                </Box>
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button
-                onClick={closeSettings}
-                disabled={saving}
-                variant="outlined"
-                sx={{
-                  color: "text.primary",
-                  borderColor: "divider",
-                  backgroundColor: "background.default",
-                  "&:hover": { backgroundColor: "action.hover" },
-                }}
-              >
-                {t("basic.cancel", "Cancel")}
-              </Button>
-              {dialogMode === "add-stream" ? (
-                <Button
-                  variant="contained"
-                  onClick={addNewStream}
-                  disabled={saving}
-                  sx={{ minWidth: 120, fontWeight: 600 }}
-                >
-                  {t("basic.save", "Save")}
-                </Button>
-              ) : dialogMode === "replicate-stream" ? (
-                <Button
-                  variant="contained"
-                  onClick={replicateStream}
-                  disabled={saving}
-                  sx={{ minWidth: 120, fontWeight: 600 }}
-                >
-                  {t("basic.save", "Save")}
-                </Button>
-              ) : dialogMode === "edit-stream" ? (
-                <Button
-                  variant="contained"
-                  onClick={saveStreamInfo}
-                  disabled={saving}
-                  sx={{ minWidth: 120, fontWeight: 600 }}
-                >
-                  {t("basic.save", "Save")}
-                </Button>
-              ) : dialogMode === "edit-task" ? (
-                <Button
-                  variant="contained"
-                  onClick={saveTaskInfo}
-                  disabled={saving}
-                  sx={{ minWidth: 120, fontWeight: 600 }}
-                >
-                  {t("basic.save", "Save")}
-                </Button>
-              ) : dialogMode === "edit-milestone" ? (
-                <>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    onClick={removeMilestoneLink}
-                    disabled={
-                      saving || !String(formData.milestoneTaskId || "").trim()
-                    }
-                  >
-                    {t("basic.remove", "Remove")}
-                  </Button>
-                  <Button
-                    variant="contained"
-                    onClick={saveMilestoneLink}
-                    disabled={saving || milestoneCandidates.length === 0}
-                    sx={{ minWidth: 120, fontWeight: 600 }}
-                  >
-                    {t("basic.save", "Save")}
-                  </Button>
-                </>
-              ) : null}
-            </DialogActions>
-          </Dialog>
-
-          <Dialog
-            open={inventoryPlanningOpen}
-            onClose={() => setInventoryPlanningOpen(false)}
-            fullWidth
-            maxWidth="md"
-          >
-            <DialogTitle>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 2,
-                  flexWrap: "wrap",
-                }}
-              >
-                <Typography variant="h6" component="div">
-                  {t("projectPlanning.inventoryPlanning", "Inventory Planning")}{" "}
-                  -{" "}
-                  {inventoryPlanningTarget?.name ||
-                    inventoryPlanningTarget?.raw?.taskName ||
-                    inventoryPlanningTarget?.raw?.streamName ||
-                    "-"}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ ml: "auto" }}
-                >
-                  <strong>
-                    {t("projectPlanning.leftHeaderStart", "Start")}:
-                  </strong>{" "}
-                  {formatDate(inventoryPlanningTarget?.startDate)}
-                  {"  "}
-                  <strong>
-                    {t("projectPlanning.leftHeaderEnd", "End")}:
-                  </strong>{" "}
-                  {formatDate(inventoryPlanningTarget?.endDate)}
-                </Typography>
-              </Box>
-            </DialogTitle>
-            <DialogContent dividers>
-              <Stack spacing={1.5}>
-                {inventoryPlanningError && (
-                  <Alert severity="error">{inventoryPlanningError}</Alert>
-                )}
-
-                <Tabs
-                  value={inventoryPlanningTab}
-                  onChange={(_, value) => setInventoryPlanningTab(value)}
-                  variant="scrollable"
-                  allowScrollButtonsMobile
-                >
-                  <Tab
-                    value="stock"
-                    label={t("projectPlanning.stockPlanning", "Stock")}
-                    disabled={inventoryPlanningTarget?.type !== "task"}
-                  />
-                  <Tab
-                    value="asset"
-                    label={t("projectPlanning.assetPlanning", "Asset")}
-                    disabled={inventoryPlanningTarget?.type !== "stream"}
-                  />
-                  <Tab
-                    value="bundle"
-                    label={t("projectPlanning.bundlePlanning", "Bundle")}
-                  />
-                </Tabs>
-
-                {inventoryPlanningLoading ? (
-                  <Box
-                    sx={{ py: 4, display: "flex", justifyContent: "center" }}
-                  >
-                    <CircularProgress size={24} />
-                  </Box>
-                ) : inventoryPlanningTab === "stock" ? (
-                  inventoryPlanningTarget?.type !== "task" ? (
-                    <Alert severity="warning">
-                      {t(
-                        "projectPlanning.stockOnlyForTask",
-                        "Stock planning is only available for tasks.",
-                      )}
-                    </Alert>
-                  ) : (
-                    <Stack spacing={1.25}>
-                      <Typography variant="body2">
-                        {t(
-                          "projectPlanning.stockWorkspaceHelp",
-                          "Include stock inventory required for the entire task duration.",
-                        )}
-                      </Typography>
-                      <Stack
-                        direction={{ xs: "column", md: "row" }}
-                        spacing={1}
-                      >
-                        <Autocomplete
-                          options={getAvailableProductOptions(
-                            "stock",
-                            stockProductOptions,
-                          )}
-                          fullWidth
-                          size="small"
-                          value={
-                            getAvailableProductOptions(
-                              "stock",
-                              stockProductOptions,
-                            ).find(
-                              (product) =>
-                                String(product?.productId || "") ===
-                                String(inventoryDraft.productId || ""),
-                            ) || null
-                          }
-                          onChange={(_, value) => {
-                            const nextProductId = String(
-                              value?.productId || "",
-                            ).trim();
-                            if (!nextProductId) {
-                              setInventoryDraft((prev) => ({
-                                ...prev,
-                                productId: "",
-                              }));
-                              return;
-                            }
-
-                            const duplicate = getInventoryRows("stock").some(
-                              (item) =>
-                                String(item?.productId || "").trim() ===
-                                nextProductId,
-                            );
-                            if (duplicate) {
-                              setInventoryPlanningError(
-                                t(
-                                  "projectPlanning.inventoryDuplicateProduct",
-                                  "This product has already been added.",
-                                ),
-                              );
-                              return;
-                            }
-
-                            setInventoryPlanningError("");
-                            setInventoryDraft((prev) => ({
-                              ...prev,
-                              productId: nextProductId,
-                            }));
-                          }}
-                          getOptionLabel={(option) =>
-                            String(
-                              option?.productName ||
-                                option?.productCode ||
-                                option?.productId ||
-                                "",
-                            ).trim()
-                          }
-                          isOptionEqualToValue={(option, value) =>
-                            String(option?.productId || "") ===
-                            String(value?.productId || "")
-                          }
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              label={t("product.productName", "Product")}
-                            />
-                          )}
-                        />
-                        <TextField
-                          type="number"
-                          size="small"
-                          label={t("basic.quantity", "Quantity")}
-                          value={inventoryDraft.quantity}
-                          onChange={(e) =>
-                            setInventoryDraft((prev) => ({
-                              ...prev,
-                              quantity: e.target.value,
-                            }))
-                          }
-                          inputProps={{ min: 1 }}
-                          sx={{ width: { xs: "100%", md: 160 } }}
-                        />
-                        <Button
-                          variant="contained"
-                          disabled={
-                            !String(inventoryDraft.productId || "").trim()
-                          }
-                          onClick={() =>
-                            addPlanningProduct(
-                              "stock",
-                              getAvailableProductOptions(
-                                "stock",
-                                stockProductOptions,
-                              ),
-                            )
-                          }
-                        >
-                          {t("basic.add", "Add")}
-                        </Button>
-                      </Stack>
-                      {getInventoryRows("stock").length === 0 ? (
-                        <Typography variant="body2" color="text.secondary">
-                          {t(
-                            "projectPlanning.noStockSelected",
-                            "No stock selected.",
-                          )}
-                        </Typography>
-                      ) : (
-                        <Box
-                          sx={{
-                            border: "1px solid",
-                            borderColor: "divider",
-                            borderRadius: 1,
-                            overflow: "hidden",
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              display: "grid",
-                              gridTemplateColumns:
-                                "minmax(0, 1.6fr) minmax(0, 1fr) 90px 56px",
-                              gap: 1,
-                              px: 1.25,
-                              py: 0.75,
-                              bgcolor: "background.default",
-                              borderBottom: "1px solid",
-                              borderColor: "divider",
-                            }}
-                          >
-                            <Typography variant="caption" fontWeight={700}>
-                              {t("product.productName", "Product")}
-                            </Typography>
-                            <Typography variant="caption" fontWeight={700}>
-                              {t("product.productCode", "Code")}
-                            </Typography>
-                            <Typography variant="caption" fontWeight={700}>
-                              {t("basic.quantity", "Quantity")}
-                            </Typography>
-                            <Typography variant="caption" fontWeight={700}>
-                              {t("basic.remove", "Remove")}
-                            </Typography>
-                          </Box>
-                          {getInventoryRows("stock").map((item) => (
-                            <Box
-                              key={String(item.productId)}
-                              sx={{
-                                display: "grid",
-                                gridTemplateColumns:
-                                  "minmax(0, 1.6fr) minmax(0, 1fr) 90px 56px",
-                                gap: 1,
-                                px: 1.25,
-                                py: 0.5,
-                                borderBottom: "1px solid",
-                                borderColor: "divider",
-                                alignItems: "center",
-                                "&:last-child": { borderBottom: "none" },
-                              }}
-                            >
-                              <Typography variant="body2" noWrap>
-                                {item.productName}
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                                noWrap
-                              >
-                                {item.productCode || item.productId}
-                              </Typography>
-                              <Typography variant="body2">
-                                {item.quantity}
-                              </Typography>
-                              <IconButton
-                                size="small"
-                                onClick={() =>
-                                  removePlanningRow(
-                                    "stock",
-                                    "productId",
-                                    item.productId,
-                                  )
-                                }
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          ))}
-                        </Box>
-                      )}
-                    </Stack>
-                  )
-                ) : inventoryPlanningTab === "asset" ? (
-                  inventoryPlanningTarget?.type !== "stream" ? (
-                    <Alert severity="warning">
-                      {t(
-                        "projectPlanning.assetOnlyForStream",
-                        "Asset planning is only available for streams.",
-                      )}
-                    </Alert>
-                  ) : (
-                    <Stack spacing={1.25}>
-                      <Typography variant="body2">
-                        {t(
-                          "projectPlanning.assetWorkspaceHelp",
-                          "Include asset requirements for the entire stream duration.",
-                        )}
-                      </Typography>
-                      <Stack
-                        direction={{ xs: "column", md: "row" }}
-                        spacing={1}
-                      >
-                        <Autocomplete
-                          options={getAvailableProductOptions(
-                            "asset",
-                            assetProductOptions,
-                          )}
-                          fullWidth
-                          size="small"
-                          value={
-                            getAvailableProductOptions(
-                              "asset",
-                              assetProductOptions,
-                            ).find(
-                              (product) =>
-                                String(product?.productId || "") ===
-                                String(inventoryDraft.productId || ""),
-                            ) || null
-                          }
-                          onChange={(_, value) => {
-                            const nextProductId = String(
-                              value?.productId || "",
-                            ).trim();
-                            if (!nextProductId) {
-                              setInventoryDraft((prev) => ({
-                                ...prev,
-                                productId: "",
-                              }));
-                              return;
-                            }
-
-                            const duplicate = getInventoryRows("asset").some(
-                              (item) =>
-                                String(item?.productId || "").trim() ===
-                                nextProductId,
-                            );
-                            if (duplicate) {
-                              setInventoryPlanningError(
-                                t(
-                                  "projectPlanning.inventoryDuplicateProduct",
-                                  "This product has already been added.",
-                                ),
-                              );
-                              return;
-                            }
-
-                            setInventoryPlanningError("");
-                            setInventoryDraft((prev) => ({
-                              ...prev,
-                              productId: nextProductId,
-                            }));
-                          }}
-                          getOptionLabel={(option) =>
-                            String(
-                              option?.productName ||
-                                option?.productCode ||
-                                option?.productId ||
-                                "",
-                            ).trim()
-                          }
-                          isOptionEqualToValue={(option, value) =>
-                            String(option?.productId || "") ===
-                            String(value?.productId || "")
-                          }
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              label={t("product.productName", "Product")}
-                            />
-                          )}
-                        />
-                        <TextField
-                          type="number"
-                          size="small"
-                          label={t("basic.quantity", "Quantity")}
-                          value={inventoryDraft.quantity}
-                          onChange={(e) =>
-                            setInventoryDraft((prev) => ({
-                              ...prev,
-                              quantity: e.target.value,
-                            }))
-                          }
-                          inputProps={{ min: 1 }}
-                          sx={{ width: { xs: "100%", md: 160 } }}
-                        />
-                        <Button
-                          variant="contained"
-                          disabled={
-                            !String(inventoryDraft.productId || "").trim()
-                          }
-                          onClick={() =>
-                            addPlanningProduct(
-                              "asset",
-                              getAvailableProductOptions(
-                                "asset",
-                                assetProductOptions,
-                              ),
-                            )
-                          }
-                        >
-                          {t("basic.add", "Add")}
-                        </Button>
-                      </Stack>
-                      {getInventoryRows("asset").length === 0 ? (
-                        <Typography variant="body2" color="text.secondary">
-                          {t(
-                            "projectPlanning.noAssetSelected",
-                            "No asset selected.",
-                          )}
-                        </Typography>
-                      ) : (
-                        <Box
-                          sx={{
-                            border: "1px solid",
-                            borderColor: "divider",
-                            borderRadius: 1,
-                            overflow: "hidden",
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              display: "grid",
-                              gridTemplateColumns:
-                                "minmax(0, 1.6fr) minmax(0, 1fr) 90px 56px",
-                              gap: 1,
-                              px: 1.25,
-                              py: 0.75,
-                              bgcolor: "background.default",
-                              borderBottom: "1px solid",
-                              borderColor: "divider",
-                            }}
-                          >
-                            <Typography variant="caption" fontWeight={700}>
-                              {t("product.productName", "Product")}
-                            </Typography>
-                            <Typography variant="caption" fontWeight={700}>
-                              {t("product.productCode", "Code")}
-                            </Typography>
-                            <Typography variant="caption" fontWeight={700}>
-                              {t("basic.quantity", "Quantity")}
-                            </Typography>
-                            <Typography variant="caption" fontWeight={700}>
-                              {t("basic.remove", "Remove")}
-                            </Typography>
-                          </Box>
-                          {getInventoryRows("asset").map((item) => (
-                            <Box
-                              key={String(item.productId)}
-                              sx={{
-                                display: "grid",
-                                gridTemplateColumns:
-                                  "minmax(0, 1.6fr) minmax(0, 1fr) 90px 56px",
-                                gap: 1,
-                                px: 1.25,
-                                py: 0.5,
-                                borderBottom: "1px solid",
-                                borderColor: "divider",
-                                alignItems: "center",
-                                "&:last-child": { borderBottom: "none" },
-                              }}
-                            >
-                              <Typography variant="body2" noWrap>
-                                {item.productName}
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                                noWrap
-                              >
-                                {item.productCode || item.productId}
-                              </Typography>
-                              <Typography variant="body2">
-                                {item.quantity}
-                              </Typography>
-                              <IconButton
-                                size="small"
-                                onClick={() =>
-                                  removePlanningRow(
-                                    "asset",
-                                    "productId",
-                                    item.productId,
-                                  )
-                                }
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          ))}
-                        </Box>
-                      )}
-                    </Stack>
-                  )
-                ) : (
-                  <Stack spacing={1.25}>
-                    <Typography variant="body2">
-                      {t(
-                        "projectPlanning.bundleWorkspaceHelp",
-                        "Include fixed bundles required for the entire stream/task duration.",
-                      )}
-                    </Typography>
-                    <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
-                      <Autocomplete
-                        options={getAvailableBundleOptions()}
-                        fullWidth
-                        size="small"
-                        value={
-                          getAvailableBundleOptions().find(
-                            (bundle) =>
-                              getBundleId(bundle) ===
-                              String(inventoryDraft.bundleId || ""),
-                          ) || null
-                        }
-                        onChange={(_, value) => {
-                          const nextBundleId = getBundleId(value);
-                          if (!nextBundleId) {
-                            setInventoryDraft((prev) => ({
-                              ...prev,
-                              bundleId: "",
-                            }));
-                            return;
-                          }
-
-                          const duplicate = getInventoryRows("bundle").some(
-                            (item) =>
-                              String(item?.bundleId || "").trim() ===
-                              nextBundleId,
-                          );
-                          if (duplicate) {
-                            setInventoryPlanningError(
-                              t(
-                                "projectPlanning.inventoryDuplicateBundle",
-                                "This bundle has already been added.",
-                              ),
-                            );
-                            return;
-                          }
-
-                          setInventoryPlanningError("");
-                          setInventoryDraft((prev) => ({
-                            ...prev,
-                            bundleId: nextBundleId,
-                          }));
-                        }}
-                        getOptionLabel={(option) => getBundleName(option)}
-                        isOptionEqualToValue={(option, value) =>
-                          getBundleId(option) === getBundleId(value)
-                        }
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label={t("productBundle.title", "Bundle")}
-                          />
-                        )}
-                      />
-                      <TextField
-                        type="number"
-                        size="small"
-                        label={t("basic.quantity", "Quantity")}
-                        value={inventoryDraft.bundleQuantity}
-                        onChange={(e) =>
-                          setInventoryDraft((prev) => ({
-                            ...prev,
-                            bundleQuantity: e.target.value,
-                          }))
-                        }
-                        inputProps={{ min: 1 }}
-                        sx={{ width: { xs: "100%", md: 160 } }}
-                      />
-                      <Button
-                        variant="contained"
-                        disabled={!String(inventoryDraft.bundleId || "").trim()}
-                        onClick={addPlanningBundle}
-                      >
-                        {t("basic.add", "Add")}
-                      </Button>
-                    </Stack>
-                    {getInventoryRows("bundle").length === 0 ? (
-                      <Typography variant="body2" color="text.secondary">
-                        {t(
-                          "projectPlanning.noBundleSelected",
-                          "No bundle selected.",
-                        )}
-                      </Typography>
-                    ) : (
-                      <Box
-                        sx={{
-                          border: "1px solid",
-                          borderColor: "divider",
-                          borderRadius: 1,
-                          overflow: "hidden",
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            display: "grid",
-                            gridTemplateColumns:
-                              "minmax(0, 1.2fr) minmax(0, 1.8fr) 90px 56px",
-                            gap: 1,
-                            px: 1.25,
-                            py: 0.75,
-                            bgcolor: "background.default",
-                            borderBottom: "1px solid",
-                            borderColor: "divider",
-                          }}
-                        >
-                          <Typography variant="caption" fontWeight={700}>
-                            {t("productBundle.title", "Bundle")}
-                          </Typography>
-                          <Typography variant="caption" fontWeight={700}>
-                            {t("productBundle.members", "Members")}
-                          </Typography>
-                          <Typography variant="caption" fontWeight={700}>
-                            {t("basic.quantity", "Quantity")}
-                          </Typography>
-                          <Typography variant="caption" fontWeight={700}>
-                            {t("basic.remove", "Remove")}
-                          </Typography>
-                        </Box>
-                        {getInventoryRows("bundle").map((item) => (
-                          <Box
-                            key={String(item.bundleId)}
-                            sx={{
-                              display: "grid",
-                              gridTemplateColumns:
-                                "minmax(0, 1.2fr) minmax(0, 1.8fr) 90px 56px",
-                              gap: 1,
-                              px: 1.25,
-                              py: 0.5,
-                              borderBottom: "1px solid",
-                              borderColor: "divider",
-                              alignItems: "center",
-                              "&:last-child": { borderBottom: "none" },
-                            }}
-                          >
-                            <Typography variant="body2" noWrap>
-                              {item.bundleName}
-                            </Typography>
-                            <Box sx={{ minWidth: 0 }}>
-                              {String(item.bundleMembersText || "").trim() ? (
-                                <Stack
-                                  direction="row"
-                                  spacing={0.5}
-                                  flexWrap="wrap"
-                                  useFlexGap
-                                >
-                                  {String(item.bundleMembersText || "")
-                                    .split(",")
-                                    .map((name) => name.trim())
-                                    .filter(Boolean)
-                                    .map((name, idx) => (
-                                      <Chip
-                                        key={`${item.bundleId}-${idx}`}
-                                        label={name}
-                                        size="small"
-                                      />
-                                    ))}
-                                </Stack>
-                              ) : (
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                >
-                                  -
-                                </Typography>
-                              )}
-                            </Box>
-                            <Typography variant="body2">
-                              {item.quantity}
-                            </Typography>
-                            <IconButton
-                              size="small"
-                              onClick={() =>
-                                removePlanningRow(
-                                  "bundle",
-                                  "bundleId",
-                                  item.bundleId,
-                                )
-                              }
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        ))}
-                      </Box>
-                    )}
-                  </Stack>
-                )}
-              </Stack>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setInventoryPlanningOpen(false)}>
-                {t("basic.close", "Close")}
-              </Button>
-            </DialogActions>
-          </Dialog>
-
-          <Dialog
-            open={skillPlanningOpen}
-            onClose={() => setSkillPlanningOpen(false)}
-            fullWidth
-            maxWidth="sm"
-          >
-            <DialogTitle>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "space-between",
-                  gap: 1,
-                }}
-              >
-                <Typography variant="h6" component="div" sx={{ pr: 1 }}>
-                  {t("projectPlanning.skillWorkspace", "Skill Workspace")}
-                  {" - "}
-                  {skillPlanningTarget?.name ||
-                    skillPlanningTarget?.raw?.taskName ||
-                    "-"}
-                </Typography>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<AddIcon fontSize="small" />}
-                  onClick={openCreateSkillDialog}
-                  disabled={skillPlanningLoading}
-                  sx={{ mt: 0, flexShrink: 0 }}
-                >
-                  {t(
-                    "projectPlanning.addSkillDefinition",
-                    "Add Skill Definition",
-                  )}
-                </Button>
-              </Box>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mt: 0.5 }}
-              >
-                {t(
-                  "projectPlanning.skillWorkspaceHelp",
-                  "Define the skills and units required for this task.",
-                )}
-              </Typography>
-            </DialogTitle>
-            <DialogContent dividers>
-              <Stack spacing={1.25}>
-                {skillPlanningError && (
-                  <Alert severity="error">{skillPlanningError}</Alert>
-                )}
-
-                <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
-                  <FormControl
-                    size="small"
-                    fullWidth
-                    sx={{ minWidth: { xs: "100%", md: 260 } }}
-                  >
-                    <InputLabel>
-                      {t("projectPlanning.skillName", "Skill")}
-                    </InputLabel>
-                    <Select
-                      value={skillDraft.skillId ?? ""}
-                      label={t("projectPlanning.skillName", "Skill")}
-                      onChange={(event) => {
-                        const nextSkillId = toLongId(event.target.value);
-                        if (nextSkillId === null) {
-                          setSkillDraft((prev) => ({ ...prev, skillId: null }));
-                          return;
-                        }
-
-                        const duplicateRow = skillPlanningRows.find(
-                          (item) =>
-                            toLongId(item?.skillId) === nextSkillId &&
-                            String(item?.apiId || "") !==
-                              String(skillDraft.apiId || ""),
-                        );
-
-                        if (duplicateRow) {
-                          setSkillPlanningError(
-                            t(
-                              "projectPlanning.skillDuplicate",
-                              "This skill has already been added.",
-                            ),
-                          );
-                          return;
-                        }
-
-                        setSkillPlanningError("");
-                        setSkillDraft((prev) => ({
-                          ...prev,
-                          skillId: nextSkillId,
-                        }));
-                      }}
-                    >
-                      {availableSkillOptions.map((option) => {
-                        const skillId = toLongId(option?.staffSkillId);
-                        if (skillId === null) return null;
-                        const skillName =
-                          String(option?.skillName || "").trim() ||
-                          String(skillId);
-                        return (
-                          <MenuItem key={skillId} value={skillId}>
-                            {skillName}
-                          </MenuItem>
-                        );
-                      })}
-                    </Select>
-                  </FormControl>
-
-                  <TextField
-                    type="number"
-                    size="small"
-                    label={t("projectPlanning.skillUnit", "Unit")}
-                    value={skillDraft.unit}
-                    onChange={(event) =>
-                      setSkillDraft((prev) => ({
-                        ...prev,
-                        unit: event.target.value,
-                      }))
-                    }
-                    inputProps={{ min: 1, step: 1 }}
-                    sx={{ width: { xs: "100%", md: 140 } }}
-                  />
-
-                  <Button
-                    variant="contained"
-                    disabled={
-                      skillPlanningLoading || skillDraft.skillId === null
-                    }
-                    onClick={saveSkillAssignment}
-                  >
-                    {skillDraft.apiId
-                      ? t("basic.save", "Save")
-                      : t("basic.add", "Add")}
-                  </Button>
-                </Stack>
-
-                {skillPlanningLoading ? (
-                  <Box
-                    sx={{ py: 4, display: "flex", justifyContent: "center" }}
-                  >
-                    <CircularProgress size={24} />
-                  </Box>
-                ) : skillPlanningRows.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    {t(
-                      "projectPlanning.noSkillSelected",
-                      "No skills selected.",
-                    )}
-                  </Typography>
-                ) : (
-                  <Box
-                    sx={{
-                      border: "1px solid",
-                      borderColor: "divider",
-                      borderRadius: 1,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: "minmax(0, 2.8fr) 100px 82px",
-                        gap: 1,
-                        px: 1.25,
-                        py: 0.75,
-                        bgcolor: "background.default",
-                        borderBottom: "1px solid",
-                        borderColor: "divider",
-                      }}
-                    >
-                      <Typography variant="caption" fontWeight={700}>
-                        {t("projectPlanning.skillName", "Skill")}
-                      </Typography>
-                      <Typography variant="caption" fontWeight={700}>
-                        {t("projectPlanning.skillUnit", "Unit")}
-                      </Typography>
-                      <Typography variant="caption" fontWeight={700}>
-                        {t("basic.remove", "Remove")}
-                      </Typography>
-                    </Box>
-
-                    {skillPlanningRows
-                      .slice()
-                      .sort((a, b) =>
-                        String(a?.skillName || a?.skillId || "").localeCompare(
-                          String(b?.skillName || b?.skillId || ""),
-                          undefined,
-                          { sensitivity: "base" },
-                        ),
-                      )
-                      .map((item) => {
-                        const skillId = toLongId(item?.skillId);
-                        if (skillId === null) return null;
-                        const skillName =
-                          String(item?.skillName || "").trim() ||
-                          String(
-                            skillById?.[skillId]?.skillName || "",
-                          ).trim() ||
-                          String(skillId) ||
-                          "-";
-
-                        return (
-                          <Box
-                            key={`${String(item.apiId || "new")}-${skillId}`}
-                            sx={{
-                              display: "grid",
-                              gridTemplateColumns:
-                                "minmax(0, 2.8fr) 100px 82px",
-                              gap: 1,
-                              px: 1.25,
-                              py: 0.5,
-                              borderBottom: "1px solid",
-                              borderColor: "divider",
-                              alignItems: "center",
-                              "&:last-child": { borderBottom: "none" },
-                            }}
-                          >
-                            <Typography variant="body2" noWrap>
-                              {skillName}
-                            </Typography>
-                            <Typography variant="body2">{item.unit}</Typography>
-                            <Box sx={{ display: "flex", gap: 0.25 }}>
-                              <IconButton
-                                size="small"
-                                onClick={() =>
-                                  setSkillDraft({
-                                    apiId: item.apiId || null,
-                                    skillId,
-                                    unit: String(item.unit || "1"),
-                                  })
-                                }
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                onClick={() => removeSkillAssignment(item)}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          </Box>
-                        );
-                      })}
-                  </Box>
-                )}
-              </Stack>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setSkillPlanningOpen(false)}>
-                {t("basic.close", "Close")}
-              </Button>
-            </DialogActions>
-          </Dialog>
-
-          <Dialog
-            open={skillCreateOpen}
-            onClose={() => {
-              if (skillCreateLoading) return;
-              setSkillCreateOpen(false);
-              setSkillCreateError("");
-            }}
-            fullWidth
-            maxWidth="sm"
-          >
-            <DialogTitle>
-              {t("projectPlanning.addSkillDefinition", "Add Skill Definition")}
-            </DialogTitle>
-            <DialogContent dividers>
-              <Stack spacing={1.25} sx={{ mt: 0.25 }}>
-                {skillCreateError && (
-                  <Alert severity="error">{skillCreateError}</Alert>
-                )}
-
-                <TextField
-                  size="small"
-                  label={t("projectPlanning.skillName", "Skill")}
-                  value={skillCreateForm.skillName}
-                  onChange={(event) =>
-                    setSkillCreateForm((prev) => ({
-                      ...prev,
-                      skillName: event.target.value,
-                    }))
-                  }
-                  required
-                  fullWidth
-                />
-
-                <TextField
-                  size="small"
-                  label={t("projectPlanning.skillDescription", "Description")}
-                  value={skillCreateForm.skillDescription}
-                  onChange={(event) =>
-                    setSkillCreateForm((prev) => ({
-                      ...prev,
-                      skillDescription: event.target.value,
-                    }))
-                  }
-                  fullWidth
-                />
-
-                <Autocomplete
-                  freeSolo
-                  options={skillCategoryOptions}
-                  value={null}
-                  inputValue={skillCreateForm.skillCategory}
-                  onInputChange={(_, newInputValue) =>
-                    setSkillCreateForm((prev) => ({
-                      ...prev,
-                      skillCategory: newInputValue,
-                    }))
-                  }
-                  onChange={(_, value) =>
-                    setSkillCreateForm((prev) => ({
-                      ...prev,
-                      skillCategory: String(value || "").trim(),
-                    }))
-                  }
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      size="small"
-                      label={t("projectPlanning.skillCategory", "Category")}
-                      placeholder={t(
-                        "projectPlanning.skillCategoryPlaceholder",
-                        "Select or type new category",
-                      )}
-                      fullWidth
-                    />
-                  )}
-                />
-              </Stack>
-            </DialogContent>
-            <DialogActions>
-              <Button
-                onClick={() => {
-                  if (skillCreateLoading) return;
-                  setSkillCreateOpen(false);
-                  setSkillCreateError("");
-                }}
-                disabled={skillCreateLoading}
-              >
-                {t("basic.cancel", "Cancel")}
-              </Button>
-              <Button
-                variant="contained"
-                onClick={saveNewSkillDefinition}
-                disabled={
-                  skillCreateLoading ||
-                  !String(skillCreateForm.skillName || "").trim()
-                }
-              >
-                {skillCreateLoading
-                  ? t("basic.loading", "Loading")
-                  : t("basic.save", "Save")}
-              </Button>
-            </DialogActions>
-          </Dialog>
-
-          <Dialog
-            open={manpowerPlanningOpen}
-            onClose={() => setManpowerPlanningOpen(false)}
-            fullWidth
-            maxWidth="md"
-          >
-            <DialogTitle>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 2,
-                  flexWrap: "wrap",
-                }}
-              >
-                <Typography variant="h6" component="div">
-                  {t("projectPlanning.manpowerWorkspace", "Manpower Workspace")}
-                  {" - "}
-                  {manpowerPlanningTarget?.name ||
-                    manpowerPlanningTarget?.raw?.taskName ||
-                    "-"}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {t(
-                    "projectPlanning.manpowerWorkspaceHelp",
-                    "Define the staff required for this task.",
-                  )}
-                </Typography>
-              </Box>
-            </DialogTitle>
-            <DialogContent dividers>
-              <Stack spacing={1.25}>
-                {manpowerPlanningError && (
-                  <Alert severity="error">{manpowerPlanningError}</Alert>
-                )}
-
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    {t(
-                      "projectPlanning.manpowerSkillProfileFilter",
-                      "Skill Profile",
-                    )}
-                  </Typography>
-                  <Box
-                    sx={{
-                      mt: 0.5,
-                      p: 0.75,
-                      border: "1px solid",
-                      borderColor: "divider",
-                      borderRadius: 1,
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 0.5,
-                      minHeight: 44,
-                      alignItems: "center",
-                    }}
-                  >
-                    {manpowerSkillFilterOptions.length === 0 ? (
-                      <Typography variant="caption" color="text.secondary">
-                        {t(
-                          "projectPlanning.manpowerNoSkillProfiles",
-                          "No skill profiles",
-                        )}
-                      </Typography>
-                    ) : (
-                      manpowerSkillFilterOptions.map((skill) => {
-                        const isSelected = manpowerSkillFilter.some(
-                          (selected) =>
-                            String(selected || "")
-                              .trim()
-                              .toLowerCase() ===
-                            String(skill || "")
-                              .trim()
-                              .toLowerCase(),
-                        );
-
-                        return (
-                          <Chip
-                            key={`skill-filter-chip-${skill}`}
-                            label={skill}
-                            size="small"
-                            clickable
-                            onMouseDown={(event) => event.preventDefault()}
-                            variant={isSelected ? "filled" : "outlined"}
-                            color={isSelected ? "primary" : "default"}
-                            onClick={() => toggleManpowerSkillFilter(skill)}
-                            onDelete={
-                              isSelected
-                                ? () => toggleManpowerSkillFilter(skill)
-                                : undefined
-                            }
-                            sx={{
-                              height: 18,
-                              "& .MuiChip-label": {
-                                px: 0.6,
-                                fontSize: "0.68rem",
-                              },
-                            }}
-                          />
-                        );
-                      })
-                    )}
-                  </Box>
-                </Box>
-
-                <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
-                  <Autocomplete
-                    options={filteredManpowerStaffOptions}
-                    open={manpowerStaffDropdownOpen}
-                    onOpen={() => setManpowerStaffDropdownOpen(true)}
-                    onClose={(_, reason) => {
-                      if (reason === "selectOption") {
-                        setManpowerStaffDropdownOpen(false);
-                        return;
-                      }
-                      setManpowerStaffDropdownOpen(false);
-                    }}
-                    fullWidth
-                    size="small"
-                    value={
-                      manpowerStaffOptions.find(
-                        (staff) =>
-                          String(staff?.staffId || "") ===
-                          String(manpowerDraft.staffId || ""),
-                      ) || null
-                    }
-                    onChange={(_, value) => {
-                      const nextStaffId = String(value?.staffId || "").trim();
-                      if (!nextStaffId) {
-                        setManpowerDraft((prev) => ({ ...prev, staffId: "" }));
-                        return;
-                      }
-
-                      const duplicateRow = manpowerPlanningRows.find(
-                        (item) =>
-                          String(item?.staffId || "").trim() === nextStaffId &&
-                          String(item?.apiId || "") !==
-                            String(manpowerDraft.apiId || ""),
-                      );
-
-                      if (duplicateRow) {
-                        setManpowerPlanningError(
-                          t(
-                            "projectPlanning.manpowerDuplicateStaff",
-                            "This staff has already been added.",
-                          ),
-                        );
-                        return;
-                      }
-
-                      setManpowerPlanningError("");
-                      setManpowerDraft((prev) => ({
-                        ...prev,
-                        staffId: nextStaffId,
-                      }));
-                    }}
-                    getOptionLabel={(option) => {
-                      const name =
-                        String(option?.staffName || "").trim() ||
-                        [option?.firstName, option?.lastName]
-                          .filter(Boolean)
-                          .join(" ")
-                          .trim();
-                      return name || "-";
-                    }}
-                    isOptionEqualToValue={(option, value) =>
-                      String(option?.staffId || "") ===
-                      String(value?.staffId || "")
-                    }
-                    renderOption={(props, option) => {
-                      const staffId = String(option?.staffId || "").trim();
-                      const skills = manpowerSkillsByStaffId?.[staffId] || [];
-                      const name =
-                        String(option?.staffName || "").trim() ||
-                        [option?.firstName, option?.lastName]
-                          .filter(Boolean)
-                          .join(" ")
-                          .trim() ||
-                        "-";
-
-                      return (
-                        <Box
-                          component="li"
-                          {...props}
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 0.75,
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <Typography sx={{ mr: 0.25, fontSize: "inherit" }}>
-                            {name}
-                          </Typography>
-                          <Box
-                            sx={{
-                              display: "flex",
-                              gap: 0.5,
-                              flexWrap: "wrap",
-                              alignItems: "center",
-                              ml: 0.5,
-                            }}
-                          >
-                            {skills.length === 0 ? (
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{ ml: 0.25 }}
-                              >
-                                {t(
-                                  "projectPlanning.manpowerNoSkillProfiles",
-                                  "No skill profiles",
-                                )}
-                              </Typography>
-                            ) : (
-                              skills.slice(0, 3).map((skill) => (
-                                <Chip
-                                  key={`${staffId}-${skill}`}
-                                  label={skill}
-                                  size="small"
-                                  sx={{
-                                    height: 18,
-                                    "& .MuiChip-label": {
-                                      px: 0.6,
-                                      fontSize: "0.66rem",
-                                    },
-                                  }}
-                                />
-                              ))
-                            )}
-                          </Box>
-                        </Box>
-                      );
-                    }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label={t("projectPlanning.staffName", "Staff Name")}
-                        placeholder={t(
-                          "projectPlanning.manpowerStaffFilterPlaceholder",
-                          "Search by staff name",
-                        )}
-                      />
-                    )}
-                  />
-
-                  <FormControl
-                    size="small"
-                    sx={{ minWidth: { xs: "100%", md: 170 } }}
-                  >
-                    <InputLabel>
-                      {t("projectPlanning.manpowerRole", "Role")}
-                    </InputLabel>
-                    <Select
-                      value={manpowerDraft.role}
-                      label={t("projectPlanning.manpowerRole", "Role")}
-                      onChange={(event) =>
-                        setManpowerDraft((prev) => ({
-                          ...prev,
-                          role: normalizeManpowerRole(event.target.value),
-                        }))
-                      }
-                    >
-                      {manpowerRoleOptions.map((option) => (
-                        <MenuItem key={option.value} value={option.value}>
-                          {option.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-
-                  <TextField
-                    type="number"
-                    size="small"
-                    label={t("projectPlanning.manpowerLoading", "Loading")}
-                    value={manpowerDraft.loading}
-                    onChange={(event) =>
-                      setManpowerDraft((prev) => ({
-                        ...prev,
-                        loading: event.target.value,
-                      }))
-                    }
-                    inputProps={{ min: 0, max: 1, step: 0.1 }}
-                    sx={{ width: { xs: "100%", md: 150 } }}
-                  />
-
-                  <Button
-                    variant="contained"
-                    disabled={
-                      manpowerPlanningLoading ||
-                      !String(manpowerDraft.staffId || "").trim()
-                    }
-                    onClick={saveManpowerAssignment}
-                  >
-                    {manpowerDraft.apiId
-                      ? t("basic.save", "Save")
-                      : t("basic.add", "Add")}
-                  </Button>
-                </Stack>
-
-                {manpowerPlanningLoading ? (
-                  <Box
-                    sx={{ py: 4, display: "flex", justifyContent: "center" }}
-                  >
-                    <CircularProgress size={24} />
-                  </Box>
-                ) : manpowerPlanningRows.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    {t(
-                      "projectPlanning.noManpowerSelected",
-                      "No manpower selected.",
-                    )}
-                  </Typography>
-                ) : (
-                  <Box
-                    sx={{
-                      border: "1px solid",
-                      borderColor: "divider",
-                      borderRadius: 1,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: "minmax(0, 2.4fr) 110px 90px 82px",
-                        gap: 1,
-                        px: 1.25,
-                        py: 0.75,
-                        bgcolor: "background.default",
-                        borderBottom: "1px solid",
-                        borderColor: "divider",
-                      }}
-                    >
-                      <Typography variant="caption" fontWeight={700}>
-                        {t("projectPlanning.staffName", "Staff Name")}
-                      </Typography>
-                      <Typography variant="caption" fontWeight={700}>
-                        {t("projectPlanning.manpowerRole", "Role")}
-                      </Typography>
-                      <Typography variant="caption" fontWeight={700}>
-                        {t("projectPlanning.manpowerLoading", "Loading")}
-                      </Typography>
-                      <Typography variant="caption" fontWeight={700}>
-                        {t("basic.remove", "Remove")}
-                      </Typography>
-                    </Box>
-
-                    {manpowerPlanningRows
-                      .slice()
-                      .sort((a, b) =>
-                        String(a?.staffId || "").localeCompare(
-                          String(b?.staffId || ""),
-                          undefined,
-                          { sensitivity: "base" },
-                        ),
-                      )
-                      .map((item) => {
-                        const staff =
-                          manpowerStaffById[String(item?.staffId || "")];
-                        const staffName =
-                          String(staff?.staffName || "").trim() ||
-                          [staff?.firstName, staff?.lastName]
-                            .filter(Boolean)
-                            .join(" ")
-                            .trim() ||
-                          "-";
-                        const roleLabel =
-                          normalizeManpowerRole(item?.role) === "supervisor"
-                            ? t(
-                                "projectPlanning.manpowerRoleSupervisor",
-                                "Supervisor",
-                              )
-                            : t("projectPlanning.manpowerRoleWorker", "Worker");
-
-                        return (
-                          <Box
-                            key={String(item.staffId)}
-                            sx={{
-                              display: "grid",
-                              gridTemplateColumns:
-                                "minmax(0, 2.4fr) 110px 90px 82px",
-                              gap: 1,
-                              px: 1.25,
-                              py: 0.5,
-                              borderBottom: "1px solid",
-                              borderColor: "divider",
-                              alignItems: "center",
-                              "&:last-child": { borderBottom: "none" },
-                            }}
-                          >
-                            <Box sx={{ minWidth: 0 }}>
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                                noWrap
-                                sx={{ display: "inline" }}
-                              >
-                                {staffName}
-                              </Typography>
-                              <Box
-                                component="span"
-                                sx={{
-                                  ml: 0.75,
-                                  display: "inline-flex",
-                                  gap: 0.5,
-                                  flexWrap: "wrap",
-                                  verticalAlign: "middle",
-                                }}
-                              >
-                                {(
-                                  manpowerSkillsByStaffId?.[
-                                    String(item?.staffId || "")
-                                  ] || []
-                                )
-                                  .slice(0, 3)
-                                  .map((skill) => (
-                                    <Chip
-                                      key={`${item.staffId}-${skill}`}
-                                      size="small"
-                                      label={skill}
-                                      sx={{
-                                        height: 18,
-                                        "& .MuiChip-label": {
-                                          px: 0.6,
-                                          fontSize: "0.66rem",
-                                        },
-                                      }}
-                                    />
-                                  ))}
-                              </Box>
-                            </Box>
-                            <Typography variant="body2">{roleLabel}</Typography>
-                            <Typography variant="body2">
-                              {item.loading}
-                            </Typography>
-                            <Box sx={{ display: "flex", gap: 0.25 }}>
-                              <IconButton
-                                size="small"
-                                onClick={() =>
-                                  setManpowerDraft({
-                                    apiId: item.apiId || null,
-                                    staffId: String(item.staffId || ""),
-                                    role: normalizeManpowerRole(item.role),
-                                    loading: String(item.loading || "1"),
-                                  })
-                                }
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                onClick={() => removeManpowerAssignment(item)}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          </Box>
-                        );
-                      })}
-                  </Box>
-                )}
-              </Stack>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setManpowerPlanningOpen(false)}>
-                {t("basic.close", "Close")}
-              </Button>
-            </DialogActions>
-          </Dialog>
-
-          <Menu
-            anchorEl={menuAnchorEl}
-            open={Boolean(menuAnchorEl)}
-            onClose={closeSettingsMenu}
-            anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-            transformOrigin={{ vertical: "top", horizontal: "left" }}
-          >
-            {menuTarget?.type === "stream" && (
-              <>
-                <MenuItem
-                  onClick={() => {
-                    openAddTaskDialog(menuTarget);
-                    closeSettingsMenu();
-                  }}
-                >
-                  <ListItemIcon>
-                    <AddIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText>
-                    {t("projectPlanning.createTask", "Create Task")}
-                  </ListItemText>
-                </MenuItem>
-                <MenuItem onClick={() => openStreamEditor(menuTarget)}>
-                  <ListItemIcon>
-                    <EditIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText>
-                    {t("projectPlanning.editStream", "Edit Stream Information")}
-                  </ListItemText>
-                </MenuItem>
-                <MenuItem onClick={() => openReplicateStreamDialog(menuTarget)}>
-                  <ListItemIcon>
-                    <ContentCopyIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText>
-                    {t("projectPlanning.replicateStream", "Replicate Stream")}
-                  </ListItemText>
-                </MenuItem>
-                <MenuItem
-                  onClick={() => {
-                    toggleStreamTasks(menuTarget);
-                    closeSettingsMenu();
-                  }}
-                >
-                  <ListItemIcon>
-                    {collapsedStreamIds.has(
-                      String(menuTarget?.raw?.projectStreamId || ""),
-                    ) ? (
-                      <VisibilityIcon fontSize="small" />
-                    ) : (
-                      <VisibilityOffIcon fontSize="small" />
-                    )}
-                  </ListItemIcon>
-                  <ListItemText>
-                    {collapsedStreamIds.has(
-                      String(menuTarget?.raw?.projectStreamId || ""),
-                    )
-                      ? t("projectPlanning.showTasks", "Show Tasks")
-                      : t("projectPlanning.hideTasks", "Hide Tasks")}
-                  </ListItemText>
-                </MenuItem>
-                <MenuItem
-                  onClick={() => {
-                    removeStream(menuTarget);
-                    closeSettingsMenu();
-                  }}
-                  disabled={tasks.some(
-                    (task) =>
-                      String(task?.projectStreamId || "") ===
-                      String(menuTarget?.raw?.projectStreamId || ""),
-                  )}
-                >
-                  <ListItemIcon>
-                    <DeleteIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText>
-                    {t("projectPlanning.removeStream", "Remove Stream")}
-                  </ListItemText>
-                </MenuItem>
-              </>
-            )}
-
-            {menuTarget?.type === "task" && (
-              <>
-                <MenuItem
-                  onClick={() => {
-                    openAddTaskDialog(menuTarget);
-                    closeSettingsMenu();
-                  }}
-                >
-                  <ListItemIcon>
-                    <AddIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText>
-                    {t("projectPlanning.createChildTask", "Create Child Task")}
-                  </ListItemText>
-                </MenuItem>
-                <MenuItem onClick={() => openTaskEditor(menuTarget)}>
-                  <ListItemIcon>
-                    <EditIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText>
-                    {t("projectPlanning.editTask", "Edit Task Information")}
-                  </ListItemText>
-                </MenuItem>
-                <MenuItem onClick={() => openMilestoneDialog(menuTarget)}>
-                  <ListItemIcon>
-                    <SettingsIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText>
-                    {t("projectPlanning.linkMilestone", "Link Milestone Task")}
-                  </ListItemText>
-                </MenuItem>
-                <MenuItem onClick={() => startMoveMode(menuTarget)}>
-                  <ListItemIcon>
-                    <DriveFileMoveIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText>
-                    {t("projectPlanning.moveTo", "Move To")}
-                  </ListItemText>
-                </MenuItem>
-                <MenuItem
-                  onClick={async () => {
-                    const taskId = menuTarget?.raw?.projectTaskId;
-                    if (!taskId) return;
-                    const blockedReason = taskDeleteBlockedReason(menuTarget);
-                    if (blockedReason) {
-                      setError(blockedReason);
-                      closeSettingsMenu();
-                      return;
-                    }
-                    try {
-                      await request("DELETE", `/api/projecttasks/${taskId}`);
-                      await syncWorkbenchFromServer();
-                    } catch {
-                      setError(t("basic.deleteFailed", "Delete failed"));
-                    } finally {
-                      closeSettingsMenu();
-                    }
-                  }}
-                  disabled={Boolean(taskDeleteBlockedReason(menuTarget))}
-                >
-                  <ListItemIcon>
-                    <DeleteIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText>
-                    {t(
-                      "projectPlanning.removeCurrentTask",
-                      "Remove Current Task",
-                    )}
-                  </ListItemText>
-                </MenuItem>
-              </>
-            )}
-          </Menu>
-
-          <Dialog
-            open={inventoryOverviewOpen}
-            onClose={() => {
-              setInventoryOverviewOpen(false);
-              setInventoryOverviewRowsReady(false);
-            }}
-            maxWidth={false}
-            fullWidth
-            PaperProps={{
-              sx: {
-                width: "94vw",
-                maxWidth: "94vw",
-                height: "86vh",
-              },
-            }}
-          >
-            <DialogTitle sx={{ pb: 0.25, pt: 1 }}>
-              {t("projectPlanning.inventoryOverview", "Inventory Overview")} -{" "}
-              {projectCode}
-            </DialogTitle>
-            <Box
-              sx={{
-                px: 3,
-                py: 0.5,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 2,
-                flexWrap: "wrap",
-              }}
-            >
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ flex: 1 }}
-              >
-                {t(
-                  "projectPlanning.inventoryOverviewDesc",
-                  "View planned inventory needs across all tasks. Quantity is allocated on the task supply date based on task duration.",
-                )}
-              </Typography>
-              <ToggleButtonGroup
-                value={inventoryOverviewViewMode}
-                exclusive
-                onChange={(_, value) => {
-                  if (value) setInventoryOverviewViewMode(value);
-                }}
-                size="small"
-              >
-                <ToggleButton value="day">
-                  {t("projectPlanning.viewDay", "Day")}
-                </ToggleButton>
-                <ToggleButton value="week">
-                  {t("projectPlanning.viewWeek", "Week")}
-                </ToggleButton>
-                <ToggleButton value="month">
-                  {t("projectPlanning.viewMonth", "Month")}
-                </ToggleButton>
-              </ToggleButtonGroup>
-            </Box>
-            <DialogContent
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 1,
-                overflow: "hidden",
-              }}
-            >
-              {inventoryOverviewLoading || !inventoryOverviewRowsReady ? (
-                <Box sx={{ py: 4, display: "flex", justifyContent: "center" }}>
-                  <CircularProgress size={26} />
-                </Box>
-              ) : inventoryOverviewError ? (
-                <Alert severity="error">{inventoryOverviewError}</Alert>
-              ) : inventoryOverviewRows.length === 0 ? (
-                <Alert severity="info">
-                  {t(
-                    "projectPlanning.noInventoryData",
-                    "No inventory data available for this project.",
-                  )}
-                </Alert>
-              ) : (
-                <Box
-                  sx={{
-                    border: "1px solid",
-                    borderColor: "divider",
-                    borderRadius: 1,
-                    overflow: "auto",
-                    flex: 1,
-                  }}
-                >
-                  <Box sx={{ minWidth: 320 + inventoryOverviewTimelineWidth }}>
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: `320px ${inventoryOverviewTimelineWidth}px`,
-                        borderBottom: "1px solid",
-                        borderColor: "divider",
-                        position: "sticky",
-                        top: 0,
-                        zIndex: 6,
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          borderRight: "1px solid",
-                          borderColor: "divider",
-                          position: "sticky",
-                          left: 0,
-                          zIndex: 7,
-                          bgcolor: "background.default",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          px: 1,
-                          py: 0.5,
-                        }}
-                      >
-                        <Typography
-                          variant="caption"
-                          fontWeight={700}
-                          sx={{ fontSize: "0.64rem" }}
-                        >
-                          {t("projectPlanning.timeline", "Timeline")}
-                        </Typography>
-                      </Box>
-
-                      <Box
-                        sx={{ bgcolor: "background.default", display: "flex" }}
-                      >
-                        {inventoryOverviewUpperSegments.map((seg) => (
-                          <Box
-                            key={seg.key}
-                            sx={{
-                              width: seg.span * inventoryOverviewColWidth,
-                              px: 0.5,
-                              py: 0.5,
-                              borderLeft: "1px solid",
-                              borderColor: "divider",
-                              textAlign: "center",
-                            }}
-                          >
-                            <Typography
-                              variant="caption"
-                              sx={{ fontSize: "0.64rem", whiteSpace: "nowrap" }}
-                            >
-                              {seg.label}
-                            </Typography>
-                          </Box>
-                        ))}
-                      </Box>
-                    </Box>
-
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: `320px ${inventoryOverviewTimelineWidth}px`,
-                        borderBottom: "1px solid",
-                        borderColor: "divider",
-                        position: "sticky",
-                        top: 27,
-                        zIndex: 5,
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          borderRight: "1px solid",
-                          borderColor: "divider",
-                          position: "sticky",
-                          left: 0,
-                          zIndex: 6,
-                          bgcolor: "background.default",
-                          display: "grid",
-                          gridTemplateColumns: "1fr 88px",
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            px: 1,
-                            py: 0.6,
-                            borderRight: "1px solid",
-                            borderColor: "divider",
-                          }}
-                        >
-                          <Typography
-                            variant="caption"
-                            fontWeight={700}
-                            sx={{ fontSize: "0.68rem" }}
-                          >
-                            {t("projectPlanning.productName", "Product Name")}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ px: 1, py: 0.6 }}>
-                          <Typography
-                            variant="caption"
-                            fontWeight={700}
-                            sx={{ fontSize: "0.68rem" }}
-                          >
-                            {t("basic.uom", "UOM")}
-                          </Typography>
-                        </Box>
-                      </Box>
-
-                      <Box sx={{ bgcolor: "background.default" }}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            borderTop: "1px solid",
-                            borderColor: "divider",
-                          }}
-                        >
-                          {inventoryOverviewActiveCols.map((col, idx) => (
-                            <Box
-                              key={col.key}
-                              sx={{
-                                width: inventoryOverviewColWidth,
-                                px: 0,
-                                py: 0.4,
-                                bgcolor: isCurrentPeriodColumn(
-                                  inventoryOverviewViewMode,
-                                  col,
-                                )
-                                  ? "action.selected"
-                                  : "transparent",
-                                borderLeft: "1px solid",
-                                borderColor:
-                                  inventoryOverviewViewMode === "day"
-                                    ? col.isMonthStart
-                                      ? "divider"
-                                      : "transparent"
-                                    : idx === 0
-                                      ? "divider"
-                                      : "transparent",
-                                textAlign: "center",
-                              }}
-                            >
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  fontSize: "0.58rem",
-                                  lineHeight: 1,
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                {col.label}
-                              </Typography>
-                            </Box>
-                          ))}
-                        </Box>
-                      </Box>
-                    </Box>
-
-                    {inventoryOverviewRows.map((row, rowIndex) => (
-                      <Box
-                        key={row.key}
-                        sx={{
-                          display: "grid",
-                          gridTemplateColumns: `320px ${inventoryOverviewTimelineWidth}px`,
-                          borderBottom: "1px solid",
-                          borderColor: "divider",
-                          minHeight: 28,
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            borderRight: "1px solid",
-                            borderColor: "divider",
-                            position: "sticky",
-                            left: 0,
-                            zIndex: 5,
-                            bgcolor:
-                              rowIndex % 2 === 0
-                                ? "background.paper"
-                                : "grey.50",
-                            display: "grid",
-                            gridTemplateColumns: "1fr 88px",
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              px: 1,
-                              py: 0.55,
-                              borderRight: "1px solid",
-                              borderColor: "divider",
-                              minWidth: 0,
-                            }}
-                          >
-                            <Typography
-                              variant="caption"
-                              sx={{ fontSize: "0.69rem" }}
-                              noWrap
-                            >
-                              {row.productName}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ px: 1, py: 0.55 }}>
-                            <Typography
-                              variant="caption"
-                              sx={{ fontSize: "0.69rem" }}
-                            >
-                              {row.uom}
-                            </Typography>
-                          </Box>
-                        </Box>
-
-                        <Box
-                          sx={{
-                            display: "flex",
-                            bgcolor:
-                              rowIndex % 2 === 0
-                                ? "background.paper"
-                                : "grey.50",
-                          }}
-                        >
-                          {inventoryOverviewActiveCols.map((col) => {
-                            const value = getUsageValue(row, col);
-                            const hasValue = value > 0;
-                            const isCurrentPeriod = isCurrentPeriodColumn(
-                              inventoryOverviewViewMode,
-                              col,
-                            );
-                            const cellSx = {
-                              width: inventoryOverviewColWidth,
-                              bgcolor: isCurrentPeriod
-                                ? "action.selected"
-                                : "transparent",
-                              borderLeft: "1px solid",
-                              borderColor:
-                                inventoryOverviewViewMode === "day"
-                                  ? col.isMonthStart
-                                    ? "divider"
-                                    : "transparent"
-                                  : "divider",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              py: 0.3,
-                              cursor: hasValue ? "pointer" : "default",
-                            };
-
-                            if (!hasValue) {
-                              return (
-                                <Box key={`${row.key}-${col.key}`} sx={cellSx}>
-                                  <Typography
-                                    variant="caption"
-                                    sx={{
-                                      fontSize: "0.62rem",
-                                      color: "text.disabled",
-                                    }}
-                                  >
-                                    -
-                                  </Typography>
-                                </Box>
-                              );
-                            }
-
-                            const detailsTable = getUsageDetailsTable(row, col);
-                            return (
-                              <Tooltip
-                                key={`${row.key}-${col.key}`}
-                                title={detailsTable}
-                                arrow
-                                placement="top"
-                                disableInteractive={false}
-                              >
-                                <Box sx={cellSx}>
-                                  <Typography
-                                    variant="caption"
-                                    sx={{
-                                      fontSize: "0.62rem",
-                                      color: "text.primary",
-                                    }}
-                                  >
-                                    {Number(value.toFixed(2))}
-                                  </Typography>
-                                </Box>
-                              </Tooltip>
-                            );
-                          })}
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button
-                onClick={() => {
-                  setInventoryOverviewOpen(false);
-                  setInventoryOverviewRowsReady(false);
-                }}
-              >
-                {t("basic.close", "Close")}
-              </Button>
-            </DialogActions>
-          </Dialog>
-
-          <Dialog
-            open={skillOverviewOpen}
-            onClose={() => {
-              setSkillOverviewOpen(false);
-              setSkillOverviewRowsReady(false);
-            }}
-            maxWidth={false}
-            fullWidth
-            PaperProps={{
-              sx: {
-                width: "94vw",
-                maxWidth: "94vw",
-                height: "86vh",
-              },
-            }}
-          >
-            <DialogTitle sx={{ pb: 0.25, pt: 1 }}>
-              {t("projectPlanning.skillOverview", "Skill Overview")} -{" "}
-              {projectCode}
-            </DialogTitle>
-            <Box
-              sx={{
-                px: 3,
-                py: 0.5,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 2,
-                flexWrap: "wrap",
-              }}
-            >
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ flex: 1 }}
-              >
-                {t(
-                  "projectPlanning.skillOverviewDesc",
-                  "Track required skill units across tasks. Hover each populated cell to see task-by-task unit breakdown.",
-                )}
-              </Typography>
-              <ToggleButtonGroup
-                value={skillOverviewViewMode}
-                exclusive
-                onChange={(_, value) => {
-                  if (value) setSkillOverviewViewMode(value);
-                }}
-                size="small"
-              >
-                <ToggleButton value="day">
-                  {t("projectPlanning.viewDay", "Day")}
-                </ToggleButton>
-                <ToggleButton value="week">
-                  {t("projectPlanning.viewWeek", "Week")}
-                </ToggleButton>
-                <ToggleButton value="month">
-                  {t("projectPlanning.viewMonth", "Month")}
-                </ToggleButton>
-              </ToggleButtonGroup>
-            </Box>
-            <DialogContent
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 1,
-                overflow: "hidden",
-              }}
-            >
-              {skillOverviewLoading || !skillOverviewRowsReady ? (
-                <Box sx={{ py: 4, display: "flex", justifyContent: "center" }}>
-                  <CircularProgress size={26} />
-                </Box>
-              ) : skillOverviewError ? (
-                <Alert severity="error">{skillOverviewError}</Alert>
-              ) : skillOverviewRows.length === 0 ? (
-                <Alert severity="info">
-                  {t("projectPlanning.noSkillSelected", "No skills selected.")}
-                </Alert>
-              ) : (
-                <Box
-                  sx={{
-                    border: "1px solid",
-                    borderColor: "divider",
-                    borderRadius: 1,
-                    overflow: "auto",
-                    flex: 1,
-                  }}
-                >
-                  <Box sx={{ minWidth: 380 + skillOverviewTimelineWidth }}>
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: `380px ${skillOverviewTimelineWidth}px`,
-                        borderBottom: "1px solid",
-                        borderColor: "divider",
-                        position: "sticky",
-                        top: 0,
-                        zIndex: 6,
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          borderRight: "1px solid",
-                          borderColor: "divider",
-                          position: "sticky",
-                          left: 0,
-                          zIndex: 7,
-                          bgcolor: "background.default",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          px: 1,
-                          py: 0.5,
-                        }}
-                      >
-                        <Typography
-                          variant="caption"
-                          fontWeight={700}
-                          sx={{ fontSize: "0.64rem" }}
-                        >
-                          {t("projectPlanning.timeline", "Timeline")}
-                        </Typography>
-                      </Box>
-
-                      <Box
-                        sx={{ bgcolor: "background.default", display: "flex" }}
-                      >
-                        {skillOverviewUpperSegments.map((seg) => (
-                          <Box
-                            key={seg.key}
-                            sx={{
-                              width: seg.span * skillOverviewColWidth,
-                              px: 0.5,
-                              py: 0.5,
-                              borderLeft: "1px solid",
-                              borderColor: "divider",
-                              textAlign: "center",
-                            }}
-                          >
-                            <Typography
-                              variant="caption"
-                              sx={{ fontSize: "0.64rem", whiteSpace: "nowrap" }}
-                            >
-                              {seg.label}
-                            </Typography>
-                          </Box>
-                        ))}
-                      </Box>
-                    </Box>
-
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: `380px ${skillOverviewTimelineWidth}px`,
-                        borderBottom: "1px solid",
-                        borderColor: "divider",
-                        position: "sticky",
-                        top: 27,
-                        zIndex: 5,
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          borderRight: "1px solid",
-                          borderColor: "divider",
-                          position: "sticky",
-                          left: 0,
-                          zIndex: 6,
-                          bgcolor: "background.default",
-                          px: 1,
-                          py: 0.6,
-                        }}
-                      >
-                        <Typography
-                          variant="caption"
-                          fontWeight={700}
-                          sx={{ fontSize: "0.68rem" }}
-                        >
-                          {t("projectPlanning.skillName", "Skill")}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ bgcolor: "background.default" }}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            borderTop: "1px solid",
-                            borderColor: "divider",
-                          }}
-                        >
-                          {skillOverviewActiveCols.map((col, idx) => (
-                            <Box
-                              key={col.key}
-                              sx={{
-                                width: skillOverviewColWidth,
-                                px: 0,
-                                py: 0.4,
-                                bgcolor: isCurrentPeriodColumn(
-                                  skillOverviewViewMode,
-                                  col,
-                                )
-                                  ? "action.selected"
-                                  : "transparent",
-                                borderLeft: "1px solid",
-                                borderColor:
-                                  skillOverviewViewMode === "day"
-                                    ? col.isMonthStart
-                                      ? "divider"
-                                      : "transparent"
-                                    : idx === 0
-                                      ? "divider"
-                                      : "transparent",
-                                textAlign: "center",
-                              }}
-                            >
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  fontSize: "0.58rem",
-                                  lineHeight: 1,
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                {col.label}
-                              </Typography>
-                            </Box>
-                          ))}
-                        </Box>
-                      </Box>
-                    </Box>
-
-                    {skillOverviewRows.map((row, rowIndex) => (
-                      <Box
-                        key={row.key}
-                        sx={{
-                          display: "grid",
-                          gridTemplateColumns: `380px ${skillOverviewTimelineWidth}px`,
-                          borderBottom: "1px solid",
-                          borderColor: "divider",
-                          minHeight: 28,
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            borderRight: "1px solid",
-                            borderColor: "divider",
-                            position: "sticky",
-                            left: 0,
-                            zIndex: 5,
-                            bgcolor:
-                              rowIndex % 2 === 0
-                                ? "background.paper"
-                                : "grey.50",
-                            px: 1,
-                            py: 0.55,
-                          }}
-                        >
-                          <Typography
-                            variant="caption"
-                            sx={{ fontSize: "0.69rem" }}
-                            noWrap
-                          >
-                            {row.skillName}
-                          </Typography>
-                        </Box>
-
-                        <Box
-                          sx={{
-                            display: "flex",
-                            bgcolor:
-                              rowIndex % 2 === 0
-                                ? "background.paper"
-                                : "grey.50",
-                          }}
-                        >
-                          {skillOverviewActiveCols.map((col) => {
-                            const value = getSkillUsageValue(row, col);
-                            const hasValue = value > 0;
-                            const isCurrentPeriod = isCurrentPeriodColumn(
-                              skillOverviewViewMode,
-                              col,
-                            );
-                            const cellSx = {
-                              width: skillOverviewColWidth,
-                              bgcolor: isCurrentPeriod
-                                ? "action.selected"
-                                : "transparent",
-                              borderLeft: "1px solid",
-                              borderColor:
-                                skillOverviewViewMode === "day"
-                                  ? col.isMonthStart
-                                    ? "divider"
-                                    : "transparent"
-                                  : "divider",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              py: 0.3,
-                              cursor: hasValue ? "pointer" : "default",
-                            };
-
-                            if (!hasValue) {
-                              return (
-                                <Box key={`${row.key}-${col.key}`} sx={cellSx}>
-                                  <Typography
-                                    variant="caption"
-                                    sx={{
-                                      fontSize: "0.62rem",
-                                      color: "text.disabled",
-                                    }}
-                                  >
-                                    -
-                                  </Typography>
-                                </Box>
-                              );
-                            }
-
-                            const detailsTable = getSkillUsageDetailsTable(
-                              row,
-                              col,
-                            );
-                            return (
-                              <Tooltip
-                                key={`${row.key}-${col.key}`}
-                                title={detailsTable}
-                                arrow
-                                placement="top"
-                                disableInteractive={false}
-                              >
-                                <Box sx={cellSx}>
-                                  <Typography
-                                    variant="caption"
-                                    sx={{
-                                      fontSize: "0.62rem",
-                                      color: "text.primary",
-                                    }}
-                                  >
-                                    {Number(value.toFixed(2))}
-                                  </Typography>
-                                </Box>
-                              </Tooltip>
-                            );
-                          })}
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button
-                onClick={() => {
-                  setSkillOverviewOpen(false);
-                  setSkillOverviewRowsReady(false);
-                }}
-              >
-                {t("basic.close", "Close")}
-              </Button>
-            </DialogActions>
-          </Dialog>
-
-          <Dialog
-            open={manpowerOverviewOpen}
-            onClose={() => {
-              setManpowerOverviewOpen(false);
-              setManpowerOverviewRowsReady(false);
-            }}
-            maxWidth={false}
-            fullWidth
-            PaperProps={{
-              sx: {
-                width: "94vw",
-                maxWidth: "94vw",
-                height: "86vh",
-              },
-            }}
-          >
-            <DialogTitle sx={{ pb: 0.25, pt: 1 }}>
-              {t("projectPlanning.manpowerOverview", "Manpower Overview")} -{" "}
-              {projectCode}
-            </DialogTitle>
-            <Box
-              sx={{
-                px: 3,
-                py: 0.5,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 2,
-                flexWrap: "wrap",
-              }}
-            >
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ flex: 1 }}
-              >
-                {t(
-                  "projectPlanning.manpowerOverviewDesc",
-                  "Track staff utilization across tasks. Red indicates overloading (total loading > 1.0 for a day). Staff contributions span the full task duration.",
-                )}
-              </Typography>
-              <ToggleButtonGroup
-                value={manpowerOverviewViewMode}
-                exclusive
-                onChange={(_, value) => {
-                  if (value) setManpowerOverviewViewMode(value);
-                }}
-                size="small"
-              >
-                <ToggleButton value="day">
-                  {t("projectPlanning.viewDay", "Day")}
-                </ToggleButton>
-                <ToggleButton value="week">
-                  {t("projectPlanning.viewWeek", "Week")}
-                </ToggleButton>
-                <ToggleButton value="month">
-                  {t("projectPlanning.viewMonth", "Month")}
-                </ToggleButton>
-              </ToggleButtonGroup>
-            </Box>
-            <DialogContent
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 1,
-                overflow: "hidden",
-              }}
-            >
-              {manpowerOverviewLoading || !manpowerOverviewRowsReady ? (
-                <Box sx={{ py: 4, display: "flex", justifyContent: "center" }}>
-                  <CircularProgress size={26} />
-                </Box>
-              ) : manpowerOverviewError ? (
-                <Alert severity="error">{manpowerOverviewError}</Alert>
-              ) : manpowerOverviewRows.length === 0 ? (
-                <Alert severity="info">
-                  {t(
-                    "projectPlanning.noManpowerSelected",
-                    "No manpower selected.",
-                  )}
-                </Alert>
-              ) : (
-                <Box
-                  sx={{
-                    border: "1px solid",
-                    borderColor: "divider",
-                    borderRadius: 1,
-                    overflow: "auto",
-                    flex: 1,
-                  }}
-                >
-                  <Box sx={{ minWidth: 420 + manpowerOverviewTimelineWidth }}>
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: `420px ${manpowerOverviewTimelineWidth}px`,
-                        borderBottom: "1px solid",
-                        borderColor: "divider",
-                        position: "sticky",
-                        top: 0,
-                        zIndex: 6,
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          borderRight: "1px solid",
-                          borderColor: "divider",
-                          position: "sticky",
-                          left: 0,
-                          zIndex: 7,
-                          bgcolor: "background.default",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          px: 1,
-                          py: 0.5,
-                        }}
-                      >
-                        <Typography
-                          variant="caption"
-                          fontWeight={700}
-                          sx={{ fontSize: "0.64rem" }}
-                        >
-                          {t("projectPlanning.timeline", "Timeline")}
-                        </Typography>
-                      </Box>
-
-                      <Box
-                        sx={{ bgcolor: "background.default", display: "flex" }}
-                      >
-                        {manpowerOverviewUpperSegments.map((seg) => (
-                          <Box
-                            key={seg.key}
-                            sx={{
-                              width: seg.span * manpowerOverviewColWidth,
-                              px: 0.5,
-                              py: 0.5,
-                              borderLeft: "1px solid",
-                              borderColor: "divider",
-                              textAlign: "center",
-                            }}
-                          >
-                            <Typography
-                              variant="caption"
-                              sx={{ fontSize: "0.64rem", whiteSpace: "nowrap" }}
-                            >
-                              {seg.label}
-                            </Typography>
-                          </Box>
-                        ))}
-                      </Box>
-                    </Box>
-
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: `420px ${manpowerOverviewTimelineWidth}px`,
-                        borderBottom: "1px solid",
-                        borderColor: "divider",
-                        position: "sticky",
-                        top: 27,
-                        zIndex: 5,
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          borderRight: "1px solid",
-                          borderColor: "divider",
-                          position: "sticky",
-                          left: 0,
-                          zIndex: 6,
-                          bgcolor: "background.default",
-                          display: "grid",
-                          gridTemplateColumns: "1fr 180px",
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            px: 1,
-                            py: 0.6,
-                            borderRight: "1px solid",
-                            borderColor: "divider",
-                          }}
-                        >
-                          <Typography
-                            variant="caption"
-                            fontWeight={700}
-                            sx={{ fontSize: "0.68rem" }}
-                          >
-                            {t("projectleader.staffName", "Staff Name")}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ px: 1, py: 0.6 }}>
-                          <Typography
-                            variant="caption"
-                            fontWeight={700}
-                            sx={{ fontSize: "0.68rem" }}
-                          >
-                            {t(
-                              "projectPlanning.manpowerSkillProfileFilter",
-                              "Skill Profile",
-                            )}
-                          </Typography>
-                        </Box>
-                      </Box>
-
-                      <Box sx={{ bgcolor: "background.default" }}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            borderTop: "1px solid",
-                            borderColor: "divider",
-                          }}
-                        >
-                          {manpowerOverviewActiveCols.map((col, idx) => (
-                            <Box
-                              key={col.key}
-                              sx={{
-                                width: manpowerOverviewColWidth,
-                                px: 0,
-                                py: 0.4,
-                                bgcolor: isCurrentPeriodColumn(
-                                  manpowerOverviewViewMode,
-                                  col,
-                                )
-                                  ? "action.selected"
-                                  : "transparent",
-                                borderLeft: "1px solid",
-                                borderColor:
-                                  manpowerOverviewViewMode === "day"
-                                    ? col.isMonthStart
-                                      ? "divider"
-                                      : "transparent"
-                                    : idx === 0
-                                      ? "divider"
-                                      : "transparent",
-                                textAlign: "center",
-                              }}
-                            >
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  fontSize: "0.58rem",
-                                  lineHeight: 1,
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                {col.label}
-                              </Typography>
-                            </Box>
-                          ))}
-                        </Box>
-                      </Box>
-                    </Box>
-
-                    {manpowerOverviewRows.map((row, rowIndex) => (
-                      <Box
-                        key={row.key}
-                        sx={{
-                          display: "grid",
-                          gridTemplateColumns: `420px ${manpowerOverviewTimelineWidth}px`,
-                          borderBottom: "1px solid",
-                          borderColor: "divider",
-                          minHeight: 28,
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            borderRight: "1px solid",
-                            borderColor: "divider",
-                            position: "sticky",
-                            left: 0,
-                            zIndex: 5,
-                            bgcolor:
-                              rowIndex % 2 === 0
-                                ? "background.paper"
-                                : "grey.50",
-                            display: "grid",
-                            gridTemplateColumns: "1fr 180px",
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              px: 1,
-                              py: 0.55,
-                              borderRight: "1px solid",
-                              borderColor: "divider",
-                              minWidth: 0,
-                            }}
-                          >
-                            <Typography
-                              variant="caption"
-                              sx={{ fontSize: "0.69rem" }}
-                              noWrap
-                            >
-                              {row.staffName}
-                            </Typography>
-                          </Box>
-                          <Box
-                            sx={{
-                              px: 0.75,
-                              py: 0.35,
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 0.35,
-                              flexWrap: "wrap",
-                            }}
-                          >
-                            {row.skills.length === 0 ? (
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  fontSize: "0.63rem",
-                                  color: "text.secondary",
-                                }}
-                              >
-                                {t(
-                                  "projectPlanning.manpowerNoSkillProfiles",
-                                  "No skill profiles",
-                                )}
-                              </Typography>
-                            ) : (
-                              row.skills.slice(0, 2).map((skill) => (
-                                <Chip
-                                  key={`${row.staffId}-${skill}`}
-                                  size="small"
-                                  label={skill}
-                                  sx={{
-                                    height: 18,
-                                    "& .MuiChip-label": {
-                                      px: 0.6,
-                                      fontSize: "0.62rem",
-                                    },
-                                  }}
-                                />
-                              ))
-                            )}
-                            {row.skills.length > 2 && (
-                              <Chip
-                                size="small"
-                                label={`+${row.skills.length - 2}`}
-                                sx={{
-                                  height: 18,
-                                  "& .MuiChip-label": {
-                                    px: 0.6,
-                                    fontSize: "0.62rem",
-                                  },
-                                }}
-                              />
-                            )}
-                          </Box>
-                        </Box>
-
-                        <Box
-                          sx={{
-                            display: "flex",
-                            bgcolor:
-                              rowIndex % 2 === 0
-                                ? "background.paper"
-                                : "grey.50",
-                          }}
-                        >
-                          {manpowerOverviewActiveCols.map((col) => {
-                            const value = getManpowerUsageValue(row, col);
-                            const hasValue = value > 0;
-                            const isCurrentPeriod = isCurrentPeriodColumn(
-                              manpowerOverviewViewMode,
-                              col,
-                            );
-                            const overloaded = hasValue
-                              ? isManpowerOverloaded(row, col)
-                              : false;
-                            const cellSx = {
-                              width: manpowerOverviewColWidth,
-                              bgcolor: isCurrentPeriod
-                                ? "action.selected"
-                                : "transparent",
-                              borderLeft: "1px solid",
-                              borderColor:
-                                manpowerOverviewViewMode === "day"
-                                  ? col.isMonthStart
-                                    ? "divider"
-                                    : "transparent"
-                                  : "divider",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              py: 0.3,
-                              cursor: hasValue ? "pointer" : "default",
-                            };
-
-                            if (!hasValue) {
-                              return (
-                                <Box key={`${row.key}-${col.key}`} sx={cellSx}>
-                                  <Typography
-                                    variant="caption"
-                                    sx={{
-                                      fontSize: "0.62rem",
-                                      color: "text.disabled",
-                                    }}
-                                  >
-                                    -
-                                  </Typography>
-                                </Box>
-                              );
-                            }
-
-                            const detailsTable = getManpowerUsageDetailsTable(
-                              row,
-                              col,
-                            );
-                            return (
-                              <Tooltip
-                                key={`${row.key}-${col.key}`}
-                                title={detailsTable}
-                                arrow
-                                placement="top"
-                                disableInteractive={false}
-                              >
-                                <Box sx={cellSx}>
-                                  <Typography
-                                    variant="caption"
-                                    sx={{
-                                      fontSize: "0.62rem",
-                                      color: overloaded
-                                        ? "error.main"
-                                        : "text.primary",
-                                      fontWeight: overloaded ? 700 : 400,
-                                    }}
-                                  >
-                                    {Number(value.toFixed(2))}
-                                  </Typography>
-                                </Box>
-                              </Tooltip>
-                            );
-                          })}
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button
-                onClick={() => {
-                  setManpowerOverviewOpen(false);
-                  setManpowerOverviewRowsReady(false);
-                }}
-              >
-                {t("basic.close", "Close")}
-              </Button>
-            </DialogActions>
-          </Dialog>
-        </>
+        <WorkbenchLoadedView
+          projectSummaryProps={projectSummaryProps}
+          timelinePanelProps={timelinePanelProps}
+          dialogsHostBaseProps={dialogsHostBaseProps}
+          settingsDialogProps={settingsDialogProps}
+          inventoryPlanningDialogProps={inventoryPlanningDialogProps}
+          manpowerPlanningDialogProps={manpowerPlanningDialogProps}
+          skillPlanningDialogProps={skillPlanningDialogProps}
+          skillCreateDialogProps={skillCreateDialogProps}
+          settingsMenuProps={settingsMenuProps}
+          inventoryOverviewDialogProps={inventoryOverviewDialogProps}
+          manpowerOverviewDialogProps={manpowerOverviewDialogProps}
+          skillOverviewDialogProps={skillOverviewDialogProps}
+        />
       )}
     </Box>
   );

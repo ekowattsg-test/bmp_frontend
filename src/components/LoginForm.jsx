@@ -70,6 +70,7 @@ export default function LoginForm({
 
   const onSubmitOtp = (e) => {
     onOtpLogin(e, otp);
+    setOtp("");
   };
 
   const hasCredentials = login.trim() !== "" || password.trim() !== "";
@@ -79,6 +80,7 @@ export default function LoginForm({
     if (qrRedirectingRef.current) return;
 
     const rawValue = String(scannedValue || "").trim();
+    setQrLoginUrl("");
     if (!rawValue) return;
 
     let parsedUrl;
