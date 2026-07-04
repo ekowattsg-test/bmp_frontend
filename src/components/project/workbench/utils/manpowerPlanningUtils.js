@@ -1,5 +1,31 @@
 const normalizeText = (value) => String(value || "").trim();
 
+const normalizeManpowerTouched = (value, fallback = 0) => {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) return numeric === 1 ? 1 : 0;
+
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  if (
+    normalized === "1" ||
+    normalized === "true" ||
+    normalized === "y" ||
+    normalized === "yes"
+  ) {
+    return 1;
+  }
+  if (
+    normalized === "0" ||
+    normalized === "false" ||
+    normalized === "n" ||
+    normalized === "no"
+  ) {
+    return 0;
+  }
+  return fallback === 1 ? 1 : 0;
+};
+
 export const normalizeManpowerLoading = (value) => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 1;
@@ -80,7 +106,6 @@ export const buildManpowerDialogData = ({
   toLongId,
   normalizeManpowerLoading,
   noSkillProfileLabel,
-  noneLabel,
 }) => {
   const skillNameById = staffSkillRows.reduce((acc, skill) => {
     const skillId = toLongId(skill?.staffSkillId);
@@ -145,6 +170,7 @@ export const buildManpowerDialogData = ({
       staffId: normalizeText(item?.staffId),
       role: "worker",
       loading: String(normalizeManpowerLoading(item?.loading ?? 1)),
+      manpowerTouched: normalizeManpowerTouched(item?.manpowerTouched, 0),
     }))
     .filter((item) => item.apiId);
 
@@ -209,16 +235,6 @@ export const buildManpowerDialogData = ({
       ),
     );
 
-  dropdownOptions.push({
-    value: "",
-    workDate: "",
-    requiredSkill: "",
-    staffName: noneLabel,
-    skillProfiles: [],
-    deployed: false,
-    label: noneLabel,
-  });
-
   return {
     manpowerProjectSkillChips,
     normalizedRows,
@@ -240,6 +256,9 @@ export const buildManpowerSavePayload = ({
   staffId: normalizeText(row.staffId),
   role: "worker",
   loading: normalizeManpowerLoading(row.loading),
+  manpowerTouched: normalizeText(row.staffId)
+    ? normalizeManpowerTouched(row?.manpowerTouched, 1)
+    : 0,
 });
 
 export const normalizeSavedManpowerRow = ({
@@ -259,4 +278,8 @@ export const normalizeSavedManpowerRow = ({
   staffId: normalizeText(saved?.staffId || payload.staffId),
   role: "worker",
   loading: String(normalizeManpowerLoading(saved?.loading ?? payload.loading)),
+  manpowerTouched: normalizeManpowerTouched(
+    saved?.manpowerTouched ?? payload.manpowerTouched,
+    payload.manpowerTouched,
+  ),
 });

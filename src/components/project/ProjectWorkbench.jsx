@@ -57,7 +57,6 @@ import {
   getManpowerRowsForActiveDate,
   getManpowerTaskId,
   hasDuplicateStaffSelection,
-  hasEmptyStaffSelection,
   hasInvalidManpowerLoading,
   isManpowerTouched,
   normalizeSavedManpowerRow,
@@ -3354,7 +3353,6 @@ const ProjectWorkbench = () => {
           "projectPlanning.noSkillProfile",
           "No Skill Profile",
         ),
-        noneLabel: t("basic.none", "None"),
       });
 
       setManpowerProjectSkills(manpowerProjectSkillChips);
@@ -3421,13 +3419,6 @@ const ProjectWorkbench = () => {
           "projectPlanning.manpowerLoadingHint",
           "Loading must be between 0.0 and 1.0.",
         ),
-      );
-      return;
-    }
-
-    if (hasEmptyStaffSelection(targetRows)) {
-      setManpowerPlanningError(
-        t("projectPlanning.staffName", "Staff Name") + " is required",
       );
       return;
     }

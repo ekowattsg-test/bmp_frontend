@@ -141,7 +141,7 @@ const ManpowerPlanningDialog = ({
                 sx={{
                   display: "grid",
                   gridTemplateColumns:
-                    "minmax(0, 1.9fr) minmax(0, 3.1fr) 120px",
+                    "minmax(0, 1.7fr) minmax(0, 3fr) 120px 90px",
                   gap: 1,
                   px: 1.25,
                   py: 0.75,
@@ -179,6 +179,16 @@ const ManpowerPlanningDialog = ({
                   }}
                 >
                   {t("projectPlanning.manpowerLoading", "Loading")}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 700,
+                    color: "text.primary",
+                    letterSpacing: 0.2,
+                  }}
+                >
+                  {t("basic.action", "Action")}
                 </Typography>
               </Box>
 
@@ -232,7 +242,7 @@ const ManpowerPlanningDialog = ({
                     sx={{
                       display: "grid",
                       gridTemplateColumns:
-                        "minmax(0, 1.9fr) minmax(0, 3.1fr) 120px",
+                        "minmax(0, 1.7fr) minmax(0, 3fr) 120px 90px",
                       gap: 1,
                       px: 1.25,
                       py: 0.5,
@@ -257,7 +267,7 @@ const ManpowerPlanningDialog = ({
                           const selectedValue = String(value || "").trim();
                           const selectedName =
                             staffNameById[selectedValue] ||
-                            t("basic.none", "None");
+                            t("projectPlanning.unassigned", "Unassigned");
                           const selectedProfiles =
                             Array.isArray(staffSkillsById[selectedValue]) &&
                             staffSkillsById[selectedValue].length > 0
@@ -269,7 +279,12 @@ const ManpowerPlanningDialog = ({
                                       "No Skill Profile",
                                     ),
                                   ]
-                                : [];
+                                : [
+                                    t(
+                                      "projectPlanning.unassigned",
+                                      "Unassigned",
+                                    ),
+                                  ];
 
                           return (
                             <Box
@@ -314,6 +329,11 @@ const ManpowerPlanningDialog = ({
                         onChange={(event) =>
                           onUpdateRow(item.apiId, {
                             staffId: String(event.target.value || "").trim(),
+                            manpowerTouched: String(
+                              event.target.value || "",
+                            ).trim()
+                              ? 1
+                              : 0,
                           })
                         }
                       >
@@ -483,6 +503,21 @@ const ManpowerPlanningDialog = ({
                       }
                       inputProps={{ min: 0, max: 1, step: 0.1 }}
                     />
+
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="warning"
+                      onClick={() =>
+                        onUpdateRow(item.apiId, {
+                          staffId: "",
+                          manpowerTouched: 0,
+                        })
+                      }
+                      disabled={!String(item?.staffId || "").trim()}
+                    >
+                      {t("basic.clear", "Clear")}
+                    </Button>
                   </Box>
                 );
               })}
