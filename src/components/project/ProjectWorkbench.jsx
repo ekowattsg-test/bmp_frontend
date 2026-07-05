@@ -310,6 +310,13 @@ const ProjectWorkbench = () => {
   const [dialogMode, setDialogMode] = useState("");
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
   const [menuTarget, setMenuTarget] = useState(null);
+  const [taskStatusUpdateOpen, setTaskStatusUpdateOpen] = useState(false);
+  const [taskStatusUpdateTarget, setTaskStatusUpdateTarget] = useState(null);
+  const [taskStatusUpdateDate, setTaskStatusUpdateDate] = useState(
+    toApiDate(new Date()),
+  );
+  const [taskStatusUpdateSaving, setTaskStatusUpdateSaving] = useState(false);
+  const [taskStatusUpdateError, setTaskStatusUpdateError] = useState("");
   const [moveSourceTaskId, setMoveSourceTaskId] = useState("");
   const [saving, setSaving] = useState(false);
   const [settingsError, setSettingsError] = useState("");
@@ -421,11 +428,11 @@ const ProjectWorkbench = () => {
     () => [
       {
         value: "worker",
-        label: t("projectPlanning.manpowerRoleWorker", "Worker"),
+        label: t("projectPlanning.manpowerRoleWorker"),
       },
       {
         value: "supervisor",
-        label: t("projectPlanning.manpowerRoleSupervisor", "Supervisor"),
+        label: t("projectPlanning.manpowerRoleSupervisor"),
       },
     ],
     [t],
@@ -507,9 +514,9 @@ const ProjectWorkbench = () => {
     });
 
     const roleLabelMap = {
-      M: t("projectLeader.roleManager", "Manager"),
-      L: t("projectLeader.roleLeader", "Leader"),
-      C: t("projectLeader.roleCoLeader", "Co-Leader"),
+      M: t("projectLeader.roleManager"),
+      L: t("projectLeader.roleLeader"),
+      C: t("projectLeader.roleCoLeader"),
     };
 
     const map = new Map();
@@ -567,6 +574,25 @@ const ProjectWorkbench = () => {
     const end = parseDate(endValue);
     if (!start || !end || end < start) return null;
     return diffDays(start, end) + 1;
+  };
+
+  const getTaskStatusTransition = (task) => {
+    const status = String(task?.taskStatus || "").trim();
+    if (status === "Not Started") {
+      return {
+        currentStatus: status,
+        nextStatus: "In Progress",
+      };
+    }
+
+    if (status === "In Progress") {
+      return {
+        currentStatus: status,
+        nextStatus: "Completed",
+      };
+    }
+
+    return null;
   };
 
   const validateTaskDuration = (taskTypeCode, startValue, endValue) => {
@@ -1383,7 +1409,7 @@ const ProjectWorkbench = () => {
             {periodLabel}
           </Typography>
           <Typography sx={{ fontSize: "0.75rem" }}>
-            {t("projectPlanning.noSkillSelected", "No skills selected.")}
+            {t("projectPlanning.noSkillSelected")}
           </Typography>
         </Box>
       );
@@ -1426,7 +1452,7 @@ const ProjectWorkbench = () => {
                 borderRight: "1px solid rgba(255,255,255,0.2)",
               }}
             >
-              {t("projectPlanning.streamTaskLabel", "Stream / Task")}
+              {t("projectPlanning.streamTaskLabel")}
             </Box>
             <Box
               sx={{
@@ -1437,7 +1463,7 @@ const ProjectWorkbench = () => {
                 textAlign: "right",
               }}
             >
-              {t("projectPlanning.skillUnit", "Unit")}
+              {t("projectPlanning.skillUnit")}
             </Box>
           </Box>
         </Box>
@@ -1546,7 +1572,7 @@ const ProjectWorkbench = () => {
             {periodLabel}
           </Typography>
           <Typography sx={{ fontSize: "0.75rem" }}>
-            {t("projectPlanning.noManpowerSelected", "No manpower selected.")}
+            {t("projectPlanning.noManpowerSelected")}
           </Typography>
         </Box>
       );
@@ -1589,7 +1615,7 @@ const ProjectWorkbench = () => {
                 borderRight: "1px solid rgba(255,255,255,0.2)",
               }}
             >
-              {t("projectPlanning.streamTaskLabel", "Stream / Task")}
+              {t("projectPlanning.streamTaskLabel")}
             </Box>
             <Box
               sx={{
@@ -1600,7 +1626,7 @@ const ProjectWorkbench = () => {
                 textAlign: "right",
               }}
             >
-              {t("projectPlanning.manpowerLoading", "Loading")}
+              {t("projectPlanning.manpowerLoading")}
             </Box>
           </Box>
         </Box>
@@ -1746,7 +1772,9 @@ const ProjectWorkbench = () => {
           <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, mb: 0.5 }}>
             {periodLabel}
           </Typography>
-          <Typography sx={{ fontSize: "0.75rem" }}>No usage</Typography>
+          <Typography sx={{ fontSize: "0.75rem" }}>
+            {t("projectPlanning.noInventoryUsage")}
+          </Typography>
         </Box>
       );
     }
@@ -1788,7 +1816,7 @@ const ProjectWorkbench = () => {
                 borderRight: "1px solid rgba(255,255,255,0.2)",
               }}
             >
-              Task/Stream
+              {t("projectPlanning.streamTaskLabel")}
             </Box>
             <Box
               sx={{
@@ -1799,7 +1827,7 @@ const ProjectWorkbench = () => {
                 textAlign: "right",
               }}
             >
-              Qty
+              {t("projectPlanning.quantityShort")}
             </Box>
           </Box>
         </Box>
@@ -2089,10 +2117,10 @@ const ProjectWorkbench = () => {
   const timelineWidth = Math.max(700, activeCols.length * colWidth);
 
   const statusLabel = {
-    PLAN: t("project.statusPlan", "Planning"),
-    ACTIVE: t("project.statusActive", "Active"),
-    COMPLETE: t("project.statusComplete", "Complete"),
-    CLOSE: t("project.statusClose", "Close"),
+    PLAN: t("project.statusPlan"),
+    ACTIVE: t("project.statusActive"),
+    COMPLETE: t("project.statusComplete"),
+    CLOSE: t("project.statusClose"),
   };
 
   const customerDisplayName =
@@ -2135,6 +2163,27 @@ const ProjectWorkbench = () => {
     });
     setSettingsOpen(true);
     closeSettingsMenu();
+  };
+
+  const openTaskStatusUpdateDialog = (row) => {
+    if (row?.type !== "task") return;
+
+    const transition = getTaskStatusTransition(row?.raw);
+    if (!transition) return;
+
+    setTaskStatusUpdateTarget(row);
+    setTaskStatusUpdateDate(toApiDate(new Date()));
+    setTaskStatusUpdateError("");
+    setTaskStatusUpdateOpen(true);
+  };
+
+  const closeTaskStatusUpdateDialog = () => {
+    if (taskStatusUpdateSaving) return;
+
+    setTaskStatusUpdateOpen(false);
+    setTaskStatusUpdateTarget(null);
+    setTaskStatusUpdateDate(toApiDate(new Date()));
+    setTaskStatusUpdateError("");
   };
 
   const openMilestoneDialog = (row) => {
@@ -2253,9 +2302,7 @@ const ProjectWorkbench = () => {
       await syncWorkbenchFromServer();
       setSettingsOpen(false);
     } catch (err) {
-      setSettingsError(
-        err?.userMessage || t("basic.saveFailed", "Save failed"),
-      );
+      setSettingsError(err?.userMessage || t("basic.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -2268,10 +2315,7 @@ const ProjectWorkbench = () => {
     try {
       const streamName = String(formData.streamName || "").trim();
       if (!streamName) {
-        const message = t(
-          "basic.validationRequired",
-          "Required fields are missing.",
-        );
+        const message = t("basic.validationRequired");
         setSettingsError(message);
         setSaving(false);
         return;
@@ -2291,7 +2335,7 @@ const ProjectWorkbench = () => {
       await syncWorkbenchFromServer();
       setSettingsOpen(false);
     } catch {
-      const message = t("basic.saveFailed", "Save failed");
+      const message = t("basic.saveFailed");
       setSettingsError(message);
       setError(message);
     } finally {
@@ -2307,12 +2351,7 @@ const ProjectWorkbench = () => {
       (task) => String(task?.projectStreamId || "") === String(streamId),
     );
     if (hasTasks) {
-      setSettingsError(
-        t(
-          "projectPlanning.removeStreamBlocked",
-          "Cannot remove stream with tasks attached.",
-        ),
-      );
+      setSettingsError(t("projectPlanning.removeStreamBlocked"));
       return;
     }
 
@@ -2323,7 +2362,7 @@ const ProjectWorkbench = () => {
       await syncWorkbenchFromServer();
       setSettingsOpen(false);
     } catch {
-      setSettingsError(t("basic.deleteFailed", "Delete failed"));
+      setSettingsError(t("basic.deleteFailed"));
     } finally {
       setSaving(false);
     }
@@ -2339,10 +2378,7 @@ const ProjectWorkbench = () => {
     try {
       const streamName = String(formData.streamName || "").trim();
       if (!streamName) {
-        const message = t(
-          "basic.validationRequired",
-          "Required fields are missing.",
-        );
+        const message = t("basic.validationRequired");
         setSettingsError(message);
         setSaving(false);
         return;
@@ -2354,7 +2390,7 @@ const ProjectWorkbench = () => {
       await syncWorkbenchFromServer();
       setSettingsOpen(false);
     } catch {
-      const message = t("basic.saveFailed", "Save failed");
+      const message = t("basic.saveFailed");
       setSettingsError(message);
       setError(message);
     } finally {
@@ -2433,9 +2469,63 @@ const ProjectWorkbench = () => {
       await syncWorkbenchFromServer();
       setSettingsOpen(false);
     } catch {
-      setSettingsError(t("basic.saveFailed", "Save failed"));
+      setSettingsError(t("basic.saveFailed"));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const saveTaskStatusUpdate = async ({ nextStatus, statusDate }) => {
+    const taskId = taskStatusUpdateTarget?.raw?.projectTaskId;
+    if (!taskId) return;
+
+    const transition = getTaskStatusTransition(taskStatusUpdateTarget?.raw);
+    if (!transition || transition.nextStatus !== nextStatus) {
+      setTaskStatusUpdateError(
+        t("projectPlanning.taskStatusUpdateUnavailable"),
+      );
+      return;
+    }
+
+    const selectedDate = String(
+      statusDate || taskStatusUpdateDate || toApiDate(new Date()),
+    ).trim();
+    if (!parseDate(selectedDate)) {
+      setTaskStatusUpdateError(
+        t("projectPlanning.taskStatusUpdateInvalidDate"),
+      );
+      return;
+    }
+
+    setTaskStatusUpdateSaving(true);
+    setTaskStatusUpdateError("");
+
+    try {
+      const dateFieldName =
+        nextStatus === "Completed" ? "actualEndDate" : "actualStartDate";
+      const payload = {
+        ...taskStatusUpdateTarget.raw,
+        taskStatus: nextStatus,
+        [dateFieldName]: selectedDate,
+      };
+
+      const calcRes = await request(
+        "POST",
+        "/api/projecttasks/calculate",
+        payload,
+      );
+      const calculatedPayload = {
+        ...payload,
+        ...(calcRes?.data || {}),
+      };
+
+      await request("PUT", `/api/projecttasks/${taskId}`, calculatedPayload);
+      await syncWorkbenchFromServer();
+      closeTaskStatusUpdateDialog();
+    } catch {
+      setTaskStatusUpdateError(t("projectPlanning.taskStatusUpdateFailed"));
+    } finally {
+      setTaskStatusUpdateSaving(false);
     }
   };
 
@@ -2449,12 +2539,7 @@ const ProjectWorkbench = () => {
         (task) => String(task?.projectTaskId || "") === milestoneTaskId,
       );
       if (!candidate || !isMilestoneTask(candidate)) {
-        setSettingsError(
-          t(
-            "projectPlanning.milestoneTaskOnly",
-            "Please select a milestone task.",
-          ),
-        );
+        setSettingsError(t("projectPlanning.milestoneTaskOnly"));
         return;
       }
     }
@@ -2470,7 +2555,7 @@ const ProjectWorkbench = () => {
       await syncWorkbenchFromServer();
       setSettingsOpen(false);
     } catch {
-      setSettingsError(t("basic.saveFailed", "Save failed"));
+      setSettingsError(t("basic.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -2491,7 +2576,7 @@ const ProjectWorkbench = () => {
       await syncWorkbenchFromServer();
       setSettingsOpen(false);
     } catch {
-      setSettingsError(t("basic.saveFailed", "Save failed"));
+      setSettingsError(t("basic.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -2501,15 +2586,11 @@ const ProjectWorkbench = () => {
     const source = settingsTarget?.raw;
     if (!source) return;
     if (!String(childTaskData.taskName || "").trim()) {
-      setSettingsError(
-        t("basic.validationRequired", "Required fields are missing."),
-      );
+      setSettingsError(t("basic.validationRequired"));
       return;
     }
     if (!String(childTaskData.taskType || "").trim()) {
-      setSettingsError(
-        t("basic.validationRequired", "Required fields are missing."),
-      );
+      setSettingsError(t("basic.validationRequired"));
       return;
     }
 
@@ -2519,24 +2600,14 @@ const ProjectWorkbench = () => {
       settingsTarget?.type === "stream" &&
       String(selectedTypeMeta?.createByStream ?? "").trim() !== "1"
     ) {
-      setSettingsError(
-        t(
-          "projectPlanning.streamCreateTypeOnly",
-          "This task type can only be created from a task.",
-        ),
-      );
+      setSettingsError(t("projectPlanning.streamCreateTypeOnly"));
       return;
     }
     if (
       settingsTarget?.type === "task" &&
       String(selectedTypeMeta?.createByStream ?? "").trim() !== "0"
     ) {
-      setSettingsError(
-        t(
-          "projectPlanning.taskCreateTypeOnly",
-          "This task type can only be created from a stream.",
-        ),
-      );
+      setSettingsError(t("projectPlanning.taskCreateTypeOnly"));
       return;
     }
 
@@ -2613,7 +2684,7 @@ const ProjectWorkbench = () => {
       await syncWorkbenchFromServer();
       setSettingsOpen(false);
     } catch {
-      setSettingsError(t("basic.saveFailed", "Save failed"));
+      setSettingsError(t("basic.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -2659,7 +2730,7 @@ const ProjectWorkbench = () => {
     const description =
       typeMeta?.projectTaskDescription ||
       taskTypeCode ||
-      t("projecttask.taskType", "Task Type");
+      t("projecttask.taskType");
 
     switch (taskTypeCode) {
       case "B":
@@ -2696,10 +2767,7 @@ const ProjectWorkbench = () => {
         return {
           icon: ArrowForwardOutlinedIcon,
           color: "secondary.main",
-          label: t(
-            "projectPlanning.dependentAfterParentEnd",
-            "Dependent task (starts after parent task ends)",
-          ),
+          label: t("projectPlanning.dependentAfterParentEnd"),
         };
       default:
         return {
@@ -2728,7 +2796,7 @@ const ProjectWorkbench = () => {
       return {
         icon: HandymanOutlinedIcon,
         color: "warning.main",
-        label: t("projectPlanning.inventoryAsset", "Asset required"),
+        label: t("projectPlanning.inventoryAsset"),
       };
     }
 
@@ -2736,14 +2804,14 @@ const ProjectWorkbench = () => {
       return {
         icon: Inventory2OutlinedIcon,
         color: "info.main",
-        label: t("projectPlanning.inventoryStock", "Stock required"),
+        label: t("projectPlanning.inventoryStock"),
       };
     }
 
     return {
       icon: AllInboxOutlinedIcon,
       color: "secondary.main",
-      label: t("projectPlanning.inventoryAny", "Any inventory type"),
+      label: t("projectPlanning.inventoryAny"),
     };
   };
 
@@ -3091,9 +3159,7 @@ const ProjectWorkbench = () => {
         }
       }
     } catch {
-      setInventoryPlanningError(
-        t("projectPlanning.inventoryLoadFailed", "Failed to load inventory."),
-      );
+      setInventoryPlanningError(t("projectPlanning.inventoryLoadFailed"));
       setInventoryProducts([]);
       setInventoryBundles([]);
     } finally {
@@ -3116,12 +3182,7 @@ const ProjectWorkbench = () => {
       (item) => String(item?.productId || "") === productId,
     );
     if (existsAt >= 0) {
-      setInventoryPlanningError(
-        t(
-          "projectPlanning.inventoryDuplicateProduct",
-          "This product has already been added.",
-        ),
-      );
+      setInventoryPlanningError(t("projectPlanning.inventoryDuplicateProduct"));
       return;
     }
 
@@ -3136,12 +3197,7 @@ const ProjectWorkbench = () => {
 
     const config = getPlanningConfig(section);
     if (!config) {
-      setInventoryPlanningError(
-        t(
-          "projectPlanning.inventoryTaskMissing",
-          "No task is available to save this planning section.",
-        ),
-      );
+      setInventoryPlanningError(t("projectPlanning.inventoryTaskMissing"));
       return;
     }
 
@@ -3159,9 +3215,7 @@ const ProjectWorkbench = () => {
       }
       setInventoryPlanningError("");
     } catch {
-      setInventoryPlanningError(
-        t("projectPlanning.inventorySaveFailed", "Failed to save inventory."),
-      );
+      setInventoryPlanningError(t("projectPlanning.inventorySaveFailed"));
       return;
     }
 
@@ -3185,12 +3239,7 @@ const ProjectWorkbench = () => {
       (item) => String(item?.bundleId || "") === bundleId,
     );
     if (existsAt >= 0) {
-      setInventoryPlanningError(
-        t(
-          "projectPlanning.inventoryDuplicateBundle",
-          "This bundle has already been added.",
-        ),
-      );
+      setInventoryPlanningError(t("projectPlanning.inventoryDuplicateBundle"));
       return;
     }
 
@@ -3208,12 +3257,7 @@ const ProjectWorkbench = () => {
 
     const config = getPlanningConfig("bundle");
     if (!config) {
-      setInventoryPlanningError(
-        t(
-          "projectPlanning.inventoryTaskMissing",
-          "No task is available to save this planning section.",
-        ),
-      );
+      setInventoryPlanningError(t("projectPlanning.inventoryTaskMissing"));
       return;
     }
 
@@ -3231,9 +3275,7 @@ const ProjectWorkbench = () => {
       }
       setInventoryPlanningError("");
     } catch {
-      setInventoryPlanningError(
-        t("projectPlanning.inventorySaveFailed", "Failed to save inventory."),
-      );
+      setInventoryPlanningError(t("projectPlanning.inventorySaveFailed"));
       return;
     }
 
@@ -3261,12 +3303,7 @@ const ProjectWorkbench = () => {
         await request("DELETE", config.deleteEndpoint(targetRow.apiId));
         return true;
       } catch {
-        setInventoryPlanningError(
-          t(
-            "projectPlanning.inventoryDeleteFailed",
-            "Failed to delete inventory.",
-          ),
-        );
+        setInventoryPlanningError(t("projectPlanning.inventoryDeleteFailed"));
         return false;
       }
     };
@@ -3280,12 +3317,7 @@ const ProjectWorkbench = () => {
 
   const openManpowerPlanningDialog = async (row) => {
     if (row?.type !== "task") {
-      setError(
-        t(
-          "projectPlanning.manpowerOnlyForTask",
-          "Manpower planning is only available for tasks.",
-        ),
-      );
+      setError(t("projectPlanning.manpowerOnlyForTask"));
       return;
     }
 
@@ -3349,10 +3381,7 @@ const ProjectWorkbench = () => {
         staffSkillProfileViewRows,
         toLongId,
         normalizeManpowerLoading,
-        noSkillProfileLabel: t(
-          "projectPlanning.noSkillProfile",
-          "No Skill Profile",
-        ),
+        noSkillProfileLabel: t("projectPlanning.noSkillProfile"),
       });
 
       setManpowerProjectSkills(manpowerProjectSkillChips);
@@ -3362,12 +3391,7 @@ const ProjectWorkbench = () => {
       setManpowerStaffSkillMap(staffSkillMap);
       setManpowerDropdownOptions(dropdownOptions);
     } catch {
-      setManpowerPlanningError(
-        t(
-          "projectPlanning.manpowerLoadFailed",
-          "Failed to load project manpower.",
-        ),
-      );
+      setManpowerPlanningError(t("projectPlanning.manpowerLoadFailed"));
       setManpowerStaffOptions([]);
       setManpowerPlanningRows([]);
       setManpowerPlanningDate("");
@@ -3397,29 +3421,17 @@ const ProjectWorkbench = () => {
     const targetRows = manpowerRowsForActiveDate;
 
     if (targetRows.length === 0) {
-      setManpowerPlanningError(
-        t("projectPlanning.noManpowerSelected", "No manpower selected."),
-      );
+      setManpowerPlanningError(t("projectPlanning.noManpowerSelected"));
       return;
     }
 
     if (hasDuplicateStaffSelection(targetRows)) {
-      setManpowerPlanningError(
-        t(
-          "projectPlanning.manpowerDuplicateStaff",
-          "This staff has already been added.",
-        ),
-      );
+      setManpowerPlanningError(t("projectPlanning.manpowerDuplicateStaff"));
       return;
     }
 
     if (hasInvalidManpowerLoading(targetRows)) {
-      setManpowerPlanningError(
-        t(
-          "projectPlanning.manpowerLoadingHint",
-          "Loading must be between 0.0 and 1.0.",
-        ),
-      );
+      setManpowerPlanningError(t("projectPlanning.manpowerLoadingHint"));
       return;
     }
 
@@ -3464,13 +3476,9 @@ const ProjectWorkbench = () => {
         }),
       );
       await syncWorkbenchFromServer();
+      setManpowerPlanningOpen(false);
     } catch {
-      setManpowerPlanningError(
-        t(
-          "projectPlanning.manpowerSaveFailed",
-          "Failed to save project manpower.",
-        ),
-      );
+      setManpowerPlanningError(t("projectPlanning.manpowerSaveFailed"));
     } finally {
       setManpowerPlanningLoading(false);
     }
@@ -3540,7 +3548,7 @@ const ProjectWorkbench = () => {
         String(option?.staffName || option?.label || "").trim() || value;
       return acc;
     }, {});
-    map[""] = t("basic.none", "None");
+    map[""] = t("basic.none");
     return map;
   }, [manpowerDropdownOptions, t]);
 
@@ -3563,12 +3571,7 @@ const ProjectWorkbench = () => {
 
   const openSkillPlanningDialog = async (row) => {
     if (row?.type !== "task") {
-      setError(
-        t(
-          "projectPlanning.skillOnlyForTask",
-          "Skill planning is only available for tasks.",
-        ),
-      );
+      setError(t("projectPlanning.skillOnlyForTask"));
       return;
     }
 
@@ -3616,9 +3619,7 @@ const ProjectWorkbench = () => {
         }),
       );
     } catch {
-      setSkillPlanningError(
-        t("projectPlanning.skillLoadFailed", "Failed to load project skills."),
-      );
+      setSkillPlanningError(t("projectPlanning.skillLoadFailed"));
       setSkillOptions([]);
       setSkillPlanningRows([]);
     } finally {
@@ -3644,9 +3645,7 @@ const ProjectWorkbench = () => {
     const skillCategory = String(skillCreateForm.skillCategory || "").trim();
 
     if (!skillName) {
-      setSkillCreateError(
-        t("projectPlanning.skillName", "Skill") + " is required",
-      );
+      setSkillCreateError(t("projectPlanning.skillName") + " is required");
       return;
     }
 
@@ -3681,11 +3680,7 @@ const ProjectWorkbench = () => {
       setSkillCreateOpen(false);
     } catch (err) {
       setSkillCreateError(
-        err?.response?.data?.message ||
-          t(
-            "projectPlanning.skillCreateFailed",
-            "Failed to save skill definition.",
-          ),
+        err?.response?.data?.message || t("projectPlanning.skillCreateFailed"),
       );
     } finally {
       setSkillCreateLoading(false);
@@ -3700,9 +3695,7 @@ const ProjectWorkbench = () => {
 
     if (!taskId || skillId === null) return;
     if (!Number.isFinite(unit) || unit < 1) {
-      setSkillPlanningError(
-        t("projectPlanning.skillUnitHint", "Unit must be a positive integer."),
-      );
+      setSkillPlanningError(t("projectPlanning.skillUnitHint"));
       return;
     }
 
@@ -3713,12 +3706,7 @@ const ProjectWorkbench = () => {
       toLongId,
     });
     if (duplicateRow) {
-      setSkillPlanningError(
-        t(
-          "projectPlanning.skillDuplicate",
-          "This skill has already been added.",
-        ),
-      );
+      setSkillPlanningError(t("projectPlanning.skillDuplicate"));
       return;
     }
 
@@ -3763,9 +3751,7 @@ const ProjectWorkbench = () => {
         unit: "1",
       });
     } catch {
-      setSkillPlanningError(
-        t("projectPlanning.skillSaveFailed", "Failed to save project skills."),
-      );
+      setSkillPlanningError(t("projectPlanning.skillSaveFailed"));
     } finally {
       setSkillPlanningLoading(false);
     }
@@ -3790,12 +3776,7 @@ const ProjectWorkbench = () => {
         removeSkillPlanningRowsBySkillId({ prevRows: prev, skillId, toLongId }),
       );
     } catch {
-      setSkillPlanningError(
-        t(
-          "projectPlanning.skillDeleteFailed",
-          "Failed to delete project skills.",
-        ),
-      );
+      setSkillPlanningError(t("projectPlanning.skillDeleteFailed"));
     }
   };
 
@@ -3864,22 +3845,13 @@ const ProjectWorkbench = () => {
     const typeMeta = taskTypeMetaByCode[taskTypeCode];
 
     if (String(typeMeta?.canDelete ?? "").trim() === "0") {
-      return t(
-        "projectPlanning.removeTaskBlockedType",
-        "This task type cannot be deleted.",
-      );
+      return t("projectPlanning.removeTaskBlockedType");
     }
     if (hasTaskDependencyReference(taskId)) {
-      return t(
-        "projectPlanning.removeTaskBlockedDependency",
-        "Cannot remove task with dependent child or milestone links.",
-      );
+      return t("projectPlanning.removeTaskBlockedDependency");
     }
     if (String(taskTypeCode).toUpperCase() === "B") {
-      return t(
-        "projectPlanning.removeTaskBlockedBaseline",
-        "Baseline task cannot be removed.",
-      );
+      return t("projectPlanning.removeTaskBlockedBaseline");
     }
     return "";
   };
@@ -3897,7 +3869,7 @@ const ProjectWorkbench = () => {
       await request("DELETE", `/api/projecttasks/${taskId}`);
       await syncWorkbenchFromServer();
     } catch {
-      setError(t("basic.deleteFailed", "Delete failed"));
+      setError(t("basic.deleteFailed"));
     } finally {
       closeSettingsMenu();
     }
@@ -3965,7 +3937,7 @@ const ProjectWorkbench = () => {
       await syncWorkbenchFromServer();
       clearMoveMode();
     } catch {
-      setError(t("basic.saveFailed", "Save failed"));
+      setError(t("basic.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -4021,6 +3993,7 @@ const ProjectWorkbench = () => {
     openInventoryPlanningDialog,
     openSkillPlanningDialog,
     openManpowerPlanningDialog,
+    openTaskStatusUpdateDialog,
     formatDate,
     ganttCurrentPeriodOverlay,
   };
@@ -4032,6 +4005,7 @@ const ProjectWorkbench = () => {
     manpowerPlanningDialogProps,
     skillPlanningDialogProps,
     skillCreateDialogProps,
+    taskStatusUpdateDialogProps,
     settingsMenuProps,
     inventoryOverviewDialogProps,
     manpowerOverviewDialogProps,
@@ -4132,6 +4106,14 @@ const ProjectWorkbench = () => {
     setSkillCreateError,
     setSkillCreateForm,
     saveNewSkillDefinition,
+    taskStatusUpdateOpen,
+    taskStatusUpdateTarget,
+    taskStatusUpdateDate,
+    taskStatusUpdateError,
+    taskStatusUpdateSaving,
+    setTaskStatusUpdateDate,
+    closeTaskStatusUpdateDialog,
+    saveTaskStatusUpdate,
     menuAnchorEl,
     menuTarget,
     closeSettingsMenu,
@@ -4216,6 +4198,7 @@ const ProjectWorkbench = () => {
           manpowerPlanningDialogProps={manpowerPlanningDialogProps}
           skillPlanningDialogProps={skillPlanningDialogProps}
           skillCreateDialogProps={skillCreateDialogProps}
+          taskStatusUpdateDialogProps={taskStatusUpdateDialogProps}
           settingsMenuProps={settingsMenuProps}
           inventoryOverviewDialogProps={inventoryOverviewDialogProps}
           manpowerOverviewDialogProps={manpowerOverviewDialogProps}

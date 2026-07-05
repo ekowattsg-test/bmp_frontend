@@ -38,7 +38,7 @@ const WorkbenchRowActionIcons = ({
         <IconButton
           size="small"
           onClick={(event) => onOpenSettingsMenu(event, row)}
-          aria-label={t("basic.settings", "Settings")}
+          aria-label={t("basic.settings")}
           sx={{
             width: 16,
             height: 16,
@@ -57,12 +57,7 @@ const WorkbenchRowActionIcons = ({
       </Box>
 
       {inventoryIconMeta ? (
-        <Tooltip
-          title={t(
-            "projectPlanning.openInventoryPlanning",
-            "Open inventory planning",
-          )}
-        >
+        <Tooltip title={t("projectPlanning.openInventoryPlanning")}>
           <IconButton
             size="small"
             onClick={(event) => {
@@ -100,9 +95,7 @@ const WorkbenchRowActionIcons = ({
       )}
 
       {manpowerRequired > 0 ? (
-        <Tooltip
-          title={t("projectPlanning.openSkillPlanning", "Open skill workspace")}
-        >
+        <Tooltip title={t("projectPlanning.openSkillPlanning")}>
           <IconButton
             size="small"
             onClick={(event) => {

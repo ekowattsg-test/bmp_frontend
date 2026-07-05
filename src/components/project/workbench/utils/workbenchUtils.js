@@ -18,6 +18,22 @@ export const formatDate = (value) => {
 export const diffDays = (from, to) =>
   Math.round((to.getTime() - from.getTime()) / DAY_MS);
 
+export const getTaskStatusLabel = (status, t) => {
+  const normalizedStatus = String(status || "")
+    .trim()
+    .toUpperCase();
+  if (normalizedStatus === "NOT STARTED") {
+    return t("projectPlanning.taskStatusNotStarted");
+  }
+  if (normalizedStatus === "IN PROGRESS") {
+    return t("projectPlanning.taskStatusInProgress");
+  }
+  if (normalizedStatus === "COMPLETED") {
+    return t("projectPlanning.taskStatusCompleted");
+  }
+  return String(status || "").trim() || "-";
+};
+
 export const toStatusColor = (status) => {
   const s = String(status || "").toUpperCase();
   if (s === "ACTIVE" || s === "IN PROGRESS") return "success";

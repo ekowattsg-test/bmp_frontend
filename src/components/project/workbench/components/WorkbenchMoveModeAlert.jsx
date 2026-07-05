@@ -17,18 +17,15 @@ const WorkbenchMoveModeAlert = ({
       sx={{ mx: 2, mt: 1.5, mb: 0.5 }}
       action={
         <Button color="inherit" size="small" onClick={onCancel}>
-          {t("basic.cancel", "Cancel")}
+          {t("basic.cancel")}
         </Button>
       }
     >
-      {t("projectPlanning.moveModeActive", "Move mode active")}
+      {t("projectPlanning.moveModeActive")}
       {": "}
       <strong>{moveSourceTask?.taskName || moveSourceTaskId}</strong>
       {". "}
-      {t(
-        "projectPlanning.selectMoveTarget",
-        "Hover valid tasks for 'Move here' and click to move.",
-      )}
+      {t("projectPlanning.selectMoveTarget")}
     </Alert>
   );
 };

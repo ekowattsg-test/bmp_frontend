@@ -58,7 +58,7 @@ const InventoryPlanningDialog = ({
           }}
         >
           <Typography variant="h6" component="div">
-            {t("projectPlanning.inventoryPlanning", "Inventory Planning")} -{" "}
+            {t("projectPlanning.inventoryPlanning")} -{" "}
             {target?.name ||
               target?.raw?.taskName ||
               target?.raw?.streamName ||
@@ -69,10 +69,10 @@ const InventoryPlanningDialog = ({
             color="text.secondary"
             sx={{ ml: "auto" }}
           >
-            <strong>{t("projectPlanning.leftHeaderStart", "Start")}: </strong>
+            <strong>{t("projectPlanning.leftHeaderStart")}: </strong>
             {formatDate(target?.startDate)}
             {"  "}
-            <strong>{t("projectPlanning.leftHeaderEnd", "End")}: </strong>
+            <strong>{t("projectPlanning.leftHeaderEnd")}: </strong>
             {formatDate(target?.endDate)}
           </Typography>
         </Box>
@@ -89,18 +89,15 @@ const InventoryPlanningDialog = ({
           >
             <Tab
               value="stock"
-              label={t("projectPlanning.stockPlanning", "Stock")}
+              label={t("projectPlanning.stockPlanning")}
               disabled={target?.type !== "task"}
             />
             <Tab
               value="asset"
-              label={t("projectPlanning.assetPlanning", "Asset")}
+              label={t("projectPlanning.assetPlanning")}
               disabled={target?.type !== "stream"}
             />
-            <Tab
-              value="bundle"
-              label={t("projectPlanning.bundlePlanning", "Bundle")}
-            />
+            <Tab value="bundle" label={t("projectPlanning.bundlePlanning")} />
           </Tabs>
 
           {loading ? (
@@ -110,18 +107,12 @@ const InventoryPlanningDialog = ({
           ) : tab === "stock" ? (
             target?.type !== "task" ? (
               <Alert severity="warning">
-                {t(
-                  "projectPlanning.stockOnlyForTask",
-                  "Stock planning is only available for tasks.",
-                )}
+                {t("projectPlanning.stockOnlyForTask")}
               </Alert>
             ) : (
               <Stack spacing={1.25}>
                 <Typography variant="body2">
-                  {t(
-                    "projectPlanning.stockWorkspaceHelp",
-                    "Include stock inventory required for the entire task duration.",
-                  )}
+                  {t("projectPlanning.stockWorkspaceHelp")}
                 </Typography>
                 <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
                   <Autocomplete
@@ -157,10 +148,7 @@ const InventoryPlanningDialog = ({
                       );
                       if (duplicate) {
                         onErrorChange(
-                          t(
-                            "projectPlanning.inventoryDuplicateProduct",
-                            "This product has already been added.",
-                          ),
+                          t("projectPlanning.inventoryDuplicateProduct"),
                         );
                         return;
                       }
@@ -181,16 +169,13 @@ const InventoryPlanningDialog = ({
                       String(value?.productId || "")
                     }
                     renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label={t("product.productName", "Product")}
-                      />
+                      <TextField {...params} label={t("product.productName")} />
                     )}
                   />
                   <TextField
                     type="number"
                     size="small"
-                    label={t("basic.quantity", "Quantity")}
+                    label={t("basic.quantity")}
                     value={draft.quantity}
                     onChange={(e) =>
                       onDraftChange({ quantity: e.target.value })
@@ -211,12 +196,12 @@ const InventoryPlanningDialog = ({
                       )
                     }
                   >
-                    {t("basic.add", "Add")}
+                    {t("basic.add")}
                   </Button>
                 </Stack>
                 {getInventoryRows("stock").length === 0 ? (
                   <Typography variant="body2" color="text.secondary">
-                    {t("projectPlanning.noStockSelected", "No stock selected.")}
+                    {t("projectPlanning.noStockSelected")}
                   </Typography>
                 ) : (
                   <Box
@@ -241,16 +226,16 @@ const InventoryPlanningDialog = ({
                       }}
                     >
                       <Typography variant="caption" fontWeight={700}>
-                        {t("product.productName", "Product")}
+                        {t("product.productName")}
                       </Typography>
                       <Typography variant="caption" fontWeight={700}>
-                        {t("product.productCode", "Code")}
+                        {t("product.productCode")}
                       </Typography>
                       <Typography variant="caption" fontWeight={700}>
-                        {t("basic.quantity", "Quantity")}
+                        {t("basic.quantity")}
                       </Typography>
                       <Typography variant="caption" fontWeight={700}>
-                        {t("basic.remove", "Remove")}
+                        {t("basic.remove")}
                       </Typography>
                     </Box>
                     {getInventoryRows("stock").map((item) => (
@@ -301,18 +286,12 @@ const InventoryPlanningDialog = ({
           ) : tab === "asset" ? (
             target?.type !== "stream" ? (
               <Alert severity="warning">
-                {t(
-                  "projectPlanning.assetOnlyForStream",
-                  "Asset planning is only available for streams.",
-                )}
+                {t("projectPlanning.assetOnlyForStream")}
               </Alert>
             ) : (
               <Stack spacing={1.25}>
                 <Typography variant="body2">
-                  {t(
-                    "projectPlanning.assetWorkspaceHelp",
-                    "Include asset requirements for the entire stream duration.",
-                  )}
+                  {t("projectPlanning.assetWorkspaceHelp")}
                 </Typography>
                 <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
                   <Autocomplete
@@ -348,10 +327,7 @@ const InventoryPlanningDialog = ({
                       );
                       if (duplicate) {
                         onErrorChange(
-                          t(
-                            "projectPlanning.inventoryDuplicateProduct",
-                            "This product has already been added.",
-                          ),
+                          t("projectPlanning.inventoryDuplicateProduct"),
                         );
                         return;
                       }
@@ -372,16 +348,13 @@ const InventoryPlanningDialog = ({
                       String(value?.productId || "")
                     }
                     renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label={t("product.productName", "Product")}
-                      />
+                      <TextField {...params} label={t("product.productName")} />
                     )}
                   />
                   <TextField
                     type="number"
                     size="small"
-                    label={t("basic.quantity", "Quantity")}
+                    label={t("basic.quantity")}
                     value={draft.quantity}
                     onChange={(e) =>
                       onDraftChange({ quantity: e.target.value })
@@ -402,12 +375,12 @@ const InventoryPlanningDialog = ({
                       )
                     }
                   >
-                    {t("basic.add", "Add")}
+                    {t("basic.add")}
                   </Button>
                 </Stack>
                 {getInventoryRows("asset").length === 0 ? (
                   <Typography variant="body2" color="text.secondary">
-                    {t("projectPlanning.noAssetSelected", "No asset selected.")}
+                    {t("projectPlanning.noAssetSelected")}
                   </Typography>
                 ) : (
                   <Box
@@ -432,16 +405,16 @@ const InventoryPlanningDialog = ({
                       }}
                     >
                       <Typography variant="caption" fontWeight={700}>
-                        {t("product.productName", "Product")}
+                        {t("product.productName")}
                       </Typography>
                       <Typography variant="caption" fontWeight={700}>
-                        {t("product.productCode", "Code")}
+                        {t("product.productCode")}
                       </Typography>
                       <Typography variant="caption" fontWeight={700}>
-                        {t("basic.quantity", "Quantity")}
+                        {t("basic.quantity")}
                       </Typography>
                       <Typography variant="caption" fontWeight={700}>
-                        {t("basic.remove", "Remove")}
+                        {t("basic.remove")}
                       </Typography>
                     </Box>
                     {getInventoryRows("asset").map((item) => (
@@ -492,10 +465,7 @@ const InventoryPlanningDialog = ({
           ) : (
             <Stack spacing={1.25}>
               <Typography variant="body2">
-                {t(
-                  "projectPlanning.bundleWorkspaceHelp",
-                  "Include fixed bundles required for the entire stream/task duration.",
-                )}
+                {t("projectPlanning.bundleWorkspaceHelp")}
               </Typography>
               <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
                 <Autocomplete
@@ -521,10 +491,7 @@ const InventoryPlanningDialog = ({
                     );
                     if (duplicate) {
                       onErrorChange(
-                        t(
-                          "projectPlanning.inventoryDuplicateBundle",
-                          "This bundle has already been added.",
-                        ),
+                        t("projectPlanning.inventoryDuplicateBundle"),
                       );
                       return;
                     }
@@ -537,16 +504,13 @@ const InventoryPlanningDialog = ({
                     getBundleId(option) === getBundleId(value)
                   }
                   renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label={t("productBundle.title", "Bundle")}
-                    />
+                    <TextField {...params} label={t("productBundle.title")} />
                   )}
                 />
                 <TextField
                   type="number"
                   size="small"
-                  label={t("basic.quantity", "Quantity")}
+                  label={t("basic.quantity")}
                   value={draft.bundleQuantity}
                   onChange={(e) =>
                     onDraftChange({ bundleQuantity: e.target.value })
@@ -559,12 +523,12 @@ const InventoryPlanningDialog = ({
                   disabled={!String(draft.bundleId || "").trim()}
                   onClick={addPlanningBundle}
                 >
-                  {t("basic.add", "Add")}
+                  {t("basic.add")}
                 </Button>
               </Stack>
               {getInventoryRows("bundle").length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
-                  {t("projectPlanning.noBundleSelected", "No bundle selected.")}
+                  {t("projectPlanning.noBundleSelected")}
                 </Typography>
               ) : (
                 <Box
@@ -589,16 +553,16 @@ const InventoryPlanningDialog = ({
                     }}
                   >
                     <Typography variant="caption" fontWeight={700}>
-                      {t("productBundle.title", "Bundle")}
+                      {t("productBundle.title")}
                     </Typography>
                     <Typography variant="caption" fontWeight={700}>
-                      {t("productBundle.members", "Members")}
+                      {t("productBundle.members")}
                     </Typography>
                     <Typography variant="caption" fontWeight={700}>
-                      {t("basic.quantity", "Quantity")}
+                      {t("basic.quantity")}
                     </Typography>
                     <Typography variant="caption" fontWeight={700}>
-                      {t("basic.remove", "Remove")}
+                      {t("basic.remove")}
                     </Typography>
                   </Box>
                   {getInventoryRows("bundle").map((item) => (
@@ -664,7 +628,7 @@ const InventoryPlanningDialog = ({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t("basic.close", "Close")}</Button>
+        <Button onClick={onClose}>{t("basic.close")}</Button>
       </DialogActions>
     </Dialog>
   );

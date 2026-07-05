@@ -24,10 +24,23 @@ const WorkbenchTimelineRows = ({
   openInventoryPlanningDialog,
   openSkillPlanningDialog,
   openManpowerPlanningDialog,
+  openTaskStatusUpdateDialog,
   formatDate,
   colWidth,
   ganttCurrentPeriodOverlay,
 }) => {
+  const streamNameById = rows.reduce((acc, row) => {
+    if (row.type !== "stream") return acc;
+    const streamId = String(
+      row?.streamId || row?.raw?.projectStreamId || "",
+    ).trim();
+    const streamName = String(row?.raw?.streamName || row?.name || "").trim();
+    if (streamId && streamName) {
+      acc[streamId] = streamName;
+    }
+    return acc;
+  }, {});
+
   return rows.map((row) => {
     const geo = getTaskBarGeometry(row);
     const validMoveTarget = isValidMoveTarget(row);
@@ -44,6 +57,10 @@ const WorkbenchTimelineRows = ({
       .trim()
       .toUpperCase();
     const isMilestoneTaskType = row.type === "task" && taskTypeCode === "M";
+    const taskStatus = String(row?.raw?.taskStatus || "").trim();
+    const isStatusUpdatableTask =
+      row.type === "task" &&
+      (taskStatus === "Not Started" || taskStatus === "In Progress");
 
     return (
       <Box
@@ -76,6 +93,9 @@ const WorkbenchTimelineRows = ({
           onOpenInventoryPlanning={openInventoryPlanningDialog}
           onOpenSkillPlanning={openSkillPlanningDialog}
           onOpenManpowerPlanning={openManpowerPlanningDialog}
+          onTaskBarClick={
+            isStatusUpdatableTask ? () => openTaskStatusUpdateDialog(row) : null
+          }
           formatDate={formatDate}
         />
 
@@ -83,10 +103,16 @@ const WorkbenchTimelineRows = ({
           colWidth={colWidth}
           ganttCurrentPeriodOverlay={ganttCurrentPeriodOverlay}
           geo={geo}
+          row={row}
+          streamName={streamNameById[String(row?.streamId || "").trim()] || ""}
           isMilestoneTaskType={isMilestoneTaskType}
           rowType={row.type}
           isParentHighlight={isParentHighlight}
           isLinkedHighlight={isLinkedHighlight}
+          formatDate={formatDate}
+          onTaskBarClick={
+            isStatusUpdatableTask ? () => openTaskStatusUpdateDialog(row) : null
+          }
         />
       </Box>
     );

@@ -50,7 +50,7 @@ const SkillOverviewDialog = ({
       }}
     >
       <DialogTitle sx={{ pb: 0.25, pt: 1 }}>
-        {t("projectPlanning.skillOverview", "Skill Overview")} - {projectCode}
+        {t("projectPlanning.skillOverview")} - {projectCode}
       </DialogTitle>
       <Box
         sx={{
@@ -64,10 +64,7 @@ const SkillOverviewDialog = ({
         }}
       >
         <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
-          {t(
-            "projectPlanning.skillOverviewDesc",
-            "Track required skill units across tasks. Hover each populated cell to see task-by-task unit breakdown.",
-          )}
+          {t("projectPlanning.skillOverviewDesc")}
         </Typography>
         <ToggleButtonGroup
           value={viewMode}
@@ -78,13 +75,13 @@ const SkillOverviewDialog = ({
           size="small"
         >
           <ToggleButton value="day">
-            {t("projectPlanning.viewDay", "Day")}
+            {t("projectPlanning.viewDay")}
           </ToggleButton>
           <ToggleButton value="week">
-            {t("projectPlanning.viewWeek", "Week")}
+            {t("projectPlanning.viewWeek")}
           </ToggleButton>
           <ToggleButton value="month">
-            {t("projectPlanning.viewMonth", "Month")}
+            {t("projectPlanning.viewMonth")}
           </ToggleButton>
         </ToggleButtonGroup>
       </Box>
@@ -103,9 +100,7 @@ const SkillOverviewDialog = ({
         ) : error ? (
           <Alert severity="error">{error}</Alert>
         ) : rows.length === 0 ? (
-          <Alert severity="info">
-            {t("projectPlanning.noSkillSelected", "No skills selected.")}
-          </Alert>
+          <Alert severity="info">{t("projectPlanning.noSkillSelected")}</Alert>
         ) : (
           <Box
             sx={{
@@ -148,7 +143,7 @@ const SkillOverviewDialog = ({
                     fontWeight={700}
                     sx={{ fontSize: "0.64rem" }}
                   >
-                    {t("projectPlanning.timeline", "Timeline")}
+                    {t("projectPlanning.timeline")}
                   </Typography>
                 </Box>
 
@@ -204,7 +199,7 @@ const SkillOverviewDialog = ({
                     fontWeight={700}
                     sx={{ fontSize: "0.68rem" }}
                   >
-                    {t("projectPlanning.skillName", "Skill")}
+                    {t("projectPlanning.skillName")}
                   </Typography>
                 </Box>
 
@@ -367,7 +362,7 @@ const SkillOverviewDialog = ({
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t("basic.close", "Close")}</Button>
+        <Button onClick={onClose}>{t("basic.close")}</Button>
       </DialogActions>
     </Dialog>
   );

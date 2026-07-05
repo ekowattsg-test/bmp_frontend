@@ -50,8 +50,7 @@ const ManpowerOverviewDialog = ({
       }}
     >
       <DialogTitle sx={{ pb: 0.25, pt: 1 }}>
-        {t("projectPlanning.manpowerOverview", "Manpower Overview")} -{" "}
-        {projectCode}
+        {t("projectPlanning.manpowerOverview")} - {projectCode}
       </DialogTitle>
       <Box
         sx={{
@@ -65,10 +64,7 @@ const ManpowerOverviewDialog = ({
         }}
       >
         <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
-          {t(
-            "projectPlanning.manpowerOverviewDesc",
-            "View manpower deployment loading across project dates.",
-          )}
+          {t("projectPlanning.manpowerOverviewDesc")}
         </Typography>
         <ToggleButtonGroup
           value={viewMode}
@@ -79,13 +75,13 @@ const ManpowerOverviewDialog = ({
           size="small"
         >
           <ToggleButton value="day">
-            {t("projectPlanning.viewDay", "Day")}
+            {t("projectPlanning.viewDay")}
           </ToggleButton>
           <ToggleButton value="week">
-            {t("projectPlanning.viewWeek", "Week")}
+            {t("projectPlanning.viewWeek")}
           </ToggleButton>
           <ToggleButton value="month">
-            {t("projectPlanning.viewMonth", "Month")}
+            {t("projectPlanning.viewMonth")}
           </ToggleButton>
         </ToggleButtonGroup>
       </Box>
@@ -105,10 +101,7 @@ const ManpowerOverviewDialog = ({
           <Alert severity="error">{error}</Alert>
         ) : rows.length === 0 ? (
           <Alert severity="info">
-            {t(
-              "projectPlanning.noManpowerOverviewData",
-              "No manpower deployment data available for this project.",
-            )}
+            {t("projectPlanning.noManpowerOverviewData")}
           </Alert>
         ) : (
           <Box
@@ -152,7 +145,7 @@ const ManpowerOverviewDialog = ({
                     fontWeight={700}
                     sx={{ fontSize: "0.64rem" }}
                   >
-                    {t("projectPlanning.timeline", "Timeline")}
+                    {t("projectPlanning.timeline")}
                   </Typography>
                 </Box>
 
@@ -216,7 +209,7 @@ const ManpowerOverviewDialog = ({
                       fontWeight={700}
                       sx={{ fontSize: "0.68rem" }}
                     >
-                      {t("projectPlanning.staffName", "Staff Name")}
+                      {t("projectPlanning.staffName")}
                     </Typography>
                   </Box>
                   <Box sx={{ px: 1, py: 0.6 }}>
@@ -225,7 +218,7 @@ const ManpowerOverviewDialog = ({
                       fontWeight={700}
                       sx={{ fontSize: "0.68rem" }}
                     >
-                      {t("projectPlanning.skillProfiles", "Skill Profiles")}
+                      {t("projectPlanning.skillProfiles")}
                     </Typography>
                   </Box>
                 </Box>
@@ -325,10 +318,7 @@ const ManpowerOverviewDialog = ({
                       >
                         {row.skillProfiles.length > 0
                           ? row.skillProfiles.join(", ")
-                          : t(
-                              "projectPlanning.noSkillProfile",
-                              "No Skill Profile",
-                            )}
+                          : t("projectPlanning.noSkillProfile")}
                       </Typography>
                     </Box>
                   </Box>
@@ -412,7 +402,7 @@ const ManpowerOverviewDialog = ({
         )}
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 1.5 }}>
-        <Button onClick={onClose}>{t("basic.close", "Close")}</Button>
+        <Button onClick={onClose}>{t("basic.close")}</Button>
       </DialogActions>
     </Dialog>
   );

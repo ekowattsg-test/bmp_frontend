@@ -54,7 +54,7 @@ const SkillPlanningDialog = ({
           }}
         >
           <Typography variant="h6" component="div" sx={{ pr: 1 }}>
-            {t("projectPlanning.skillWorkspace", "Skill Workspace")}
+            {t("projectPlanning.skillWorkspace")}
             {" - "}
             {target?.name || target?.raw?.taskName || "-"}
           </Typography>
@@ -66,14 +66,11 @@ const SkillPlanningDialog = ({
             disabled={loading}
             sx={{ mt: 0, flexShrink: 0 }}
           >
-            {t("projectPlanning.addSkillDefinition", "Add Skill Definition")}
+            {t("projectPlanning.addSkillDefinition")}
           </Button>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          {t(
-            "projectPlanning.skillWorkspaceHelp",
-            "Define the skills and units required for this task.",
-          )}
+          {t("projectPlanning.skillWorkspaceHelp")}
         </Typography>
       </DialogTitle>
       <DialogContent dividers>
@@ -86,10 +83,10 @@ const SkillPlanningDialog = ({
               fullWidth
               sx={{ minWidth: { xs: "100%", md: 260 } }}
             >
-              <InputLabel>{t("projectPlanning.skillName", "Skill")}</InputLabel>
+              <InputLabel>{t("projectPlanning.skillName")}</InputLabel>
               <Select
                 value={draft.skillId ?? ""}
-                label={t("projectPlanning.skillName", "Skill")}
+                label={t("projectPlanning.skillName")}
                 onChange={(event) => {
                   const nextSkillId = toLongId(event.target.value);
                   if (nextSkillId === null) {
@@ -104,12 +101,7 @@ const SkillPlanningDialog = ({
                   );
 
                   if (duplicateRow) {
-                    onErrorChange(
-                      t(
-                        "projectPlanning.skillDuplicate",
-                        "This skill has already been added.",
-                      ),
-                    );
+                    onErrorChange(t("projectPlanning.skillDuplicate"));
                     return;
                   }
 
@@ -134,7 +126,7 @@ const SkillPlanningDialog = ({
             <TextField
               type="number"
               size="small"
-              label={t("projectPlanning.skillUnit", "Unit")}
+              label={t("projectPlanning.skillUnit")}
               value={draft.unit}
               onChange={(event) => onDraftChange({ unit: event.target.value })}
               inputProps={{ min: 1, step: 1 }}
@@ -148,16 +140,13 @@ const SkillPlanningDialog = ({
               }
               onClick={onSave}
             >
-              {draft.apiId ? t("basic.save", "Save") : t("basic.add", "Add")}
+              {draft.apiId ? t("basic.save") : t("basic.add")}
             </Button>
           </Stack>
 
           {saveLockedByManpower && (
             <Alert severity="warning">
-              {t(
-                "projectPlanning.skillLockedByManpower",
-                "Skill requirements are locked because manpower deployment was manually updated for this task.",
-              )}
+              {t("projectPlanning.skillLockedByManpower")}
             </Alert>
           )}
 
@@ -167,7 +156,7 @@ const SkillPlanningDialog = ({
             </Box>
           ) : rows.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
-              {t("projectPlanning.noSkillSelected", "No skills selected.")}
+              {t("projectPlanning.noSkillSelected")}
             </Typography>
           ) : (
             <Box
@@ -191,13 +180,13 @@ const SkillPlanningDialog = ({
                 }}
               >
                 <Typography variant="caption" fontWeight={700}>
-                  {t("projectPlanning.skillName", "Skill")}
+                  {t("projectPlanning.skillName")}
                 </Typography>
                 <Typography variant="caption" fontWeight={700}>
-                  {t("projectPlanning.skillUnit", "Unit")}
+                  {t("projectPlanning.skillUnit")}
                 </Typography>
                 <Typography variant="caption" fontWeight={700}>
-                  {t("basic.remove", "Remove")}
+                  {t("basic.remove")}
                 </Typography>
               </Box>
 
@@ -263,7 +252,7 @@ const SkillPlanningDialog = ({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t("basic.close", "Close")}</Button>
+        <Button onClick={onClose}>{t("basic.close")}</Button>
       </DialogActions>
     </Dialog>
   );

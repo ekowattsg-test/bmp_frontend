@@ -3,6 +3,7 @@ import InventoryPlanningDialog from "./InventoryPlanningDialog";
 import InventoryOverviewDialog from "./InventoryOverviewDialog";
 import ManpowerOverviewDialog from "./ManpowerOverviewDialog";
 import ManpowerPlanningDialog from "./ManpowerPlanningDialog";
+import TaskStatusUpdateDialog from "./TaskStatusUpdateDialog";
 import SkillCreateDialog from "./SkillCreateDialog";
 import SkillOverviewDialog from "./SkillOverviewDialog";
 import SkillPlanningDialog from "./SkillPlanningDialog";
@@ -104,6 +105,14 @@ const WorkbenchDialogsHost = ({
   setSkillCreateError,
   setSkillCreateForm,
   saveNewSkillDefinition,
+  taskStatusUpdateOpen,
+  taskStatusUpdateTarget,
+  taskStatusUpdateDate,
+  taskStatusUpdateError,
+  taskStatusUpdateSaving,
+  setTaskStatusUpdateDate,
+  closeTaskStatusUpdateDialog,
+  saveTaskStatusUpdate,
   menuAnchorEl,
   menuTarget,
   closeSettingsMenu,
@@ -172,6 +181,17 @@ const WorkbenchDialogsHost = ({
       <WorkbenchHelpDialog
         open={workbenchHelpOpen}
         onClose={() => setWorkbenchHelpOpen(false)}
+      />
+
+      <TaskStatusUpdateDialog
+        open={taskStatusUpdateOpen}
+        task={taskStatusUpdateTarget}
+        dateValue={taskStatusUpdateDate}
+        error={taskStatusUpdateError}
+        saving={taskStatusUpdateSaving}
+        onDateChange={setTaskStatusUpdateDate}
+        onClose={closeTaskStatusUpdateDialog}
+        onConfirm={saveTaskStatusUpdate}
       />
 
       <WorkbenchSettingsDialog

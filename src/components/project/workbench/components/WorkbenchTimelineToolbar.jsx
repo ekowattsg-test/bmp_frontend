@@ -42,7 +42,7 @@ const WorkbenchTimelineToolbar = ({
         }}
       >
         <Typography variant="subtitle1" sx={{ lineHeight: 1.25 }}>
-          {t("projectPlanning.ganttTitle", "Streams & Tasks Timeline")}
+          {t("projectPlanning.ganttTitle")}
         </Typography>
         <Button
           variant="contained"
@@ -50,28 +50,28 @@ const WorkbenchTimelineToolbar = ({
           onClick={onAddStream}
           sx={{ minWidth: 140, fontWeight: 600 }}
         >
-          {t("projectPlanning.addStream", "Add Stream")}
+          {t("projectPlanning.addStream")}
         </Button>
         <Button
           variant="outlined"
           onClick={onOpenInventoryOverview}
           sx={{ minWidth: 170, fontWeight: 600 }}
         >
-          {t("projectPlanning.inventoryOverview", "Inventory Overview")}
+          {t("projectPlanning.inventoryOverview")}
         </Button>
         <Button
           variant="outlined"
           onClick={onOpenSkillOverview}
           sx={{ minWidth: 170, fontWeight: 600 }}
         >
-          {t("projectPlanning.skillOverview", "Skill Overview")}
+          {t("projectPlanning.skillOverview")}
         </Button>
         <Button
           variant="outlined"
           onClick={onOpenManpowerOverview}
           sx={{ minWidth: 180, fontWeight: 600 }}
         >
-          {t("projectPlanning.manpowerOverview", "Manpower Overview")}
+          {t("projectPlanning.manpowerOverview")}
         </Button>
       </Box>
       <ToggleButtonGroup
@@ -82,14 +82,12 @@ const WorkbenchTimelineToolbar = ({
         }}
         size="small"
       >
-        <ToggleButton value="day">
-          {t("projectPlanning.viewDay", "Day")}
-        </ToggleButton>
+        <ToggleButton value="day">{t("projectPlanning.viewDay")}</ToggleButton>
         <ToggleButton value="week">
-          {t("projectPlanning.viewWeek", "Week")}
+          {t("projectPlanning.viewWeek")}
         </ToggleButton>
         <ToggleButton value="month">
-          {t("projectPlanning.viewMonth", "Month")}
+          {t("projectPlanning.viewMonth")}
         </ToggleButton>
       </ToggleButtonGroup>
     </Box>

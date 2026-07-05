@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
+import { getTaskStatusLabel } from "../utils/workbenchUtils";
 
 const WorkbenchRowTooltipContent = ({
   validMoveTarget,
@@ -27,7 +28,7 @@ const WorkbenchRowTooltipContent = ({
             fontWeight: 700,
           }}
         >
-          {t("projectPlanning.moveHere", "Move here")}
+          {t("projectPlanning.moveHere")}
         </Typography>
       )}
       {row.type === "stream" ? (
@@ -42,11 +43,10 @@ const WorkbenchRowTooltipContent = ({
             {row?.raw?.streamName || row.name}
           </Typography>
           <Typography variant="caption" sx={{ display: "block" }}>
-            {t("projectstream.streamType", "Stream Type")}:{" "}
-            {row?.raw?.streamType || "-"}
+            {t("projectstream.streamType")}: {row?.raw?.streamType || "-"}
           </Typography>
           <Typography variant="caption" sx={{ display: "block" }}>
-            {t("projectPlanning.taskCount", "Task Count")}: {streamTaskCount}
+            {t("projectPlanning.taskCount")}: {streamTaskCount}
           </Typography>
         </>
       ) : (
@@ -61,15 +61,15 @@ const WorkbenchRowTooltipContent = ({
             {row?.raw?.taskName || row.name}
           </Typography>
           <Typography variant="caption" sx={{ display: "block" }}>
-            {t("projecttask.taskType", "Task Type")}:{" "}
+            {t("projecttask.taskType")}:{" "}
             {getTaskTypeDisplay(row?.raw?.taskType)}
           </Typography>
           <Typography variant="caption" sx={{ display: "block" }}>
-            {t("projecttask.taskStatus", "Task Status")}:{" "}
-            {row?.raw?.taskStatus || "-"}
+            {t("projecttask.taskStatus")}:{" "}
+            {getTaskStatusLabel(row?.raw?.taskStatus, t)}
           </Typography>
           <Typography variant="caption" sx={{ display: "block" }}>
-            {t("projecttask.taskDuration", "Task Duration (days)")}:{" "}
+            {t("projecttask.taskDuration")}:{" "}
             {row?.raw?.taskDuration ||
               getDurationDays(row?.raw?.taskStartDate, row?.raw?.taskEndDate) ||
               "-"}

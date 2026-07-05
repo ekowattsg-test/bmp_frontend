@@ -17,6 +17,7 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { useTranslation } from "react-i18next";
+import { getTaskStatusLabel } from "../utils/workbenchUtils";
 
 const WorkbenchSettingsDialog = ({
   open,
@@ -51,14 +52,14 @@ const WorkbenchSettingsDialog = ({
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle>
         {dialogMode === "add-stream"
-          ? t("projectPlanning.addStream", "Add Stream")
+          ? t("projectPlanning.addStream")
           : dialogMode === "replicate-stream"
-            ? t("projectPlanning.replicateStream", "Replicate Stream")
+            ? t("projectPlanning.replicateStream")
             : dialogMode === "add-task"
-              ? t("projectPlanning.createTask", "Create Task")
+              ? t("projectPlanning.createTask")
               : settingsTarget?.type === "stream"
-                ? t("projectPlanning.streamSettings", "Stream Settings")
-                : t("projectPlanning.taskSettings", "Task Settings")}
+                ? t("projectPlanning.streamSettings")
+                : t("projectPlanning.taskSettings")}
       </DialogTitle>
       <DialogContent dividers>
         {settingsError && (
@@ -70,7 +71,7 @@ const WorkbenchSettingsDialog = ({
         {dialogMode === "add-stream" && (
           <Stack spacing={2}>
             <TextField
-              label={t("projectstream.streamName", "Stream Name")}
+              label={t("projectstream.streamName")}
               value={formData.streamName || ""}
               onChange={(e) =>
                 setFormData((prev) => ({
@@ -84,7 +85,7 @@ const WorkbenchSettingsDialog = ({
               required
             />
             <TextField
-              label={t("projectstream.streamDescription", "Stream Description")}
+              label={t("projectstream.streamDescription")}
               value={formData.streamDescription || ""}
               onChange={(e) =>
                 setFormData((prev) => ({
@@ -104,7 +105,7 @@ const WorkbenchSettingsDialog = ({
           settingsTarget?.type === "stream" && (
             <Stack spacing={2}>
               <TextField
-                label={t("projectstream.streamName", "Stream Name")}
+                label={t("projectstream.streamName")}
                 value={formData.streamName || ""}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -123,7 +124,7 @@ const WorkbenchSettingsDialog = ({
         {dialogMode === "edit-stream" && settingsTarget?.type === "stream" && (
           <Stack spacing={2}>
             <TextField
-              label={t("projectstream.streamName", "Stream Name")}
+              label={t("projectstream.streamName")}
               value={formData.streamName || ""}
               onChange={(e) =>
                 setFormData((prev) => ({
@@ -135,7 +136,7 @@ const WorkbenchSettingsDialog = ({
               fullWidth
             />
             <TextField
-              label={t("projectstream.streamDescription", "Stream Description")}
+              label={t("projectstream.streamDescription")}
               value={formData.streamDescription || ""}
               onChange={(e) =>
                 setFormData((prev) => ({
@@ -154,7 +155,7 @@ const WorkbenchSettingsDialog = ({
         {dialogMode === "edit-task" && settingsTarget?.type === "task" && (
           <Stack spacing={2}>
             <TextField
-              label={t("projecttask.taskName", "Task Name")}
+              label={t("projecttask.taskName")}
               value={formData.taskName || ""}
               onChange={(e) =>
                 setFormData((prev) => ({
@@ -168,7 +169,7 @@ const WorkbenchSettingsDialog = ({
 
             <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
               <TextField
-                label={t("projecttask.taskType", "Task Type")}
+                label={t("projecttask.taskType")}
                 value={(() => {
                   const taskType =
                     taskTypeMetaByCode[String(formData.taskType || "").trim()];
@@ -180,11 +181,9 @@ const WorkbenchSettingsDialog = ({
                 disabled
               />
               <FormControl size="small" fullWidth>
-                <InputLabel>
-                  {t("projecttask.taskStatus", "Task Status")}
-                </InputLabel>
+                <InputLabel>{t("projecttask.taskStatus")}</InputLabel>
                 <Select
-                  label={t("projecttask.taskStatus", "Task Status")}
+                  label={t("projecttask.taskStatus")}
                   value={formData.taskStatus || "Not Started"}
                   onChange={(e) =>
                     setFormData((prev) => ({
@@ -193,9 +192,15 @@ const WorkbenchSettingsDialog = ({
                     }))
                   }
                 >
-                  <MenuItem value="Not Started">Not Started</MenuItem>
-                  <MenuItem value="In Progress">In Progress</MenuItem>
-                  <MenuItem value="Completed">Completed</MenuItem>
+                  <MenuItem value="Not Started">
+                    {getTaskStatusLabel("Not Started", t)}
+                  </MenuItem>
+                  <MenuItem value="In Progress">
+                    {getTaskStatusLabel("In Progress", t)}
+                  </MenuItem>
+                  <MenuItem value="Completed">
+                    {getTaskStatusLabel("Completed", t)}
+                  </MenuItem>
                 </Select>
               </FormControl>
             </Stack>
@@ -204,7 +209,7 @@ const WorkbenchSettingsDialog = ({
               <TextField
                 type="date"
                 size="small"
-                label={t("projecttask.taskStartDate", "Start Date")}
+                label={t("projecttask.taskStartDate")}
                 value={formData.taskStartDate || ""}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -224,7 +229,7 @@ const WorkbenchSettingsDialog = ({
               <TextField
                 type="number"
                 size="small"
-                label={t("projecttask.taskDuration", "Task Duration (days)")}
+                label={t("projecttask.taskDuration")}
                 value={formData.taskDuration || 1}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -260,7 +265,7 @@ const WorkbenchSettingsDialog = ({
               <TextField
                 type="date"
                 size="small"
-                label={t("projecttask.taskEndDate", "End Date")}
+                label={t("projecttask.taskEndDate")}
                 value={(() => {
                   const endDate = addDays(
                     formData.taskStartDate ||
@@ -277,11 +282,9 @@ const WorkbenchSettingsDialog = ({
             </Stack>
 
             <FormControl size="small" fullWidth>
-              <InputLabel>
-                {t("projecttask.staffId", "Person In-charge")}
-              </InputLabel>
+              <InputLabel>{t("projecttask.staffId")}</InputLabel>
               <Select
-                label={t("projecttask.staffId", "Person In-charge")}
+                label={t("projecttask.staffId")}
                 value={String(
                   formData.staffId || taskAssigneeOptions[0]?.staffId || "",
                 )}
@@ -310,11 +313,9 @@ const WorkbenchSettingsDialog = ({
             </FormControl>
 
             <FormControl size="small" fullWidth>
-              <InputLabel>
-                {t("projecttask.parentTask", "Parent Task")}
-              </InputLabel>
+              <InputLabel>{t("projecttask.parentTask")}</InputLabel>
               <Select
-                label={t("projecttask.parentTask", "Parent Task")}
+                label={t("projecttask.parentTask")}
                 value={String(formData.parentTaskId || "")}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -337,7 +338,7 @@ const WorkbenchSettingsDialog = ({
             </FormControl>
 
             <TextField
-              label={t("projecttask.remarks", "Remarks")}
+              label={t("projecttask.remarks")}
               value={formData.remarks || ""}
               onChange={(e) =>
                 setFormData((prev) => ({
@@ -356,25 +357,17 @@ const WorkbenchSettingsDialog = ({
         {dialogMode === "edit-milestone" && (
           <Stack spacing={1.5}>
             <Alert severity="info">
-              {t(
-                "projectPlanning.milestoneDialogHelp",
-                "Select a milestone task for this task and save.",
-              )}
+              {t("projectPlanning.milestoneDialogHelp")}
             </Alert>
             {milestoneCandidates.length === 0 ? (
               <Alert severity="warning">
-                {t(
-                  "projectPlanning.noMilestoneTaskAvailable",
-                  "No milestone task is available for selection.",
-                )}
+                {t("projectPlanning.noMilestoneTaskAvailable")}
               </Alert>
             ) : (
               <FormControl size="small" fullWidth>
-                <InputLabel>
-                  {t("projecttask.milestoneTask", "Milestone Task")}
-                </InputLabel>
+                <InputLabel>{t("projecttask.milestoneTask")}</InputLabel>
                 <Select
-                  label={t("projecttask.milestoneTask", "Milestone Task")}
+                  label={t("projecttask.milestoneTask")}
                   value={String(formData.milestoneTaskId || "")}
                   onChange={(e) =>
                     setFormData((prev) => ({
@@ -408,12 +401,12 @@ const WorkbenchSettingsDialog = ({
           >
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
               {settingsTarget?.type === "task"
-                ? t("projectPlanning.createChildTask", "Create Child Task")
-                : t("projectPlanning.createTask", "Create Task")}
+                ? t("projectPlanning.createChildTask")
+                : t("projectPlanning.createTask")}
             </Typography>
             <Stack spacing={1.25}>
               <TextField
-                label={t("projecttask.childTaskName", "Child Task Name")}
+                label={t("projecttask.childTaskName")}
                 size="small"
                 value={childTaskData.taskName}
                 onChange={(e) =>
@@ -427,11 +420,9 @@ const WorkbenchSettingsDialog = ({
 
               <Stack direction={{ xs: "column", md: "row" }} spacing={1.25}>
                 <FormControl size="small" fullWidth>
-                  <InputLabel>
-                    {t("projecttask.taskType", "Task Type")}
-                  </InputLabel>
+                  <InputLabel>{t("projecttask.taskType")}</InputLabel>
                   <Select
-                    label={t("projecttask.taskType", "Task Type")}
+                    label={t("projecttask.taskType")}
                     value={childTaskData.taskType}
                     onChange={(e) =>
                       setChildTaskData((prev) => ({
@@ -459,7 +450,7 @@ const WorkbenchSettingsDialog = ({
                 <TextField
                   type="date"
                   size="small"
-                  label={t("projecttask.taskStartDate", "Start Date")}
+                  label={t("projecttask.taskStartDate")}
                   value={childTaskData.taskStartDate || ""}
                   onChange={(e) =>
                     setChildTaskData((prev) => ({
@@ -479,7 +470,7 @@ const WorkbenchSettingsDialog = ({
                 />
                 <TextField
                   type="number"
-                  label={t("projecttask.taskDuration", "Task Duration (days)")}
+                  label={t("projecttask.taskDuration")}
                   size="small"
                   value={childTaskData.durationDays}
                   onChange={(e) =>
@@ -521,11 +512,9 @@ const WorkbenchSettingsDialog = ({
 
               <Stack direction={{ xs: "column", md: "row" }} spacing={1.25}>
                 <FormControl size="small" fullWidth>
-                  <InputLabel>
-                    {t("projecttask.staffId", "Person In-charge")}
-                  </InputLabel>
+                  <InputLabel>{t("projecttask.staffId")}</InputLabel>
                   <Select
-                    label={t("projecttask.staffId", "Person In-charge")}
+                    label={t("projecttask.staffId")}
                     value={String(
                       childTaskData.staffId ||
                         taskAssigneeOptions[0]?.staffId ||
@@ -550,7 +539,7 @@ const WorkbenchSettingsDialog = ({
                   <TextField
                     size="small"
                     fullWidth
-                    label={t("projectPlanning.attachNewParent", "Parent Task")}
+                    label={t("projectPlanning.attachNewParent")}
                     value={
                       settingsTarget?.raw?.taskName ||
                       t(
@@ -564,13 +553,10 @@ const WorkbenchSettingsDialog = ({
                 ) : (
                   <FormControl size="small" fullWidth>
                     <InputLabel>
-                      {t("projectPlanning.attachNewParent", "Parent Task")}
+                      {t("projectPlanning.attachNewParent")}
                     </InputLabel>
                     <Select
-                      label={t(
-                        "projectPlanning.attachNewParent",
-                        "Parent Task",
-                      )}
+                      label={t("projectPlanning.attachNewParent")}
                       value={String(childTaskData.attachToParentTaskId || "")}
                       onChange={(e) =>
                         setChildTaskData((prev) => ({
@@ -580,10 +566,7 @@ const WorkbenchSettingsDialog = ({
                       }
                     >
                       <MenuItem value="">
-                        {t(
-                          "projectPlanning.currentTaskAsParent",
-                          "Current task as parent",
-                        )}
+                        {t("projectPlanning.currentTaskAsParent")}
                       </MenuItem>
                       {parentCandidates.map((task) => (
                         <MenuItem
@@ -612,8 +595,8 @@ const WorkbenchSettingsDialog = ({
                 }}
               >
                 {settingsTarget?.type === "task"
-                  ? t("projectPlanning.createChildTask", "Create Child Task")
-                  : t("projectPlanning.createTask", "Create Task")}
+                  ? t("projectPlanning.createChildTask")
+                  : t("projectPlanning.createTask")}
               </Button>
             </Stack>
           </Box>
@@ -631,7 +614,7 @@ const WorkbenchSettingsDialog = ({
             "&:hover": { backgroundColor: "action.hover" },
           }}
         >
-          {t("basic.cancel", "Cancel")}
+          {t("basic.cancel")}
         </Button>
         {dialogMode === "add-stream" ? (
           <Button
@@ -640,7 +623,7 @@ const WorkbenchSettingsDialog = ({
             disabled={saving}
             sx={{ minWidth: 120, fontWeight: 600 }}
           >
-            {t("basic.save", "Save")}
+            {t("basic.save")}
           </Button>
         ) : dialogMode === "replicate-stream" ? (
           <Button
@@ -649,7 +632,7 @@ const WorkbenchSettingsDialog = ({
             disabled={saving}
             sx={{ minWidth: 120, fontWeight: 600 }}
           >
-            {t("basic.save", "Save")}
+            {t("basic.save")}
           </Button>
         ) : dialogMode === "edit-stream" ? (
           <Button
@@ -658,7 +641,7 @@ const WorkbenchSettingsDialog = ({
             disabled={saving}
             sx={{ minWidth: 120, fontWeight: 600 }}
           >
-            {t("basic.save", "Save")}
+            {t("basic.save")}
           </Button>
         ) : dialogMode === "edit-task" ? (
           <Button
@@ -667,7 +650,7 @@ const WorkbenchSettingsDialog = ({
             disabled={saving}
             sx={{ minWidth: 120, fontWeight: 600 }}
           >
-            {t("basic.save", "Save")}
+            {t("basic.save")}
           </Button>
         ) : dialogMode === "edit-milestone" ? (
           <>
@@ -679,7 +662,7 @@ const WorkbenchSettingsDialog = ({
                 saving || !String(formData.milestoneTaskId || "").trim()
               }
             >
-              {t("basic.remove", "Remove")}
+              {t("basic.remove")}
             </Button>
             <Button
               variant="contained"
@@ -687,7 +670,7 @@ const WorkbenchSettingsDialog = ({
               disabled={saving || milestoneCandidates.length === 0}
               sx={{ minWidth: 120, fontWeight: 600 }}
             >
-              {t("basic.save", "Save")}
+              {t("basic.save")}
             </Button>
           </>
         ) : null}

@@ -50,8 +50,7 @@ const InventoryOverviewDialog = ({
       }}
     >
       <DialogTitle sx={{ pb: 0.25, pt: 1 }}>
-        {t("projectPlanning.inventoryOverview", "Inventory Overview")} -{" "}
-        {projectCode}
+        {t("projectPlanning.inventoryOverview")} - {projectCode}
       </DialogTitle>
       <Box
         sx={{
@@ -65,10 +64,7 @@ const InventoryOverviewDialog = ({
         }}
       >
         <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
-          {t(
-            "projectPlanning.inventoryOverviewDesc",
-            "View planned inventory needs across all tasks. Quantity is allocated on the task supply date based on task duration.",
-          )}
+          {t("projectPlanning.inventoryOverviewDesc")}
         </Typography>
         <ToggleButtonGroup
           value={viewMode}
@@ -79,13 +75,13 @@ const InventoryOverviewDialog = ({
           size="small"
         >
           <ToggleButton value="day">
-            {t("projectPlanning.viewDay", "Day")}
+            {t("projectPlanning.viewDay")}
           </ToggleButton>
           <ToggleButton value="week">
-            {t("projectPlanning.viewWeek", "Week")}
+            {t("projectPlanning.viewWeek")}
           </ToggleButton>
           <ToggleButton value="month">
-            {t("projectPlanning.viewMonth", "Month")}
+            {t("projectPlanning.viewMonth")}
           </ToggleButton>
         </ToggleButtonGroup>
       </Box>
@@ -104,12 +100,7 @@ const InventoryOverviewDialog = ({
         ) : error ? (
           <Alert severity="error">{error}</Alert>
         ) : rows.length === 0 ? (
-          <Alert severity="info">
-            {t(
-              "projectPlanning.noInventoryData",
-              "No inventory data available for this project.",
-            )}
-          </Alert>
+          <Alert severity="info">{t("projectPlanning.noInventoryData")}</Alert>
         ) : (
           <Box
             sx={{
@@ -152,7 +143,7 @@ const InventoryOverviewDialog = ({
                     fontWeight={700}
                     sx={{ fontSize: "0.64rem" }}
                   >
-                    {t("projectPlanning.timeline", "Timeline")}
+                    {t("projectPlanning.timeline")}
                   </Typography>
                 </Box>
 
@@ -216,7 +207,7 @@ const InventoryOverviewDialog = ({
                       fontWeight={700}
                       sx={{ fontSize: "0.68rem" }}
                     >
-                      {t("projectPlanning.productName", "Product Name")}
+                      {t("projectPlanning.productName")}
                     </Typography>
                   </Box>
                   <Box sx={{ px: 1, py: 0.6 }}>
@@ -225,7 +216,7 @@ const InventoryOverviewDialog = ({
                       fontWeight={700}
                       sx={{ fontSize: "0.68rem" }}
                     >
-                      {t("basic.uom", "UOM")}
+                      {t("basic.uom")}
                     </Typography>
                   </Box>
                 </Box>
@@ -407,7 +398,7 @@ const InventoryOverviewDialog = ({
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t("basic.close", "Close")}</Button>
+        <Button onClick={onClose}>{t("basic.close")}</Button>
       </DialogActions>
     </Dialog>
   );

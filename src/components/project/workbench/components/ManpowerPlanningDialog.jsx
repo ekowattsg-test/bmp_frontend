@@ -45,6 +45,20 @@ const ManpowerPlanningDialog = ({
 }) => {
   const { t } = useTranslation();
 
+  const activeWorkDateRaw = String(activeDate || "").trim();
+  const activeWorkDate = activeWorkDateRaw ? new Date(activeWorkDateRaw) : null;
+  const isActiveWorkDateValid =
+    activeWorkDate instanceof Date && !Number.isNaN(activeWorkDate.getTime());
+
+  if (isActiveWorkDateValid) {
+    activeWorkDate.setHours(0, 0, 0, 0);
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const hideSaveForPastWorkDate =
+    isActiveWorkDateValid && activeWorkDate.getTime() < today.getTime();
+
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle>
@@ -58,15 +72,12 @@ const ManpowerPlanningDialog = ({
           }}
         >
           <Typography variant="h6" component="div">
-            {t("projectPlanning.manpowerWorkspace", "Manpower Workspace")}
+            {t("projectPlanning.manpowerWorkspace")}
             {" - "}
             {target?.name || target?.raw?.taskName || "-"}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {t(
-              "projectPlanning.manpowerWorkspaceHelp",
-              "Define the staff required for this task.",
-            )}
+            {t("projectPlanning.manpowerWorkspaceHelp")}
           </Typography>
         </Box>
       </DialogTitle>
@@ -98,7 +109,7 @@ const ManpowerPlanningDialog = ({
             >
               <Chip
                 size="small"
-                label={t("basic.all", "All")}
+                label={t("basic.all")}
                 color={skillFilter ? "default" : "primary"}
                 variant={skillFilter ? "outlined" : "filled"}
                 onClick={() => onSkillFilterChange("")}
@@ -126,7 +137,7 @@ const ManpowerPlanningDialog = ({
             </Box>
           ) : rowsForActiveDate.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
-              {t("projectPlanning.noManpowerSelected", "No manpower selected.")}
+              {t("projectPlanning.noManpowerSelected")}
             </Typography>
           ) : (
             <Box
@@ -158,7 +169,7 @@ const ManpowerPlanningDialog = ({
                     letterSpacing: 0.2,
                   }}
                 >
-                  {t("projectPlanning.skillName", "Skill")}
+                  {t("projectPlanning.skillName")}
                 </Typography>
                 <Typography
                   variant="body2"
@@ -168,7 +179,7 @@ const ManpowerPlanningDialog = ({
                     letterSpacing: 0.2,
                   }}
                 >
-                  {t("projectPlanning.staffName", "Staff Name")}
+                  {t("projectPlanning.staffName")}
                 </Typography>
                 <Typography
                   variant="body2"
@@ -178,7 +189,7 @@ const ManpowerPlanningDialog = ({
                     letterSpacing: 0.2,
                   }}
                 >
-                  {t("projectPlanning.manpowerLoading", "Loading")}
+                  {t("projectPlanning.manpowerLoading")}
                 </Typography>
                 <Typography
                   variant="body2"
@@ -188,7 +199,7 @@ const ManpowerPlanningDialog = ({
                     letterSpacing: 0.2,
                   }}
                 >
-                  {t("basic.action", "Action")}
+                  {t("basic.action")}
                 </Typography>
               </Box>
 
@@ -257,34 +268,22 @@ const ManpowerPlanningDialog = ({
                     </Typography>
 
                     <FormControl size="small" fullWidth>
-                      <InputLabel>
-                        {t("projectPlanning.staffName", "Staff Name")}
-                      </InputLabel>
+                      <InputLabel>{t("projectPlanning.staffName")}</InputLabel>
                       <Select
-                        label={t("projectPlanning.staffName", "Staff Name")}
+                        label={t("projectPlanning.staffName")}
                         value={String(item?.staffId || "")}
                         renderValue={(value) => {
                           const selectedValue = String(value || "").trim();
                           const selectedName =
                             staffNameById[selectedValue] ||
-                            t("projectPlanning.unassigned", "Unassigned");
+                            t("projectPlanning.unassigned");
                           const selectedProfiles =
                             Array.isArray(staffSkillsById[selectedValue]) &&
                             staffSkillsById[selectedValue].length > 0
                               ? staffSkillsById[selectedValue]
                               : selectedValue
-                                ? [
-                                    t(
-                                      "projectPlanning.noSkillProfile",
-                                      "No Skill Profile",
-                                    ),
-                                  ]
-                                : [
-                                    t(
-                                      "projectPlanning.unassigned",
-                                      "Unassigned",
-                                    ),
-                                  ];
+                                ? [t("projectPlanning.noSkillProfile")]
+                                : [t("projectPlanning.unassigned")];
 
                           return (
                             <Box
@@ -425,12 +424,7 @@ const ManpowerPlanningDialog = ({
                                 Array.isArray(staffSkillMap[staffId]) &&
                                 staffSkillMap[staffId].length > 0
                                   ? staffSkillMap[staffId]
-                                  : [
-                                      t(
-                                        "projectPlanning.noSkillProfile",
-                                        "No Skill Profile",
-                                      ),
-                                    ];
+                                  : [t("projectPlanning.noSkillProfile")];
                               return (
                                 <MenuItem key={staffId} value={staffId}>
                                   <Box
@@ -516,7 +510,7 @@ const ManpowerPlanningDialog = ({
                       }
                       disabled={!String(item?.staffId || "").trim()}
                     >
-                      {t("basic.clear", "Clear")}
+                      {t("basic.clear")}
                     </Button>
                   </Box>
                 );
@@ -550,19 +544,18 @@ const ManpowerPlanningDialog = ({
             textOverflow: "ellipsis",
           }}
         >
-          {t(
-            "projectPlanning.manpowerLockSkillNotice",
-            "Task skill requirements will be locked once manpower deployment is manually updated.",
-          )}
+          {t("projectPlanning.manpowerLockSkillNotice")}
         </Typography>
-        <Button onClick={onClose}>{t("basic.close", "Close")}</Button>
-        <Button
-          variant="contained"
-          onClick={onSave}
-          disabled={loading || rowsForActiveDate.length === 0}
-        >
-          {t("basic.save", "Save")}
-        </Button>
+        <Button onClick={onClose}>{t("basic.close")}</Button>
+        {!hideSaveForPastWorkDate && (
+          <Button
+            variant="contained"
+            onClick={onSave}
+            disabled={loading || rowsForActiveDate.length === 0}
+          >
+            {t("basic.save")}
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

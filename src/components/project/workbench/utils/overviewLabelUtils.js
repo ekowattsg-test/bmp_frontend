@@ -24,9 +24,7 @@ export const buildOverviewResourceLabel = ({
   const hasResolvedTask = Boolean(task);
 
   const taskName =
-    normalizeText(item?.taskName) ||
-    normalizeText(task?.taskName) ||
-    normalizeText(item?.activityName);
+    normalizeText(item?.taskName) || normalizeText(task?.taskName);
 
   const inferredStreamId =
     streamId || normalizeText(task?.projectStreamId || task?.streamId);
@@ -43,8 +41,8 @@ export const buildOverviewResourceLabel = ({
     return joinStreamTask(streamName, taskLabel);
   }
 
-  if (inferredStreamId || streamName) {
-    return streamName || normalizeText(fallbackLabel) || "-";
+  if (streamName) {
+    return taskLabel ? joinStreamTask(streamName, taskLabel) : streamName;
   }
 
   return normalizeText(fallbackLabel) || "-";

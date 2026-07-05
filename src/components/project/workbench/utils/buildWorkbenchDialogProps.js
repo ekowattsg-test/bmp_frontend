@@ -114,6 +114,17 @@ export const buildWorkbenchDialogProps = (ctx) => {
     saveNewSkillDefinition: ctx.saveNewSkillDefinition,
   };
 
+  const taskStatusUpdateDialogProps = {
+    taskStatusUpdateOpen: ctx.taskStatusUpdateOpen,
+    taskStatusUpdateTarget: ctx.taskStatusUpdateTarget,
+    taskStatusUpdateDate: ctx.taskStatusUpdateDate,
+    taskStatusUpdateError: ctx.taskStatusUpdateError,
+    taskStatusUpdateSaving: ctx.taskStatusUpdateSaving,
+    setTaskStatusUpdateDate: ctx.setTaskStatusUpdateDate,
+    closeTaskStatusUpdateDialog: ctx.closeTaskStatusUpdateDialog,
+    saveTaskStatusUpdate: ctx.saveTaskStatusUpdate,
+  };
+
   const settingsMenuProps = {
     menuAnchorEl: ctx.menuAnchorEl,
     menuTarget: ctx.menuTarget,
@@ -193,6 +204,7 @@ export const buildWorkbenchDialogProps = (ctx) => {
     manpowerPlanningDialogProps,
     skillPlanningDialogProps,
     skillCreateDialogProps,
+    taskStatusUpdateDialogProps,
     settingsMenuProps,
     inventoryOverviewDialogProps,
     manpowerOverviewDialogProps,

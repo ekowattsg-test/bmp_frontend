@@ -42,7 +42,7 @@ const WorkbenchTimelineHeaders = ({
           }}
         >
           <Typography variant="caption" fontWeight={700}>
-            {t("projectPlanning.timeline", "Timeline")}
+            {t("projectPlanning.timeline")}
           </Typography>
         </Box>
         <Box sx={{ display: "flex", bgcolor: "background.default" }}>
@@ -98,16 +98,16 @@ const WorkbenchTimelineHeaders = ({
           }}
         >
           <Typography variant="caption" fontWeight={700}>
-            {t("projectPlanning.leftHeaderName", "Name")}
+            {t("projectPlanning.leftHeaderName")}
           </Typography>
           <Typography variant="caption" fontWeight={700} textAlign="center">
-            {t("basic.settings", "Settings")}
+            {t("basic.settings")}
           </Typography>
           <Typography variant="caption" fontWeight={700} textAlign="right">
-            {t("projectPlanning.leftHeaderStart", "Start")}
+            {t("projectPlanning.leftHeaderStart")}
           </Typography>
           <Typography variant="caption" fontWeight={700} textAlign="right">
-            {t("projectPlanning.leftHeaderEnd", "End")}
+            {t("projectPlanning.leftHeaderEnd")}
           </Typography>
         </Box>
         <Box

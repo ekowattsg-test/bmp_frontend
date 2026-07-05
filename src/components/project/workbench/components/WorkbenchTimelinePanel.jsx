@@ -41,6 +41,7 @@ const WorkbenchTimelinePanel = ({
   openInventoryPlanningDialog,
   openSkillPlanningDialog,
   openManpowerPlanningDialog,
+  openTaskStatusUpdateDialog,
   formatDate,
   ganttCurrentPeriodOverlay,
 }) => {
@@ -104,6 +105,7 @@ const WorkbenchTimelinePanel = ({
               openInventoryPlanningDialog={openInventoryPlanningDialog}
               openSkillPlanningDialog={openSkillPlanningDialog}
               openManpowerPlanningDialog={openManpowerPlanningDialog}
+              openTaskStatusUpdateDialog={openTaskStatusUpdateDialog}
               formatDate={formatDate}
               colWidth={colWidth}
               ganttCurrentPeriodOverlay={ganttCurrentPeriodOverlay}

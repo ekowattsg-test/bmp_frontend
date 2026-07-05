@@ -1,5 +1,3 @@
-import { buildOverviewResourceLabel } from "./overviewLabelUtils";
-
 export const buildInventoryOverviewRows = ({
   inventoryOverviewRowsReady,
   inventoryOverviewBounds,
@@ -14,18 +12,6 @@ export const buildInventoryOverviewRows = ({
 
   const minTime = inventoryOverviewBounds.minDate.getTime();
   const maxTime = inventoryOverviewBounds.maxDate.getTime();
-  const taskById = (tasks || []).reduce((acc, task) => {
-    const id = String(task?.projectTaskId || "").trim();
-    if (!id) return acc;
-    acc[id] = task;
-    return acc;
-  }, {});
-  const streamNameById = (streams || []).reduce((acc, stream) => {
-    const id = String(stream?.projectStreamId || "").trim();
-    if (!id) return acc;
-    acc[id] = String(stream?.streamName || "").trim() || id;
-    return acc;
-  }, {});
   const grouped = new Map();
 
   inventoryOverviewData.forEach((item) => {
@@ -52,12 +38,6 @@ export const buildInventoryOverviewRows = ({
     if (!Number.isFinite(qty) || qty <= 0) return;
 
     const activityName = String(item?.activityName || "-").trim() || "-";
-    const resourceLabel = buildOverviewResourceLabel({
-      item,
-      taskById,
-      streamNameById,
-      fallbackLabel: activityName,
-    });
     const sTime = Math.max(start.getTime(), minTime);
     const eTime = Math.min(end.getTime(), maxTime);
     if (eTime < sTime) return;
@@ -75,7 +55,7 @@ export const buildInventoryOverviewRows = ({
     }
 
     const existing = target.dayMap.get(supplyTime) || [];
-    existing.push({ activityName, resourceLabel, quantity: qty });
+    existing.push({ activityName, resourceLabel: activityName, quantity: qty });
     target.dayMap.set(supplyTime, existing);
   });
 

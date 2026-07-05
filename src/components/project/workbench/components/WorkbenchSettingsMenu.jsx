@@ -48,25 +48,19 @@ const WorkbenchSettingsMenu = ({
             <ListItemIcon>
               <AddIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>
-              {t("projectPlanning.createTask", "Create Task")}
-            </ListItemText>
+            <ListItemText>{t("projectPlanning.createTask")}</ListItemText>
           </MenuItem>
           <MenuItem onClick={() => onOpenStreamEditor(menuTarget)}>
             <ListItemIcon>
               <EditIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>
-              {t("projectPlanning.editStream", "Edit Stream Information")}
-            </ListItemText>
+            <ListItemText>{t("projectPlanning.editStream")}</ListItemText>
           </MenuItem>
           <MenuItem onClick={() => onOpenReplicateStreamDialog(menuTarget)}>
             <ListItemIcon>
               <ContentCopyIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>
-              {t("projectPlanning.replicateStream", "Replicate Stream")}
-            </ListItemText>
+            <ListItemText>{t("projectPlanning.replicateStream")}</ListItemText>
           </MenuItem>
           <MenuItem
             onClick={() => {
@@ -87,8 +81,8 @@ const WorkbenchSettingsMenu = ({
               {collapsedStreamIds.has(
                 String(menuTarget?.raw?.projectStreamId || ""),
               )
-                ? t("projectPlanning.showTasks", "Show Tasks")
-                : t("projectPlanning.hideTasks", "Hide Tasks")}
+                ? t("projectPlanning.showTasks")
+                : t("projectPlanning.hideTasks")}
             </ListItemText>
           </MenuItem>
           <MenuItem
@@ -105,9 +99,7 @@ const WorkbenchSettingsMenu = ({
             <ListItemIcon>
               <DeleteIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>
-              {t("projectPlanning.removeStream", "Remove Stream")}
-            </ListItemText>
+            <ListItemText>{t("projectPlanning.removeStream")}</ListItemText>
           </MenuItem>
         </>
       )}
@@ -123,33 +115,25 @@ const WorkbenchSettingsMenu = ({
             <ListItemIcon>
               <AddIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>
-              {t("projectPlanning.createChildTask", "Create Child Task")}
-            </ListItemText>
+            <ListItemText>{t("projectPlanning.createChildTask")}</ListItemText>
           </MenuItem>
           <MenuItem onClick={() => onOpenTaskEditor(menuTarget)}>
             <ListItemIcon>
               <EditIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>
-              {t("projectPlanning.editTask", "Edit Task Information")}
-            </ListItemText>
+            <ListItemText>{t("projectPlanning.editTask")}</ListItemText>
           </MenuItem>
           <MenuItem onClick={() => onOpenMilestoneDialog(menuTarget)}>
             <ListItemIcon>
               <SettingsIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>
-              {t("projectPlanning.linkMilestone", "Link Milestone Task")}
-            </ListItemText>
+            <ListItemText>{t("projectPlanning.linkMilestone")}</ListItemText>
           </MenuItem>
           <MenuItem onClick={() => onStartMoveMode(menuTarget)}>
             <ListItemIcon>
               <DriveFileMoveIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>
-              {t("projectPlanning.moveTo", "Move To")}
-            </ListItemText>
+            <ListItemText>{t("projectPlanning.moveTo")}</ListItemText>
           </MenuItem>
           <MenuItem
             onClick={() => onDeleteTask(menuTarget)}
@@ -159,7 +143,7 @@ const WorkbenchSettingsMenu = ({
               <DeleteIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>
-              {t("projectPlanning.removeCurrentTask", "Remove Current Task")}
+              {t("projectPlanning.removeCurrentTask")}
             </ListItemText>
           </MenuItem>
         </>
