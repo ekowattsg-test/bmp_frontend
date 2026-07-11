@@ -43,6 +43,8 @@ import OperationRoleModern from "./baseInformation/OperationRoleModern";
 import QrGenerator from "./baseInformation/QrGenerator";
 import WASimulator from "./baseInformation/WASimulator";
 import ParameterModern from "./baseInformation/ParameterModern";
+import BriefingModern from "./baseInformation/BriefingModern";
+import BriefingContentPage from "./baseInformation/BriefingContentPage";
 
 function MainPage() {
   return (
@@ -97,6 +99,11 @@ function MainPage() {
         <Route path="/qr-generator" element={<QrGenerator />} />
         <Route path="/wa-simulator" element={<WASimulator />} />
         <Route path="/parameter" element={<ParameterModern />} />
+        <Route path="/briefing" element={<BriefingModern />} />
+        <Route
+          path="/briefing/:briefingId/content"
+          element={<BriefingContentPage />}
+        />
       </Routes>
     </AdminLayout>
   );

@@ -22,6 +22,12 @@ const WorkbenchHelpDialog = ({ open, onClose }) => {
             {t("projectPlanning.helpIntro")}
           </Typography>
           <Typography variant="subtitle2">
+            {t("projectPlanning.helpSectionAtAGlance")}
+          </Typography>
+          <Typography variant="body2">
+            {t("projectPlanning.helpAtAGlanceBody")}
+          </Typography>
+          <Typography variant="subtitle2">
             {t("projectPlanning.helpSectionNavigation")}
           </Typography>
           <Typography variant="body2">
@@ -50,6 +56,12 @@ const WorkbenchHelpDialog = ({ open, onClose }) => {
           </Typography>
           <Typography variant="body2">
             {t("projectPlanning.helpActionsBody")}
+          </Typography>
+          <Typography variant="subtitle2">
+            {t("projectPlanning.helpSectionTaskBarStatus")}
+          </Typography>
+          <Typography variant="body2">
+            {t("projectPlanning.helpTaskBarStatusBody")}
           </Typography>
           <Typography variant="subtitle2">
             {t("projectPlanning.helpSectionStreamActions")}

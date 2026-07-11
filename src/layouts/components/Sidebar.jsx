@@ -29,6 +29,7 @@ import {
   PersonAdd as PersonAddIcon,
   AutoStories as AutoStoriesIcon,
   UploadFile as UploadFileIcon,
+  Description as DescriptionIcon,
   AccountTree as AccountTreeIcon,
   Inventory2 as BundleIcon,
   LockReset as LockResetIcon,
@@ -176,6 +177,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               label: t("menu.operationRole", "Operation Roles"),
               icon: <ManageAccountsIcon fontSize="small" />,
               path: "/operationrole",
+            },
+            {
+              key: "briefing",
+              label: t("menu.briefing", "Briefing Setup"),
+              icon: <DescriptionIcon fontSize="small" />,
+              path: "/briefing",
             },
             canAccessWaSimulator
               ? {

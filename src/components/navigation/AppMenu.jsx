@@ -19,6 +19,7 @@ import {
   People,
   AutoStories,
   UploadFile,
+  Description,
   History,
   Store,
   CompareArrows,
@@ -137,6 +138,11 @@ const AppMenu = () => {
             to: "/operationrole",
             label: t("menu.operationRole", "Operation Roles"),
             icon: <ManageAccounts />,
+          },
+          {
+            to: "/briefing",
+            label: t("menu.briefing", "Briefing Setup"),
+            icon: <Description />,
           },
           canAccessWaSimulator
             ? {
