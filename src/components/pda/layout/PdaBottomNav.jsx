@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { BottomNavigation, BottomNavigationAction, Paper } from "@mui/material";
 import AssignmentIcon from "@mui/icons-material/Assignment";
+import CampaignIcon from "@mui/icons-material/Campaign";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import PersonIcon from "@mui/icons-material/Person";
 
@@ -18,6 +19,12 @@ const TAB_ITEMS = [
     navigateTo: "/pda/stockcard?pda=1",
     labelKey: "pda.nav.stockCard",
     icon: <Inventory2Icon />,
+  },
+  {
+    route: "/pda/briefing",
+    navigateTo: "/pda/briefing",
+    labelKey: "pda.nav.briefing",
+    icon: <CampaignIcon />,
   },
   {
     route: "/pda/me",

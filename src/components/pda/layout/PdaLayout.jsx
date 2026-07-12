@@ -7,17 +7,20 @@ import {
   Button,
   CircularProgress,
   IconButton,
+  Menu,
+  MenuItem,
   Toolbar,
   Typography,
 } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import LanguageIcon from "@mui/icons-material/Language";
 import { request, setAuthHeader } from "../../../helpers/axios_helper";
 import { getPdaDisplayName } from "../common/pda_user_helper";
 import PdaBottomNav from "./PdaBottomNav";
 
 // Tab root paths — no back button shown on these
-const TAB_ROOTS = ["/pda/orders", "/pda/stockcard", "/pda/me"];
+const TAB_ROOTS = ["/pda/orders", "/pda/stockcard", "/pda/briefing", "/pda/me"];
 
 /**
  * PdaLayout — mobile shell for all /pda/* routes (except /pda/login).
@@ -33,11 +36,33 @@ const TAB_ROOTS = ["/pda/orders", "/pda/stockcard", "/pda/me"];
  *   - Fixed bottom navigation (Orders | Inventory Card | Me)
  */
 export default function PdaLayout() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [enriched, setEnriched] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [langMenuAnchorEl, setLangMenuAnchorEl] = useState(null);
+
+  const currentLang = useMemo(() => {
+    const value = String(i18n.resolvedLanguage || i18n.language || "en")
+      .trim()
+      .toLowerCase();
+    return value.startsWith("zh") ? "zh" : "en";
+  }, [i18n.language, i18n.resolvedLanguage]);
+
+  const openLanguageMenu = (event) => {
+    setLangMenuAnchorEl(event.currentTarget);
+  };
+
+  const closeLanguageMenu = () => {
+    setLangMenuAnchorEl(null);
+  };
+
+  const changeLanguage = async (lang) => {
+    closeLanguageMenu();
+    if (!lang || lang === currentLang) return;
+    await i18n.changeLanguage(lang);
+  };
 
   // Hide back button on the three tab root pages
   const isTabRoot = TAB_ROOTS.includes(location.pathname);
@@ -181,6 +206,36 @@ export default function PdaLayout() {
           <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 600 }} noWrap>
             {pageTitle}
           </Typography>
+
+          <IconButton
+            color="inherit"
+            aria-label={t("pda.layout.language", "Change language")}
+            onClick={openLanguageMenu}
+            size="large"
+          >
+            <LanguageIcon />
+          </IconButton>
+
+          <Menu
+            anchorEl={langMenuAnchorEl}
+            open={Boolean(langMenuAnchorEl)}
+            onClose={closeLanguageMenu}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+          >
+            <MenuItem
+              selected={currentLang === "en"}
+              onClick={() => changeLanguage("en")}
+            >
+              English
+            </MenuItem>
+            <MenuItem
+              selected={currentLang === "zh"}
+              onClick={() => changeLanguage("zh")}
+            >
+              中文
+            </MenuItem>
+          </Menu>
 
           {userName && (
             <Typography variant="body2" sx={{ opacity: 0.85 }} noWrap>

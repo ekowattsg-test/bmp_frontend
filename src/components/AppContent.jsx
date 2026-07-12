@@ -31,6 +31,11 @@ import PdaWorkOrderList from "./pda/workorder/PdaWorkOrderList.jsx";
 import PdaWorkOrderDetail from "./pda/workorder/PdaWorkOrderDetail.jsx";
 import PdaSchedule from "./pda/schedule/PdaSchedule.jsx";
 import PdaMe from "./pda/me/PdaMe.jsx";
+import PdaBriefingEntry from "./pda/briefing/PdaBriefingEntry.jsx";
+import PdaBriefingPresenterScan from "./pda/briefing/PdaBriefingPresenterScan.jsx";
+import PdaBriefingListener from "./pda/briefing/PdaBriefingListener.jsx";
+import PdaBriefingPresenterPage from "./pda/briefing/PdaBriefingPresenterPage.jsx";
+import PdaBriefingWorkerPage from "./pda/briefing/PdaBriefingWorkerPage.jsx";
 import StockCard from "./stock/StockCard.jsx";
 
 export default function AppContent() {
@@ -251,6 +256,23 @@ export default function AppContent() {
             />
             <Route path="/pda/schedule" element={<PdaSchedule />} />
             <Route path="/pda/stockcard" element={<StockCard />} />
+            <Route path="/pda/briefing" element={<PdaBriefingEntry />} />
+            <Route
+              path="/pda/briefing/:sessionId/scan"
+              element={<PdaBriefingPresenterScan />}
+            />
+            <Route
+              path="/pda/briefing/:sessionId/listener"
+              element={<PdaBriefingListener />}
+            />
+            <Route
+              path="/pda/briefing/:sessionId/presenter"
+              element={<PdaBriefingPresenterPage />}
+            />
+            <Route
+              path="/pda/briefing/:sessionId/worker"
+              element={<PdaBriefingWorkerPage />}
+            />
             <Route path="/pda/me" element={<PdaMe />} />
           </Route>
         </Routes>
