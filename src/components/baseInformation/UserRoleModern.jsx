@@ -90,7 +90,7 @@ const UserRoleModern = () => {
 
   const getRoleName = (roleId) => {
     const role = roles.find((r) => r.id === roleId);
-    return role?.role || roleId;
+    return role?.description || roleId;
   };
 
   const filteredUserRoles = userRoleData.filter((userRole) => {

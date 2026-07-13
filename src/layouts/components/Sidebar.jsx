@@ -30,6 +30,7 @@ import {
   AutoStories as AutoStoriesIcon,
   UploadFile as UploadFileIcon,
   Description as DescriptionIcon,
+  LocalLibrary as LocalLibraryIcon,
   AccountTree as AccountTreeIcon,
   Inventory2 as BundleIcon,
   LockReset as LockResetIcon,
@@ -234,6 +235,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               label: t("menu.productList", "Products"),
               icon: <StoreIcon fontSize="small" />,
               path: "/product",
+            },
+            {
+              key: "library",
+              label: t("menu.library", "Library"),
+              icon: <LocalLibraryIcon fontSize="small" />,
+              path: "/library",
             },
             {
               key: "uomHierarchy",

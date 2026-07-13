@@ -29,6 +29,8 @@ import EulaPage from "./information/EulaPage";
 import PrivacyPage from "./information/PrivacyPage";
 import ProductModern from "./baseInformation/ProductModern";
 import ProductBundleModern from "./information/ProductBundleModern";
+import LibraryModern from "./information/LibraryModern";
+import LibraryEntriesModern from "./information/LibraryEntriesModern";
 import StaffExcelUpload from "./baseInformation/StaffExcelUpload";
 import ProductExcelUpload from "./baseInformation/ProductExcelUpload";
 import UserLoginList from "./baseInformation/UserLoginList";
@@ -76,6 +78,11 @@ function MainPage() {
         <Route path="/stockcard" element={<StockCard />} />
         <Route path="/uomhierarchy" element={<UOMHierarchy />} />
         <Route path="/productbundle" element={<ProductBundleModern />} />
+        <Route path="/library" element={<LibraryModern />} />
+        <Route
+          path="/library/:libraryCatelogId/entries"
+          element={<LibraryEntriesModern />}
+        />
         <Route path="/product" element={<ProductModern />} />
         <Route path="/staffprofile" element={<StaffProfile />} />
         <Route path="/language-settings" element={<LanguageSettings />} />

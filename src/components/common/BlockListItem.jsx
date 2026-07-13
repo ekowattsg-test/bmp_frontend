@@ -138,6 +138,13 @@ const BlockListItem = ({
 
   return (
     <Paper
+      onClick={
+        onView
+          ? () => {
+              onView(item);
+            }
+          : undefined
+      }
       sx={{
         p: 2,
         boxShadow: 1,
@@ -149,6 +156,7 @@ const BlockListItem = ({
         alignItems: "flex-start",
         minWidth: 0,
         overflow: "hidden",
+        cursor: onView ? "pointer" : "default",
       }}
     >
       {leadingMedia && renderLeadingMedia()}

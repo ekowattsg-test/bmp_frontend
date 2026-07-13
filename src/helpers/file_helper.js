@@ -203,6 +203,44 @@ export const fetchThumbnailBlobUrl = async (
   return URL.createObjectURL(blob);
 };
 
+export const fetchFileBlobUrl = async (
+  fileId,
+  viewUrl,
+  mimeType = "",
+  provider = null,
+) => {
+  const base = getN8nBaseUrl();
+  if (!base || !fileId) return null;
+
+  const resolvedProvider = normalizeProvider(provider || getStorageProvider());
+  const resolvedSession = resolveSessionNumber(true);
+  const form = new FormData();
+  form.append("action", "get");
+  form.append("provider", resolvedProvider);
+  appendSessionNumber(form, resolvedSession);
+  form.append("fileId", String(fileId));
+  const resolvedViewUrl = String(viewUrl || "").trim();
+  if (resolvedViewUrl) {
+    form.append("viewUrl", resolvedViewUrl);
+  }
+
+  const resp = await fetch(n8nActionUrl(), {
+    method: "POST",
+    headers: getN8nHeaders(),
+    body: form,
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(text || "Get file failed");
+  }
+  const blob = await resp.blob();
+  const resolvedMimeType = String(mimeType || blob.type || "").trim();
+  const normalizedBlob = resolvedMimeType
+    ? new Blob([blob], { type: resolvedMimeType })
+    : blob;
+  return URL.createObjectURL(normalizedBlob);
+};
+
 export const useThumbnailUrl = (
   fileId,
   viewUrl,
@@ -358,10 +396,6 @@ export const uploadFileToDrive = async (
   _accessToken,
   folderId = null,
 ) => {
-  if (!isImageFile(file)) {
-    throw new Error("Only image files are supported by file helper uploads");
-  }
-
   const provider = getStorageProvider();
   const resolvedSession = resolveSessionNumber(true);
   const form = new FormData();
@@ -696,6 +730,34 @@ export const downloadDocument = (driveLink, fileName = "document") => {
   } finally {
     document.body.removeChild(link);
   }
+};
+
+/**
+ * Open a stored document through the standard webhook-backed retrieval flow.
+ * This avoids relying on direct provider links that may not be publicly usable.
+ * @param {string} fileId
+ * @param {string|null} provider
+ * @returns {Promise<void>}
+ */
+export const openStoredDocument = async (
+  fileId,
+  provider = null,
+  viewUrl = "",
+  mimeType = "",
+) => {
+  if (!fileId) {
+    throw new Error("fileId is required");
+  }
+
+  const blobUrl = await fetchFileBlobUrl(fileId, viewUrl, mimeType, provider);
+  if (!blobUrl) {
+    throw new Error("Unable to retrieve file");
+  }
+  window.open(blobUrl, "_blank", "noopener,noreferrer");
+
+  window.setTimeout(() => {
+    URL.revokeObjectURL(blobUrl);
+  }, 60000);
 };
 
 /**
