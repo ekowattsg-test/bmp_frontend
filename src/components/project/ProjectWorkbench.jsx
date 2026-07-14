@@ -117,20 +117,95 @@ const buildRows = (streams, tasksByStream) => {
     (a, b) => Number(a?.streamNumber || 0) - Number(b?.streamNumber || 0),
   );
 
+  const taskStartMs = (task) => {
+    const d = parseDate(task?.taskStartDate);
+    return d ? d.getTime() : Infinity;
+  };
+
+  const makeTaskRow = (task, streamId) => {
+    const status = String(task?.taskStatus || "").trim();
+    const displayStart =
+      status === "Not Started"
+        ? parseDate(task?.taskStartDate)
+        : parseDate(task?.actualStartDate) || parseDate(task?.taskStartDate);
+    const displayEnd =
+      status === "Completed"
+        ? parseDate(task?.actualEndDate) || parseDate(task?.taskEndDate)
+        : parseDate(task?.taskEndDate);
+    return {
+      id: `task-${task?.projectTaskId}`,
+      type: "task",
+      name: task?.taskName || `Task ${task?.projectTaskId || ""}`,
+      startDate: displayStart,
+      endDate: displayEnd,
+      raw: task,
+      streamId,
+    };
+  };
+
   sortedStreams.forEach((stream) => {
     const streamId = stream?.projectStreamId;
-    const streamTasks = [...(tasksByStream.get(String(streamId)) || [])].sort(
-      (a, b) => {
-        const aStart = parseDate(a?.taskStartDate);
-        const bStart = parseDate(b?.taskStartDate);
-        if (!aStart && !bStart) return 0;
-        if (!aStart) return 1;
-        if (!bStart) return -1;
-        return aStart.getTime() - bStart.getTime();
-      },
-    );
+    const allStreamTasks = tasksByStream.get(String(streamId)) || [];
 
-    const streamTaskStarts = streamTasks
+    // Separate milestones, anchors, and regular tasks
+    const milestoneTasks = allStreamTasks.filter(
+      (t) =>
+        String(t?.taskType || "")
+          .trim()
+          .toUpperCase() === "M",
+    );
+    const anchorTasks = allStreamTasks.filter(
+      (t) =>
+        String(t?.taskType || "")
+          .trim()
+          .toUpperCase() === "A",
+    );
+    const otherTasks = allStreamTasks.filter((t) => {
+      const code = String(t?.taskType || "")
+        .trim()
+        .toUpperCase();
+      return code !== "M" && code !== "A";
+    });
+
+    // Sort anchors by start date
+    anchorTasks.sort((a, b) => taskStartMs(a) - taskStartMs(b));
+
+    // Build parent→children map for other tasks
+    const taskById = new Map();
+    otherTasks.forEach((t) => {
+      taskById.set(String(t?.projectTaskId || "").trim(), t);
+    });
+
+    const childrenByParent = new Map();
+    const rootOtherTasks = [];
+    otherTasks.forEach((t) => {
+      const parentId = String(t?.parentTaskId || "").trim();
+      if (parentId && taskById.has(parentId)) {
+        if (!childrenByParent.has(parentId)) childrenByParent.set(parentId, []);
+        childrenByParent.get(parentId).push(t);
+      } else {
+        rootOtherTasks.push(t);
+      }
+    });
+
+    // Sort children within each parent by start date
+    childrenByParent.forEach((children) => {
+      children.sort((a, b) => taskStartMs(a) - taskStartMs(b));
+    });
+
+    // Sort root non-milestone non-anchor tasks by start date
+    rootOtherTasks.sort((a, b) => taskStartMs(a) - taskStartMs(b));
+
+    // Tree-walk: emit parent then its children recursively
+    const emitTaskTree = (task) => {
+      rows.push(makeTaskRow(task, streamId));
+      const id = String(task?.projectTaskId || "").trim();
+      const children = childrenByParent.get(id) || [];
+      children.forEach((child) => emitTaskTree(child));
+    };
+
+    // Compute stream date span across ALL tasks (unchanged logic)
+    const streamTaskStarts = allStreamTasks
       .map((task) => {
         const s = String(task?.taskStatus || "").trim();
         return s === "Not Started"
@@ -138,7 +213,7 @@ const buildRows = (streams, tasksByStream) => {
           : parseDate(task?.actualStartDate) || parseDate(task?.taskStartDate);
       })
       .filter(Boolean);
-    const streamTaskEnds = streamTasks
+    const streamTaskEnds = allStreamTasks
       .map((task) => {
         const s = String(task?.taskStatus || "").trim();
         return s === "Completed"
@@ -168,26 +243,16 @@ const buildRows = (streams, tasksByStream) => {
       streamId,
     });
 
-    streamTasks.forEach((task) => {
-      const status = String(task?.taskStatus || "").trim();
-      const displayStart =
-        status === "Not Started"
-          ? parseDate(task?.taskStartDate)
-          : parseDate(task?.actualStartDate) || parseDate(task?.taskStartDate);
-      const displayEnd =
-        status === "Completed"
-          ? parseDate(task?.actualEndDate) || parseDate(task?.taskEndDate)
-          : parseDate(task?.taskEndDate);
-      rows.push({
-        id: `task-${task?.projectTaskId}`,
-        type: "task",
-        name: task?.taskName || `Task ${task?.projectTaskId || ""}`,
-        startDate: displayStart,
-        endDate: displayEnd,
-        raw: task,
-        streamId,
-      });
-    });
+    // 1. Anchor tasks (sorted by start date)
+    anchorTasks.forEach((task) => emitTaskTree(task));
+
+    // 2. Other tasks grouped by parent, sorted by start date within group
+    rootOtherTasks.forEach((task) => emitTaskTree(task));
+
+    // 3. Milestones last
+    milestoneTasks
+      .sort((a, b) => taskStartMs(a) - taskStartMs(b))
+      .forEach((task) => rows.push(makeTaskRow(task, streamId)));
   });
 
   return rows;

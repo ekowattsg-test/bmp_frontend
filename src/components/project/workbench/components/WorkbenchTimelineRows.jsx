@@ -80,6 +80,7 @@ const WorkbenchTimelineRows = ({
             if (validMoveTarget) moveTaskToTargetParent(row);
           }}
           taskTypeIconMeta={taskTypeIconMeta}
+          taskTypeCode={taskTypeCode}
           isParentHighlight={isParentHighlight}
           isLinkedHighlight={isLinkedHighlight}
           onTaskIconHoverStart={onTaskIconHoverStart}

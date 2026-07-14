@@ -256,7 +256,7 @@ const LibraryModern = () => {
   const openEntries = useCallback(
     (catalog) => {
       navigate(`/library/${catalog.libraryCatelogId}/entries`, {
-        state: { catalog },
+        state: { catalog, backPath: "/library" },
       });
     },
     [navigate],
@@ -433,10 +433,7 @@ const LibraryModern = () => {
     <Box>
       <PageHeader
         title={t("library.title", "Library")}
-        subtitle={t(
-          "library.subtitle",
-          "Browse library catalogs available for your user level.",
-        )}
+        subtitle={t("library.subtitle", "Browse library catalogs.")}
         icon={LocalLibraryIcon}
         onHelpClick={() => setHelpOpen(true)}
         actionLabel={canManage ? t("library.addCatalog", "Add Catalog") : null}
@@ -453,15 +450,7 @@ const LibraryModern = () => {
         )}
       />
 
-      {!canManage ? (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          {t(
-            "library.manageThresholdInfo",
-            "Library maintenance requires user level {{level}} or above.",
-            { level: LIBRARY_MANAGE_MIN_LEVEL },
-          )}
-        </Alert>
-      ) : null}
+      {!canManage ? null : null}
 
       <Box
         sx={{

@@ -88,7 +88,10 @@ const WorkbenchTimelineHeaders = ({
             py: 0.75,
             bgcolor: "background.default",
             display: "grid",
-            gridTemplateColumns: "minmax(0, 1fr) 54px 84px 84px",
+            gridTemplateColumns: {
+              xs: "minmax(0, 1fr) 0 84px 84px",
+              md: "minmax(0, 1fr) 54px 84px 84px",
+            },
             gap: 1,
             position: "sticky",
             left: 0,
@@ -100,7 +103,12 @@ const WorkbenchTimelineHeaders = ({
           <Typography variant="caption" fontWeight={700}>
             {t("projectPlanning.leftHeaderName")}
           </Typography>
-          <Typography variant="caption" fontWeight={700} textAlign="center">
+          <Typography
+            variant="caption"
+            fontWeight={700}
+            textAlign="center"
+            sx={{ display: { xs: "none", md: "block" } }}
+          >
             {t("basic.settings")}
           </Typography>
           <Typography variant="caption" fontWeight={700} textAlign="right">

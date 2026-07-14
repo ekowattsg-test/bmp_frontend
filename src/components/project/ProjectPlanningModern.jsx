@@ -8,6 +8,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import SearchIcon from "@mui/icons-material/Search";
 import { DataGrid } from "@mui/x-data-grid";
@@ -251,20 +252,36 @@ const ProjectPlanningModern = () => {
     {
       field: "actions",
       headerName: t("basic.actions", "Actions"),
-      width: 170,
+      width: 320,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
-        <Button
-          size="small"
-          variant="outlined"
-          onClick={(event) => {
-            event.stopPropagation();
-            openWorkbench(params.row);
-          }}
+        <Box
+          sx={{ display: "flex", gap: 1, alignItems: "center", height: "100%" }}
         >
-          {t("projectPlanning.openWorkbench", "Open Workbench")}
-        </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={(event) => {
+              event.stopPropagation();
+              openWorkbench(params.row);
+            }}
+          >
+            {t("projectPlanning.openWorkbench", "Open Workbench")}
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            color="info"
+            startIcon={<FolderOpenIcon fontSize="small" />}
+            onClick={(event) => {
+              event.stopPropagation();
+              openDocuments(params.row);
+            }}
+          >
+            {t("projectPlanning.documents", "Documents")}
+          </Button>
+        </Box>
       ),
     },
   ];
@@ -276,6 +293,52 @@ const ProjectPlanningModern = () => {
     navigate(`/projectplanning/${projectCode}/workbench`, {
       state: { project },
     });
+  };
+
+  const openDocuments = async (project) => {
+    const projectCode = String(project?.projectCode || "").trim();
+    if (!projectCode) return;
+
+    try {
+      const catalogsRes = await request("GET", "/api/librarycatelogs");
+      const catalogs = Array.isArray(catalogsRes?.data) ? catalogsRes.data : [];
+      const existing = catalogs.find((catalog) =>
+        String(catalog?.projectCode || "")
+          .trim()
+          .includes(projectCode),
+      );
+
+      if (existing) {
+        navigate(`/library/${existing.libraryCatelogId}/entries`, {
+          state: { catalog: existing, backPath: "/projectplanning" },
+        });
+        return;
+      }
+
+      const newCatalog = {
+        libraryCatelogName: String(project?.projectName || projectCode),
+        description: String(project?.description || project?.projectName || ""),
+        projectCode,
+        active: 1,
+        visibleLevel: 1,
+        quicSearchKey: "",
+      };
+
+      const createRes = await request(
+        "POST",
+        "/api/librarycatelogs",
+        newCatalog,
+      );
+      const created = createRes?.data || newCatalog;
+      const createdId = created?.libraryCatelogId;
+      if (!createdId) return;
+
+      navigate(`/library/${createdId}/entries`, {
+        state: { catalog: created, backPath: "/projectplanning" },
+      });
+    } catch {
+      // silently fail — user stays on the project list
+    }
   };
 
   if (loading) {
@@ -396,13 +459,29 @@ const ProjectPlanningModern = () => {
               >
                 <BlockListItem columnDefs={blockColumnDefs} item={item} t={t} />
               </Box>
-              <Box sx={{ mt: 1, display: "flex", justifyContent: "flex-end" }}>
+              <Box
+                sx={{
+                  mt: 1,
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: 1,
+                }}
+              >
                 <Button
                   size="small"
                   variant="outlined"
                   onClick={() => openWorkbench(item)}
                 >
                   {t("projectPlanning.openWorkbench", "Open Workbench")}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="info"
+                  startIcon={<FolderOpenIcon fontSize="small" />}
+                  onClick={() => openDocuments(item)}
+                >
+                  {t("projectPlanning.documents", "Documents")}
                 </Button>
               </Box>
             </Box>
@@ -454,13 +533,24 @@ const ProjectPlanningModern = () => {
             {t("projectPlanning.selectedProject", "Selected project")}:{" "}
             <strong>{selectedProjectCode}</strong>
           </Typography>
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={() => openWorkbench(selectedProject)}
-          >
-            {t("projectPlanning.openWorkbench", "Open Workbench")}
-          </Button>
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => openWorkbench(selectedProject)}
+            >
+              {t("projectPlanning.openWorkbench", "Open Workbench")}
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              color="info"
+              startIcon={<FolderOpenIcon fontSize="small" />}
+              onClick={() => openDocuments(selectedProject)}
+            >
+              {t("projectPlanning.documents", "Documents")}
+            </Button>
+          </Box>
         </Box>
       )}
     </Box>

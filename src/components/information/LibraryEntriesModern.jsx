@@ -582,15 +582,7 @@ const LibraryEntriesModern = () => {
   }
 
   if (!canManage) {
-    return (
-      <Alert severity="error">
-        {t(
-          "libraryEntries.unauthorized",
-          "Library entry maintenance requires user level {{level}} or above.",
-          { level: LIBRARY_MANAGE_MIN_LEVEL },
-        )}
-      </Alert>
-    );
+    // access silently restricted — no message shown
   }
 
   return (
@@ -608,7 +600,7 @@ const LibraryEntriesModern = () => {
             <Button
               variant="outlined"
               startIcon={<ArrowBackIcon />}
-              onClick={() => navigate("/library")}
+              onClick={() => navigate(location.state?.backPath || "/library")}
             >
               {t("basic.back", "Back")}
             </Button>
