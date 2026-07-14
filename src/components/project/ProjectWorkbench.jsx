@@ -147,44 +147,37 @@ const buildRows = (streams, tasksByStream) => {
     const streamId = stream?.projectStreamId;
     const allStreamTasks = tasksByStream.get(String(streamId)) || [];
 
-    // Separate milestones, anchors, and regular tasks
+    // Separate milestones from everything else
     const milestoneTasks = allStreamTasks.filter(
       (t) =>
         String(t?.taskType || "")
           .trim()
           .toUpperCase() === "M",
     );
-    const anchorTasks = allStreamTasks.filter(
+    const nonMilestoneTasks = allStreamTasks.filter(
       (t) =>
         String(t?.taskType || "")
           .trim()
-          .toUpperCase() === "A",
+          .toUpperCase() !== "M",
     );
-    const otherTasks = allStreamTasks.filter((t) => {
-      const code = String(t?.taskType || "")
-        .trim()
-        .toUpperCase();
-      return code !== "M" && code !== "A";
-    });
 
-    // Sort anchors by start date
-    anchorTasks.sort((a, b) => taskStartMs(a) - taskStartMs(b));
-
-    // Build parent→children map for other tasks
+    // Build id→task map across all non-milestone tasks so children of
+    // anchor parents are correctly resolved
     const taskById = new Map();
-    otherTasks.forEach((t) => {
+    nonMilestoneTasks.forEach((t) => {
       taskById.set(String(t?.projectTaskId || "").trim(), t);
     });
 
+    // Build parent→children map from all non-milestone tasks
     const childrenByParent = new Map();
-    const rootOtherTasks = [];
-    otherTasks.forEach((t) => {
+    const rootNonMilestoneTasks = [];
+    nonMilestoneTasks.forEach((t) => {
       const parentId = String(t?.parentTaskId || "").trim();
       if (parentId && taskById.has(parentId)) {
         if (!childrenByParent.has(parentId)) childrenByParent.set(parentId, []);
         childrenByParent.get(parentId).push(t);
       } else {
-        rootOtherTasks.push(t);
+        rootNonMilestoneTasks.push(t);
       }
     });
 
@@ -193,8 +186,24 @@ const buildRows = (streams, tasksByStream) => {
       children.sort((a, b) => taskStartMs(a) - taskStartMs(b));
     });
 
-    // Sort root non-milestone non-anchor tasks by start date
-    rootOtherTasks.sort((a, b) => taskStartMs(a) - taskStartMs(b));
+    // Among root tasks: anchors first (by start date), then others (by start date)
+    const rootAnchorTasks = rootNonMilestoneTasks
+      .filter(
+        (t) =>
+          String(t?.taskType || "")
+            .trim()
+            .toUpperCase() === "A",
+      )
+      .sort((a, b) => taskStartMs(a) - taskStartMs(b));
+
+    const rootOtherTasks = rootNonMilestoneTasks
+      .filter(
+        (t) =>
+          String(t?.taskType || "")
+            .trim()
+            .toUpperCase() !== "A",
+      )
+      .sort((a, b) => taskStartMs(a) - taskStartMs(b));
 
     // Tree-walk: emit parent then its children recursively
     const emitTaskTree = (task) => {
@@ -243,10 +252,10 @@ const buildRows = (streams, tasksByStream) => {
       streamId,
     });
 
-    // 1. Anchor tasks (sorted by start date)
-    anchorTasks.forEach((task) => emitTaskTree(task));
+    // 1. Root anchor tasks with their dependent subtrees immediately after each
+    rootAnchorTasks.forEach((task) => emitTaskTree(task));
 
-    // 2. Other tasks grouped by parent, sorted by start date within group
+    // 2. Other root tasks grouped by parent, sorted by start date within group
     rootOtherTasks.forEach((task) => emitTaskTree(task));
 
     // 3. Milestones last
