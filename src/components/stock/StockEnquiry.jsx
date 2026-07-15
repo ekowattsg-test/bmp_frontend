@@ -118,6 +118,7 @@ const normalizeRow = (item) => {
     productBrand: String(item.productBrand || ""),
     productClass: String(item.productClass || ""),
     productCategory: String(item.productCategory || ""),
+    commonName: String(item.commonName || ""),
     stockCode: String(item.stockCode || ""),
     stockLocation: String(
       item.location ||
@@ -319,6 +320,7 @@ const StockEnquiry = () => {
           productBrand: row.productBrand,
           productClass: row.productClass,
           productCategory: row.productCategory,
+          commonName: row.commonName,
           stocks: new Map(),
         };
         productMap.set(productKey, productGroup);
@@ -435,6 +437,7 @@ const StockEnquiry = () => {
         productBrand: productGroup.productBrand || "",
         productClass: productGroup.productClass || "",
         productCategory: productGroup.productCategory || "",
+        commonName: productGroup.commonName || "",
         stockCode: "",
         stockLocation: "",
         movementType: t("stockEnquiry.rowLabels.productTotal"),
@@ -467,6 +470,7 @@ const StockEnquiry = () => {
           productBrand: row.productBrand,
           productClass: row.productClass,
           productCategory: row.productCategory,
+          commonName: row.commonName,
           uom: row.uom,
           stocks: new Map(),
         };
@@ -571,6 +575,7 @@ const StockEnquiry = () => {
         productBrand: productGroup.productBrand || "",
         productClass: productGroup.productClass || "",
         productCategory: productGroup.productCategory || "",
+        commonName: productGroup.commonName || "",
         stockCode: "",
         stockLocation: "",
         quantityMoved: "",
@@ -600,6 +605,9 @@ const StockEnquiry = () => {
           const r = params.row;
           const lines = [
             r.productName,
+            r.commonName
+              ? `${t("product.commonName", "Common Name")}: ${r.commonName}`
+              : null,
             r.productBrand
               ? `${t("product.productBrand", "Brand")}: ${r.productBrand}`
               : null,
@@ -781,6 +789,9 @@ const StockEnquiry = () => {
           const r = params.row;
           const lines = [
             r.productName,
+            r.commonName
+              ? `${t("product.commonName", "Common Name")}: ${r.commonName}`
+              : null,
             r.productBrand
               ? `${t("product.productBrand", "Brand")}: ${r.productBrand}`
               : null,
