@@ -226,13 +226,11 @@ const AppMenu = () => {
                 icon: <Store />,
               }
             : null,
-          isParamEnabled("manualStockEntry")
-            ? {
-                to: "/stocktransfer",
-                label: t("menu.stockTransfer", "Stock Transfer"),
-                icon: <CompareArrows />,
-              }
-            : null,
+          {
+            to: "/stocktransfer",
+            label: t("menu.stockTransfer", "Stock Transfer"),
+            icon: <CompareArrows />,
+          },
           {
             to: "/stockadjustment",
             label: t("menu.stockAdjustment", "Stock Adjustment"),

@@ -300,14 +300,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
                   path: "/stockout",
                 }
               : null,
-            isParamEnabled("manualStockEntry")
-              ? {
-                  key: "stockTransfer",
-                  label: t("menu.stockTransfer", "Stock Transfer"),
-                  icon: <CompareArrowsIcon fontSize="small" />,
-                  path: "/stocktransfer",
-                }
-              : null,
+            {
+              key: "stockTransfer",
+              label: t("menu.stockTransfer", "Stock Transfer"),
+              icon: <CompareArrowsIcon fontSize="small" />,
+              path: "/stocktransfer",
+            },
             {
               key: "stockAdjustment",
               label: t("menu.stockAdjustment", "Stock Adjustment"),

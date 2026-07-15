@@ -115,6 +115,9 @@ const normalizeRow = (item) => {
     productId: String(item.productId || ""),
     productName: String(item.productName || ""),
     productDescription: String(item.productDescription || ""),
+    productBrand: String(item.productBrand || ""),
+    productClass: String(item.productClass || ""),
+    productCategory: String(item.productCategory || ""),
     stockCode: String(item.stockCode || ""),
     stockLocation: String(
       item.location ||
@@ -160,7 +163,7 @@ const StockEnquiry = () => {
   const [actionByKeyword, setActionByKeyword] = useState("");
   const [movementKeyword, setMovementKeyword] = useState(ALL_MOVEMENTS_VALUE);
   const [movementOptions, setMovementOptions] = useState([]);
-  const [viewMode, setViewMode] = useState("summary");
+  const [viewMode, setViewMode] = useState("detail");
 
   const loadRows = async () => {
     setLoading(true);
@@ -312,6 +315,10 @@ const StockEnquiry = () => {
         productGroup = {
           productId: row.productId,
           productName: row.productName,
+          productDescription: row.productDescription,
+          productBrand: row.productBrand,
+          productClass: row.productClass,
+          productCategory: row.productCategory,
           stocks: new Map(),
         };
         productMap.set(productKey, productGroup);
@@ -424,6 +431,10 @@ const StockEnquiry = () => {
         rowType: "product",
         movementAt: "",
         productName: productGroup.productName,
+        productDescription: productGroup.productDescription || "",
+        productBrand: productGroup.productBrand || "",
+        productClass: productGroup.productClass || "",
+        productCategory: productGroup.productCategory || "",
         stockCode: "",
         stockLocation: "",
         movementType: t("stockEnquiry.rowLabels.productTotal"),
@@ -452,6 +463,10 @@ const StockEnquiry = () => {
         productGroup = {
           productId: row.productId,
           productName: row.productName,
+          productDescription: row.productDescription,
+          productBrand: row.productBrand,
+          productClass: row.productClass,
+          productCategory: row.productCategory,
           uom: row.uom,
           stocks: new Map(),
         };
@@ -552,6 +567,10 @@ const StockEnquiry = () => {
         id: `sum-product-${productGroup.productId || productGroup.productName}`,
         rowType: "product",
         productName: productGroup.productName,
+        productDescription: productGroup.productDescription || "",
+        productBrand: productGroup.productBrand || "",
+        productClass: productGroup.productClass || "",
+        productCategory: productGroup.productCategory || "",
         stockCode: "",
         stockLocation: "",
         quantityMoved: "",
@@ -578,9 +597,32 @@ const StockEnquiry = () => {
         flex: 1,
         minWidth: 140,
         renderCell: (params) => {
-          const full = `${params.row.productName || ""}${params.row.productDescription ? " — " + params.row.productDescription : ""}`;
+          const r = params.row;
+          const lines = [
+            r.productName,
+            r.productBrand
+              ? `${t("product.productBrand", "Brand")}: ${r.productBrand}`
+              : null,
+            r.productDescription
+              ? `${t("product.productDescription", "Description")}: ${r.productDescription}`
+              : null,
+            r.productCategory
+              ? `${t("product.productCategory", "Category")}: ${r.productCategory === "A" ? t("product.categoryA", "Asset") : r.productCategory === "C" ? t("product.categoryC", "Consumable") : r.productCategory}`
+              : null,
+            r.productClass
+              ? `${t("product.productClass", "Class")}: ${r.productClass}`
+              : null,
+            r.uom ? `${t("product.uom", "UOM")}: ${r.uom}` : null,
+          ].filter(Boolean);
           return (
-            <Tooltip title={full} arrow enterDelay={300} leaveDelay={100}>
+            <Tooltip
+              title={
+                <Box sx={{ whiteSpace: "pre-line" }}>{lines.join("\n")}</Box>
+              }
+              arrow
+              enterDelay={300}
+              leaveDelay={100}
+            >
               <Box
                 sx={{
                   whiteSpace: "nowrap",
@@ -736,9 +778,32 @@ const StockEnquiry = () => {
         flex: 1,
         minWidth: 180,
         renderCell: (params) => {
-          const full = `${params.row.productName || ""}${params.row.productDescription ? " — " + params.row.productDescription : ""}`;
+          const r = params.row;
+          const lines = [
+            r.productName,
+            r.productBrand
+              ? `${t("product.productBrand", "Brand")}: ${r.productBrand}`
+              : null,
+            r.productDescription
+              ? `${t("product.productDescription", "Description")}: ${r.productDescription}`
+              : null,
+            r.productCategory
+              ? `${t("product.productCategory", "Category")}: ${r.productCategory === "A" ? t("product.categoryA", "Asset") : r.productCategory === "C" ? t("product.categoryC", "Consumable") : r.productCategory}`
+              : null,
+            r.productClass
+              ? `${t("product.productClass", "Class")}: ${r.productClass}`
+              : null,
+            r.uom ? `${t("product.uom", "UOM")}: ${r.uom}` : null,
+          ].filter(Boolean);
           return (
-            <Tooltip title={full} arrow enterDelay={300} leaveDelay={100}>
+            <Tooltip
+              title={
+                <Box sx={{ whiteSpace: "pre-line" }}>{lines.join("\n")}</Box>
+              }
+              arrow
+              enterDelay={300}
+              leaveDelay={100}
+            >
               <Box
                 sx={{
                   whiteSpace: "nowrap",

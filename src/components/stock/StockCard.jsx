@@ -215,7 +215,7 @@ const StockCard = () => {
   const [actionByKeyword, setActionByKeyword] = useState("");
   const [movementKeyword, setMovementKeyword] = useState(ALL_MOVEMENTS_VALUE);
   const [movementOptions, setMovementOptions] = useState([]);
-  const [viewMode, setViewMode] = useState("summary");
+  const [viewMode, setViewMode] = useState("detail");
   const [pda, setPda] = useState(0);
   const [pdaProductOptions, setPdaProductOptions] = useState([]);
   const [pdaSelectedProductKey, setPdaSelectedProductKey] = useState("");

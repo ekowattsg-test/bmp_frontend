@@ -131,6 +131,7 @@ const ProductModern = () => {
       product.productCode?.toLowerCase().includes(searchLower) ||
       product.productDescription?.toLowerCase().includes(searchLower) ||
       product.productClass?.toLowerCase().includes(searchLower) ||
+      product.productBrand?.toLowerCase().includes(searchLower) ||
       (product.productName || "").toLowerCase().includes(searchLower) ||
       product.displayProductCategory?.toLowerCase().includes(searchLower)
     );
@@ -241,6 +242,11 @@ const ProductModern = () => {
       renderCell: renderProductCell,
       sortable: false,
       cellClassName: "product-name-cell",
+    },
+    {
+      field: "productBrand",
+      headerName: t("product.productBrand", "Brand"),
+      width: 140,
     },
     {
       field: "productDescription",
