@@ -18,6 +18,7 @@ export default function LoginForm({
   onLogin,
   onRegister,
   onOtpLogin,
+  onEmergencyLogin,
   error = "",
   loading = false,
 }) {
@@ -374,6 +375,26 @@ export default function LoginForm({
               .
             </Box>
             {qrUrlScannerOverlay}
+            {!showCredentialLoginBlock && onEmergencyLogin && (
+              <Box
+                role="button"
+                tabIndex={0}
+                onClick={onEmergencyLogin}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") onEmergencyLogin();
+                }}
+                aria-label="emergency login"
+                sx={{
+                  mt: 1.5,
+                  height: 2,
+                  borderRadius: 1,
+                  bgcolor: "divider",
+                  cursor: "default",
+                  opacity: 0.4,
+                  transition: "opacity 0.2s",
+                }}
+              />
+            )}
           </div>
           <div
             className={classNames(

@@ -13,6 +13,7 @@ import { request, setAuthHeader } from "../helpers/axios_helper";
 
 import MainPage from "./MainPage.jsx";
 import LoginForm from "./LoginForm.jsx";
+import LoginFormSimple from "./LoginFormSimple.jsx";
 import { AuthContext } from "../context/authContext.jsx";
 import AuthLayout from "../layouts/AuthLayout.jsx";
 import {
@@ -46,6 +47,7 @@ export default function AppContent() {
   const { t } = useTranslation();
   const [loginError, setLoginError] = useState(""); // Store raw backend error
   const [loginLoading, setLoginLoading] = useState(false);
+  const [showEmergencyLogin, setShowEmergencyLogin] = useState(false);
   // Backend error dialog state and refs for acknowledgement
   const [backendDialogOpen, setBackendDialogOpen] = useState(false);
   const [backendDialogMessage, setBackendDialogMessage] = useState("");
@@ -278,13 +280,23 @@ export default function AppContent() {
         </Routes>
       ) : !isAuthenticated ? (
         <AuthLayout>
-          <LoginForm
-            onLogin={onLogin}
-            onRegister={onRegister}
-            onOtpLogin={onOtpLogin}
-            error={getTranslatedError(loginError)}
-            loading={loginLoading}
-          />
+          {showEmergencyLogin ? (
+            <LoginFormSimple
+              onLogin={onLogin}
+              onRegister={onRegister}
+              error={getTranslatedError(loginError)}
+              loading={loginLoading}
+            />
+          ) : (
+            <LoginForm
+              onLogin={onLogin}
+              onRegister={onRegister}
+              onOtpLogin={onOtpLogin}
+              onEmergencyLogin={() => setShowEmergencyLogin(true)}
+              error={getTranslatedError(loginError)}
+              loading={loginLoading}
+            />
+          )}
         </AuthLayout>
       ) : (
         <MainPage />

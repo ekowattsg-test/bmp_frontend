@@ -112,6 +112,7 @@
     "otpFailed": "OTP verification failed. Please try again.",
     "qrLoginHint": "Or scan a login QR code",
     "scanQrLogin": "Scan QR Code to login",
+    "emergencyLogin": "Emergency login",
     "qrLoginPlaceholder": "Scan login QR code",
     "qrLoginInvalidUrl": "Invalid QR login URL. Please scan a valid http(s) URL.",
     "qrLoginDomainMismatch": "This QR login link is not valid for this app. Please scan a QR code from the same domain."

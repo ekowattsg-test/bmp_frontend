@@ -55,10 +55,11 @@ const AuthLayout = ({ children }) => {
               src={loginLogoSrc}
               alt={t("auth.appTitle")}
               sx={{
-                width: 56,
-                height: 56,
+                width: "30%",
+                height: "auto",
                 objectFit: "contain",
                 display: "block",
+                mx: "auto",
               }}
             />
           </Box>
