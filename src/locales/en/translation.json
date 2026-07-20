@@ -142,11 +142,50 @@
       "schedule": "Schedule",
       "stockCard": "Inventory",
       "briefing": "Briefing",
-      "me": "Me"
+      "me": "Me",
+      "site": "Field Ops",
+      "siteMenu": "Field Ops",
+      "availableTasks": "Task Assignment Board",
+      "progressUpdate": "Progress Update"
     },
     "schedule": {
       "comingSoon": "Schedules coming soon.",
       "comingSoonDesc": "Project task schedules and shift assignments will appear here."
+    },
+    "availableTask": {
+      "title": "Task Assignment Board",
+      "workDate": "Work Date",
+      "nonWorkday": "Non-workday",
+      "selectProject": "Project",
+      "selectProjectPlaceholder": "Select a project",
+      "noTasks": "No active tasks found for this project.",
+      "noAccess": "This function is only available to Site Leaders.",
+      "loadFailed": "Failed to load configuration.",
+      "taskLoadFailed": "Failed to load tasks.",
+      "markFailed": "Failed to mark task.",
+      "manpower": "Manage Manpower",
+      "manpowerTitle": "Manpower",
+      "manpowerLoadFailed": "Failed to load manpower.",
+      "manpowerSaveFailed": "Failed to save manpower.",
+      "noManpower": "No manpower assigned yet.",
+      "staff": "Staff",
+      "role": "Role",
+      "roleWorker": "Worker",
+      "roleSupervisor": "Supervisor",
+      "loading": "Load",
+      "sectionInProgress": "In Progress",
+      "sectionBackDated": "Back Dated",
+      "sectionFuture": "Future"
+    },
+    "progressUpdate": {
+      "title": "Task Progress Update",
+      "noAccess": "This function is only available to Site Leaders.",
+      "loadFailed": "Failed to load task progress records.",
+      "confirmFailed": "Failed to confirm task progress.",
+      "noItems": "No task progress records require update.",
+      "progress": "Progress",
+      "complete": "Complete",
+      "confirm": "Confirm progress"
     },
     "briefing": {
       "selectProjectHint": "Select a project code to join or start today\u2019s briefing session.",
@@ -375,6 +414,7 @@
     "customer": "Customer",
     "vendor": "Vendor",
     "purchaseOrder": "Purchase Orders",
+    "requisitionOrder": "Requisition Order",
     "deliveryOrder": "Delivery Orders",
     "staff": "Staff",
     "library": "Library",
@@ -389,6 +429,8 @@
     "projectList": "Project List",
     "projectPlanning": "Project Workbench",
     "projectManpowerGenerate": "Generate Project Manpower",
+    "projectTaskRecalculate": "Recalculate Project Tasks",
+    "requisitionGenerate": "Generate Stock Requisition",
     "workOrders": "Operations",
     "workOrderList": "Work Orders",
     "vehicle": "Vehicles",
@@ -923,6 +965,40 @@
     "removeTaskBlockedDependency": "Task cannot be removed because it has dependent tasks.",
     "removeTaskBlockedBaseline": "Baseline task cannot be removed."
   },
+  "requisitionGenerate": {
+    "title": "Generate Stock Requisition",
+    "subtitle": "Generate stock requisition orders for active project cycles.",
+    "description": "Click the button below to start the requisition generation process. The system will create requisition orders based on current project cycles and requirements.",
+    "start": "Start Requisition Generation",
+    "running": "Generating...",
+    "success": "Requisition generation completed successfully.",
+    "failed": "Requisition generation failed. Please try again."
+  },
+  "requisitionOrder": {
+    "title": "Requisition Order",
+    "subtitle": "Review generated requisitions by project and record purchase decisions.",
+    "loading": "Loading requisition orders...",
+    "loadFailed": "Failed to load requisition orders.",
+    "noOrders": "No requisition orders found.",
+    "noProject": "No Project",
+    "lineCount": "{{count}} line(s)",
+    "saveDecisions": "Save Decisions for {{project}}",
+    "saveSuccess": "Purchase decisions saved for {{project}}.",
+    "saveFailed": "Failed to save decisions.",
+    "selectVendor": "Select vendor",
+    "cols": {
+      "product": "Product Requested",
+      "qtyRequested": "Qty Req.",
+      "stockAvail": "Stock Avail.",
+      "actualProduct": "Actual Product",
+      "actualProductPlaceholder": "Product ID",
+      "qtyPurchase": "Qty Purchase",
+      "vendor": "Vendor",
+      "unitPrice": "Unit Price",
+      "purchaseDate": "Purchase Date",
+      "status": "Status"
+    }
+  },
   "projectManpowerGenerate": {
     "title": "Generate Project Manpower",
     "subtitle": "Regenerate project manpower assignments from project data.",
@@ -931,6 +1007,18 @@
     "generating": "Generating...",
     "result": "Result",
     "generateFailed": "Failed to regenerate project manpower.",
+    "unauthorized": "You are not authorized to access this function."
+  },
+  "projectTaskRecalculate": {
+    "title": "Recalculate Task Dates",
+    "subtitle": "Recalculate all task dates under the selected project.",
+    "instruction": "Select a project code and click the button to recalculate all project task dates.",
+    "projectCode": "Project Code",
+    "recalculate": "Recalculate",
+    "recalculating": "Recalculating...",
+    "recalculateSuccess": "Task dates were recalculated successfully.",
+    "recalculateFailed": "Failed to recalculate task dates.",
+    "loadProjectsFailed": "Failed to load projects.",
     "unauthorized": "You are not authorized to access this function."
   },
   "projectLeader": {
@@ -1282,7 +1370,8 @@
     "noItems": "No items found",
     "lineNo": "#",
     "productCode": "Product Code",
-    "itemType": {
+    "itemType": "Item Type",
+    "itemTypeOptions": {
       "assets": "Assets",
       "inventory": "Inventory"
     },

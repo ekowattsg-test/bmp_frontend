@@ -37,6 +37,8 @@ import PdaBriefingPresenterScan from "./pda/briefing/PdaBriefingPresenterScan.js
 import PdaBriefingListener from "./pda/briefing/PdaBriefingListener.jsx";
 import PdaBriefingPresenterPage from "./pda/briefing/PdaBriefingPresenterPage.jsx";
 import PdaBriefingWorkerPage from "./pda/briefing/PdaBriefingWorkerPage.jsx";
+import PdaAvailableTask from "./pda/site/PdaAvailableTask.jsx";
+import PdaProgressUpdate from "./pda/site/PdaProgressUpdate.jsx";
 import StockCard from "./stock/StockCard.jsx";
 
 export default function AppContent() {
@@ -276,6 +278,11 @@ export default function AppContent() {
               element={<PdaBriefingWorkerPage />}
             />
             <Route path="/pda/me" element={<PdaMe />} />
+            <Route path="/pda/available-tasks" element={<PdaAvailableTask />} />
+            <Route
+              path="/pda/progress-update"
+              element={<PdaProgressUpdate />}
+            />
           </Route>
         </Routes>
       ) : !isAuthenticated ? (

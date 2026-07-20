@@ -3,6 +3,12 @@ import { Box, Tooltip, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { getTaskStatusLabel } from "../utils/workbenchUtils";
 
+const toProgressPercent = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return Math.max(0, Math.min(100, numeric));
+};
+
 const WorkbenchTimelineBarLayer = ({
   colWidth,
   ganttCurrentPeriodOverlay,
@@ -24,9 +30,11 @@ const WorkbenchTimelineBarLayer = ({
   const taskTitle = streamName ? `${streamName} / ${taskName}` : taskName;
   const taskStartDate = formatDate(row?.startDate || row?.raw?.taskStartDate);
   const taskEndDate = formatDate(row?.endDate || row?.raw?.taskEndDate);
+  const taskProgress = toProgressPercent(row?.raw?.progress);
   const canUpdateStatus =
     taskStatus.toLowerCase() === "not started" ||
     taskStatus.toLowerCase() === "in progress";
+  const isInProgressTask = taskStatus.toLowerCase() === "in progress";
   const taskBarColor = (() => {
     const normalizedStatus = taskStatus.toLowerCase();
     if (normalizedStatus === "not started") return "success.main";
@@ -56,6 +64,12 @@ const WorkbenchTimelineBarLayer = ({
       <Typography variant="caption" sx={{ display: "block" }}>
         {t("projecttask.taskEndDate")}: {taskEndDate}
       </Typography>
+      {isInProgressTask && (
+        <Typography variant="caption" sx={{ display: "block" }}>
+          {t("pda.progressUpdate.progress", "Progress")}:{" "}
+          {Math.round(taskProgress)}%
+        </Typography>
+      )}
       {canUpdateStatus && (
         <Typography
           variant="caption"
@@ -105,7 +119,9 @@ const WorkbenchTimelineBarLayer = ({
                   ? "success.main"
                   : rowType === "stream"
                     ? "transparent"
-                    : taskBarColor,
+                    : isInProgressTask
+                      ? "success.main"
+                      : taskBarColor,
               border: rowType === "stream" || isTaskRow ? "1px solid" : "none",
               borderColor: isParentHighlight
                 ? "info.dark"
@@ -117,7 +133,24 @@ const WorkbenchTimelineBarLayer = ({
               opacity: rowType === "stream" ? 1 : 0.65,
               cursor: isTaskRow && onTaskBarClick ? "pointer" : "default",
             }}
-          />
+          >
+            {isTaskRow &&
+            isInProgressTask &&
+            !isParentHighlight &&
+            !isLinkedHighlight ? (
+              <Box
+                sx={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: `${taskProgress}%`,
+                  bgcolor: "warning.main",
+                  borderRadius: "999px 0 0 999px",
+                }}
+              />
+            ) : null}
+          </Box>
         </Tooltip>
       )}
       {geo && isMilestoneTaskType && (

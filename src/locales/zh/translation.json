@@ -142,11 +142,50 @@
       "schedule": "日程",
       "stockCard": "库存",
       "briefing": "简报",
-      "me": "我的"
+      "me": "我的",
+      "site": "现场作业",
+      "siteMenu": "现场作业",
+      "availableTasks": "任务分配看板",
+      "progressUpdate": "进度上报"
     },
     "schedule": {
       "comingSoon": "日程功能将尽快提供。",
       "comingSoonDesc": "项目任务日程与班次安排将在此显示。"
+    },
+    "availableTask": {
+      "title": "任务分配看板",
+      "workDate": "工作日期",
+      "nonWorkday": "非工作日",
+      "selectProject": "项目",
+      "selectProjectPlaceholder": "选择项目",
+      "noTasks": "该项目没有活跃任务。",
+      "noAccess": "此功能仅限现场负责人使用。",
+      "loadFailed": "加载配置失败。",
+      "taskLoadFailed": "加载任务失败。",
+      "markFailed": "标记任务失败。",
+      "manpower": "管理人力",
+      "manpowerTitle": "人力分配",
+      "manpowerLoadFailed": "加载人力失败。",
+      "manpowerSaveFailed": "保存人力失败。",
+      "noManpower": "尚未分配人力。",
+      "staff": "员工",
+      "role": "角色",
+      "roleWorker": "工人",
+      "roleSupervisor": "督导",
+      "loading": "负荷",
+      "sectionInProgress": "进行中",
+      "sectionBackDated": "过期任务",
+      "sectionFuture": "未来任务"
+    },
+    "progressUpdate": {
+      "title": "任务进度上报",
+      "noAccess": "此功能仅限现场负责人使用。",
+      "loadFailed": "加载任务进度记录失败。",
+      "confirmFailed": "确认任务进度失败。",
+      "noItems": "暂无需要上报的任务进度记录。",
+      "progress": "进度",
+      "complete": "完成",
+      "confirm": "确认进度"
     },
     "briefing": {
       "selectProjectHint": "请选择项目编号以加入或启动今日简报会话。",
@@ -375,6 +414,7 @@
     "customer": "客户",
     "vendor": "供应商",
     "purchaseOrder": "采购订单",
+    "requisitionOrder": "申购单",
     "deliveryOrder": "交货单",
     "staff": "员工",
     "library": "资料库",
@@ -389,6 +429,8 @@
     "projectList": "项目列表",
     "projectPlanning": "项目工作台",
     "projectManpowerGenerate": "生成人力配置",
+    "projectTaskRecalculate": "重算项目任务日期",
+    "requisitionGenerate": "生成库存申购单",
     "workOrders": "运营",
     "workOrderList": "工单",
     "vehicle": "车辆",
@@ -923,6 +965,40 @@
     "removeTaskBlockedDependency": "该任务存在从属任务，无法移除。",
     "removeTaskBlockedBaseline": "基线任务不能移除。"
   },
+  "requisitionGenerate": {
+    "title": "生成库存申购单",
+    "subtitle": "为当前项目周期生成库存申购单。",
+    "description": "点击下方按钮开始申购单生成流程。系统将根据当前项目周期及需求自动创建申购单。",
+    "start": "开始生成申购单",
+    "running": "生成中...",
+    "success": "申购单生成完成。",
+    "failed": "申购单生成失败，请重试。"
+  },
+  "requisitionOrder": {
+    "title": "申购单",
+    "subtitle": "按项目查阅已生成的申购记录，并填写采购决策。",
+    "loading": "正在加载申购单...",
+    "loadFailed": "加载申购单失败。",
+    "noOrders": "未找到申购单。",
+    "noProject": "无项目",
+    "lineCount": "{{count}} 行",
+    "saveDecisions": "保存 {{project}} 的采购决策",
+    "saveSuccess": "{{project}} 的采购决策已保存。",
+    "saveFailed": "保存决策失败。",
+    "selectVendor": "选择供应商",
+    "cols": {
+      "product": "申购产品",
+      "qtyRequested": "申购数量",
+      "stockAvail": "库存可用",
+      "actualProduct": "实际采购产品",
+      "actualProductPlaceholder": "产品 ID",
+      "qtyPurchase": "采购数量",
+      "vendor": "供应商",
+      "unitPrice": "单价",
+      "purchaseDate": "采购日期",
+      "status": "状态"
+    }
+  },
   "projectManpowerGenerate": {
     "title": "生成人力配置",
     "subtitle": "根据项目数据重新生成人力分配。",
@@ -931,6 +1007,18 @@
     "generating": "生成中...",
     "result": "结果",
     "generateFailed": "重新生成项目人力失败。",
+    "unauthorized": "您无权访问此功能。"
+  },
+  "projectTaskRecalculate": {
+    "title": "重算任务日期",
+    "subtitle": "重新计算所选项目下的全部任务日期。",
+    "instruction": "请选择项目编号并点击按钮，重新计算该项目下所有任务日期。",
+    "projectCode": "项目编号",
+    "recalculate": "重新计算",
+    "recalculating": "计算中...",
+    "recalculateSuccess": "任务日期重算成功。",
+    "recalculateFailed": "任务日期重算失败。",
+    "loadProjectsFailed": "加载项目失败。",
     "unauthorized": "您无权访问此功能。"
   },
   "projectLeader": {
@@ -1282,7 +1370,8 @@
     "noItems": "未找到项目",
     "lineNo": "#",
     "productCode": "产品代码",
-    "itemType": {
+    "itemType": "产品类型",
+    "itemTypeOptions": {
       "assets": "资产",
       "inventory": "库存"
     },

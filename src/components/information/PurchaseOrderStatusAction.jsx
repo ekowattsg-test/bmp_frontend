@@ -312,10 +312,10 @@ const PurchaseOrderStatusAction = ({ order, onClose, onUpdated }) => {
                           .toUpperCase();
                         const displayItemType =
                           rawType === "A"
-                            ? t("purchaseOrderList.itemType.assets", "Assets")
+                            ? t("purchaseOrderList.itemTypeOptions.assets", "Assets")
                             : rawType === "I"
                               ? t(
-                                  "purchaseOrderList.itemType.inventory",
+                                  "purchaseOrderList.itemTypeOptions.inventory",
                                   "Inventory",
                                 )
                               : item.itemType || "-";

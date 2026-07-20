@@ -356,6 +356,26 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               path: "/projectmanpower-generate",
               minLevel: 5,
             },
+            {
+              key: "projectTaskRecalculate",
+              label: t(
+                "menu.projectTaskRecalculate",
+                "Recalculate Project Tasks",
+              ),
+              icon: <TaskIcon fontSize="small" />,
+              path: "/projecttask-recalculate",
+              minLevel: 5,
+            },
+            {
+              key: "requisitionGenerate",
+              label: t(
+                "menu.requisitionGenerate",
+                "Generate Stock Requisition",
+              ),
+              icon: <AssignmentIcon fontSize="small" />,
+              path: "/requisition-generate",
+              minLevel: 5,
+            },
           ],
         },
         {
@@ -370,6 +390,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               label: t("menu.purchaseOrder"),
               icon: <BusinessIcon fontSize="small" />,
               path: "/purchaseorder",
+            },
+            {
+              key: "requisitionOrders",
+              label: t("menu.requisitionOrder", "Requisition Order"),
+              icon: <AssignmentIcon fontSize="small" />,
+              path: "/requisition-orders",
             },
             {
               key: "deliveryOrders",

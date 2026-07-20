@@ -423,12 +423,12 @@ const PurchaseOrderAdd = ({ onCancel }) => {
                         >
                           <MenuItem value="I">
                             {t(
-                              "purchaseOrderList.itemType.inventory",
+                              "purchaseOrderList.itemTypeOptions.inventory",
                               "Inventory",
                             )}
                           </MenuItem>
                           <MenuItem value="A">
-                            {t("purchaseOrderList.itemType.assets", "Assets")}
+                            {t("purchaseOrderList.itemTypeOptions.assets", "Assets")}
                           </MenuItem>
                         </Select>
                       </FormControl>
@@ -574,12 +574,12 @@ const PurchaseOrderAdd = ({ onCancel }) => {
                           >
                             <MenuItem value="I">
                               {t(
-                                "purchaseOrderList.itemType.inventory",
+                                "purchaseOrderList.itemTypeOptions.inventory",
                                 "Inventory",
                               )}
                             </MenuItem>
                             <MenuItem value="A">
-                              {t("purchaseOrderList.itemType.assets", "Assets")}
+                              {t("purchaseOrderList.itemTypeOptions.assets", "Assets")}
                             </MenuItem>
                           </Select>
                         </FormControl>

@@ -91,10 +91,10 @@ const PurchaseOrderView = ({ order, onClose }) => {
 
       let displayItemType = rawItemType || "-";
       if (normalizedType === "A") {
-        displayItemType = t("purchaseOrderList.itemType.assets", "Assets");
+        displayItemType = t("purchaseOrderList.itemTypeOptions.assets", "Assets");
       } else if (normalizedType === "I") {
         displayItemType = t(
-          "purchaseOrderList.itemType.inventory",
+          "purchaseOrderList.itemTypeOptions.inventory",
           "Inventory",
         );
       }

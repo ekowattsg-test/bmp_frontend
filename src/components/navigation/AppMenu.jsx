@@ -274,6 +274,16 @@ const AppMenu = () => {
                 icon: <Task />,
               }
             : null,
+          userLevel >= 5
+            ? {
+                to: "/projecttask-recalculate",
+                label: t(
+                  "menu.projectTaskRecalculate",
+                  "Recalculate Project Tasks",
+                ),
+                icon: <Task />,
+              }
+            : null,
         ],
       },
       {
