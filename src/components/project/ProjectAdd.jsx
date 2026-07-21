@@ -39,6 +39,7 @@ const ProjectAdd = ({ customers, onCancel }) => {
     projectName: "",
     projectDescription: "",
     customerId: "",
+    briefingId: "",
     startDate: "",
     endDate: "",
     projectLocation: "",
@@ -46,6 +47,7 @@ const ProjectAdd = ({ customers, onCancel }) => {
   });
   const [leaders, setLeaders] = useState([]);
   const [staffList, setStaffList] = useState([]);
+  const [briefings, setBriefings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -62,6 +64,28 @@ const ProjectAdd = ({ customers, onCancel }) => {
     request("GET", "/api/staffs")
       .then((res) => setStaffList(res.data || []))
       .catch(() => setStaffList([]));
+  }, []);
+
+  useEffect(() => {
+    request("GET", "/api/briefings")
+      .then((res) => {
+        const rows = Array.isArray(res?.data) ? res.data : [];
+        const activeRows = rows.filter(
+          (row) => String(row?.active ?? "").trim() === "1",
+        );
+        setBriefings(activeRows);
+        if (activeRows.length > 0) {
+          const firstBriefingId = String(
+            activeRows[0]?.briefingId || "",
+          ).trim();
+          setForm((prev) =>
+            String(prev.briefingId || "").trim()
+              ? prev
+              : { ...prev, briefingId: firstBriefingId },
+          );
+        }
+      })
+      .catch(() => setBriefings([]));
   }, []);
 
   const handleChange = (e) => {
@@ -176,6 +200,7 @@ const ProjectAdd = ({ customers, onCancel }) => {
       await request("POST", "/api/projects", {
         ...form,
         customerId: form.customerId !== "" ? Number(form.customerId) : null,
+        briefingId: form.briefingId !== "" ? Number(form.briefingId) : null,
         status: "PLAN",
       });
 
@@ -302,6 +327,25 @@ const ProjectAdd = ({ customers, onCancel }) => {
               multiline
               rows={2}
             />
+
+            <FormControl fullWidth>
+              <InputLabel>{t("project.briefingId", "Briefing")}</InputLabel>
+              <Select
+                name="briefingId"
+                value={form.briefingId}
+                onChange={handleChange}
+                label={t("project.briefingId", "Briefing")}
+              >
+                {briefings.map((briefing) => (
+                  <MenuItem
+                    key={briefing.briefingId}
+                    value={String(briefing.briefingId)}
+                  >
+                    {briefing.briefingTitle}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Box>
         </Box>
 

@@ -22,6 +22,42 @@ import { Close as CloseIcon } from "@mui/icons-material";
 import { BlockListItem, LoadMoreBlockList } from "../common";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 
+const parseVendorAddress = (value) => {
+  if (!value) {
+    return { Line1: "", Line2: "", PostalCode: "", City: "" };
+  }
+
+  if (typeof value === "object") {
+    return {
+      Line1: String(value?.Line1 || "").trim(),
+      Line2: String(value?.Line2 || "").trim(),
+      PostalCode: String(value?.PostalCode || "").trim(),
+      City: String(value?.City || "").trim(),
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(String(value));
+    return {
+      Line1: String(parsed?.Line1 || "").trim(),
+      Line2: String(parsed?.Line2 || "").trim(),
+      PostalCode: String(parsed?.PostalCode || "").trim(),
+      City: String(parsed?.City || "").trim(),
+    };
+  } catch {
+    return { Line1: "", Line2: "", PostalCode: "", City: "" };
+  }
+};
+
+const formatVendorAddress = (value) => {
+  const addr = parseVendorAddress(value);
+  const lines = [addr.Line1];
+  if (addr.Line2) lines.push(addr.Line2);
+  lines.push(addr.PostalCode);
+  lines.push(addr.City);
+  return lines.filter(Boolean).join("\n");
+};
+
 const PurchaseOrderView = ({ order, onClose }) => {
   const { t } = useTranslation();
   const [items, setItems] = useState([]);
@@ -91,7 +127,10 @@ const PurchaseOrderView = ({ order, onClose }) => {
 
       let displayItemType = rawItemType || "-";
       if (normalizedType === "A") {
-        displayItemType = t("purchaseOrderList.itemTypeOptions.assets", "Assets");
+        displayItemType = t(
+          "purchaseOrderList.itemTypeOptions.assets",
+          "Assets",
+        );
       } else if (normalizedType === "I") {
         displayItemType = t(
           "purchaseOrderList.itemTypeOptions.inventory",
@@ -146,6 +185,11 @@ const PurchaseOrderView = ({ order, onClose }) => {
       },
     ],
     [t],
+  );
+
+  const vendorAddress = useMemo(
+    () => formatVendorAddress(vendor?.address),
+    [vendor?.address],
   );
 
   return (
@@ -220,6 +264,23 @@ const PurchaseOrderView = ({ order, onClose }) => {
                     ? `${vendor.vendorName} (${vendor.vendorId})`
                     : order.vendorId}
                 </Typography>
+                {vendorAddress && (
+                  <>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block", mt: 1 }}
+                    >
+                      {t("vendorList.address", "Address")}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{ whiteSpace: "pre-line", lineHeight: 1.35 }}
+                    >
+                      {vendorAddress}
+                    </Typography>
+                  </>
+                )}
               </Box>
 
               {/* Order Amount (moved to where vendor was) */}

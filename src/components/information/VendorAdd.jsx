@@ -4,6 +4,17 @@ import { request } from "../../helpers/axios_helper";
 import { TextField, Button, Box } from "@mui/material";
 import { HeaderBar } from "../common";
 
+const buildAddressPayload = ({ line1, line2, city, postalCode }) => {
+  const payload = {
+    Line1: String(line1 || "").trim(),
+    PostalCode: String(postalCode || "").trim(),
+    City: String(city || "").trim(),
+  };
+  const normalizedLine2 = String(line2 || "").trim();
+  if (normalizedLine2) payload.Line2 = normalizedLine2;
+  return JSON.stringify(payload);
+};
+
 const VendorAdd = ({ onCancel }) => {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
@@ -11,6 +22,10 @@ const VendorAdd = ({ onCancel }) => {
     vendorName: "",
     active: true,
     contactEmail: "",
+    addressLine1: "",
+    addressLine2: "",
+    addressCity: "",
+    addressPostalCode: "",
     latitude: "",
     longitude: "",
   });
@@ -27,9 +42,22 @@ const VendorAdd = ({ onCancel }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     setLoading(true);
-    request("POST", "/api/vendors", {
-      ...formData,
+    const vendorPayload = {
+      vendorId: formData.vendorId,
+      vendorName: formData.vendorName,
+      contactEmail: formData.contactEmail,
+      latitude: formData.latitude,
+      longitude: formData.longitude,
+      address: buildAddressPayload({
+        line1: formData.addressLine1,
+        line2: formData.addressLine2,
+        city: formData.addressCity,
+        postalCode: formData.addressPostalCode,
+      }),
       active: formData.active ? 1 : 0,
+    };
+    request("POST", "/api/vendors", {
+      ...vendorPayload,
     })
       .then(() => {
         onCancel(true);
@@ -42,10 +70,7 @@ const VendorAdd = ({ onCancel }) => {
 
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: 20 }}>
-      <HeaderBar
-        title={t("vendorList.addTitle")}
-        sx={{ mb: 1 }}
-      />
+      <HeaderBar title={t("vendorList.addTitle")} sx={{ mb: 1 }} />
       <form onSubmit={handleSubmit}>
         <Box sx={{ mb: 2 }}>
           <TextField
@@ -74,6 +99,42 @@ const VendorAdd = ({ onCancel }) => {
             name="contactEmail"
             type="email"
             value={formData.contactEmail}
+            onChange={handleChange}
+          />
+        </Box>
+        <Box sx={{ mb: 2 }}>
+          <TextField
+            fullWidth
+            label={t("vendorList.addressLine1", "Address Line 1")}
+            name="addressLine1"
+            value={formData.addressLine1}
+            onChange={handleChange}
+          />
+        </Box>
+        <Box sx={{ mb: 2 }}>
+          <TextField
+            fullWidth
+            label={t("vendorList.addressLine2", "Address Line 2")}
+            name="addressLine2"
+            value={formData.addressLine2}
+            onChange={handleChange}
+          />
+        </Box>
+        <Box sx={{ mb: 2 }}>
+          <TextField
+            fullWidth
+            label={t("vendorList.addressPostalCode", "Postal Code")}
+            name="addressPostalCode"
+            value={formData.addressPostalCode}
+            onChange={handleChange}
+          />
+        </Box>
+        <Box sx={{ mb: 2 }}>
+          <TextField
+            fullWidth
+            label={t("vendorList.addressCity", "City")}
+            name="addressCity"
+            value={formData.addressCity}
             onChange={handleChange}
           />
         </Box>

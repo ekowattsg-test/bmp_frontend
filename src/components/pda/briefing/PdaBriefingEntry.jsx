@@ -22,7 +22,6 @@ import {
   formatTodayYmd,
   getSessionId,
   isLeadershipMember,
-  resolvePrimaryBriefingId,
 } from "./briefingFlowHelpers";
 
 const safeString = (value) =>
@@ -127,7 +126,12 @@ export default function PdaBriefingEntry() {
         return;
       }
 
-      const briefingId = await resolvePrimaryBriefingId();
+      const selectedProject = projects.find(
+        (project) =>
+          safeString(project?.projectCode) ===
+          safeString(normalizedProjectCode),
+      );
+      const briefingId = safeString(selectedProject?.briefingId);
       if (!briefingId) {
         setErrorMsg(t("pda.briefing.noBriefingTemplate"));
         return;

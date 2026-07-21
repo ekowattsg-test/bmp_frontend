@@ -139,11 +139,6 @@ const AppMenu = () => {
             label: t("menu.operationRole", "Operation Roles"),
             icon: <ManageAccounts />,
           },
-          {
-            to: "/briefing",
-            label: t("menu.briefing", "Briefing Setup"),
-            icon: <Description />,
-          },
           canAccessWaSimulator
             ? {
                 to: "/wa-simulator",
@@ -249,6 +244,20 @@ const AppMenu = () => {
         ].filter(Boolean),
       },
       {
+        key: "ProjectManagement",
+        menu: "ProjectControl",
+        userLevelMin: 3,
+        label: t("menu.projectManagement", "Project Management"),
+        icon: <Assignment />,
+        items: [
+          {
+            to: "/briefing",
+            label: t("menu.briefing", "Briefing Setup"),
+            icon: <Description />,
+          },
+        ],
+      },
+      {
         key: "Projects",
         menu: "ProjectControl",
         label: t("menu.projects", "Projects"),
@@ -306,6 +315,13 @@ const AppMenu = () => {
 
   const visibleSections = menuSections.filter((section) => {
     if (section.items && section.items.length === 0) {
+      return false;
+    }
+
+    if (
+      section.userLevelMin !== undefined &&
+      userLevel < Number(section.userLevelMin)
+    ) {
       return false;
     }
 

@@ -28,6 +28,42 @@ import VendorAdd from "./VendorAdd";
 import VendorEdit from "./VendorEdit";
 import VendorDelete from "./VendorDelete";
 
+const parseVendorAddress = (value) => {
+  if (!value) {
+    return { Line1: "", Line2: "", PostalCode: "", City: "" };
+  }
+
+  if (typeof value === "object") {
+    return {
+      Line1: String(value?.Line1 || "").trim(),
+      Line2: String(value?.Line2 || "").trim(),
+      PostalCode: String(value?.PostalCode || "").trim(),
+      City: String(value?.City || "").trim(),
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(String(value));
+    return {
+      Line1: String(parsed?.Line1 || "").trim(),
+      Line2: String(parsed?.Line2 || "").trim(),
+      PostalCode: String(parsed?.PostalCode || "").trim(),
+      City: String(parsed?.City || "").trim(),
+    };
+  } catch {
+    return { Line1: "", Line2: "", PostalCode: "", City: "" };
+  }
+};
+
+const formatVendorAddress = (value) => {
+  const addr = parseVendorAddress(value);
+  const lines = [addr.Line1];
+  if (addr.Line2) lines.push(addr.Line2);
+  lines.push(addr.PostalCode);
+  lines.push(addr.City);
+  return lines.filter(Boolean).join("\n");
+};
+
 const VendorModern = () => {
   const [action, setAction] = useState("view");
   const [refresh, setRefresh] = useState(false);
@@ -78,17 +114,29 @@ const VendorModern = () => {
     setDeleteMode(true);
   }, []);
 
+  const normalizedVendors = useMemo(
+    () =>
+      vendorData.map((vendor) => ({
+        ...vendor,
+        displayAddress: formatVendorAddress(vendor?.address),
+      })),
+    [vendorData],
+  );
+
   const filteredVendors = useMemo(() => {
-    return vendorData.filter((vendor) => {
+    return normalizedVendors.filter((vendor) => {
       if (!search) return true;
       const searchLower = search.toLowerCase();
       return (
         vendor.vendorName?.toLowerCase().includes(searchLower) ||
         String(vendor.vendorId).toLowerCase().includes(searchLower) ||
-        vendor.contactEmail?.toLowerCase().includes(searchLower)
+        vendor.contactEmail?.toLowerCase().includes(searchLower) ||
+        String(vendor.displayAddress || "")
+          .toLowerCase()
+          .includes(searchLower)
       );
     });
-  }, [vendorData, search]);
+  }, [normalizedVendors, search]);
 
   const columns = useMemo(
     () => [
@@ -103,6 +151,17 @@ const VendorModern = () => {
         headerName: t("vendorList.contactEmail", "Contact Email"),
         flex: 1,
         minWidth: 200,
+      },
+      {
+        field: "displayAddress",
+        headerName: t("vendorList.address", "Address"),
+        flex: 1.2,
+        minWidth: 220,
+        renderCell: (params) => (
+          <Box sx={{ whiteSpace: "pre-line", lineHeight: 1.2, py: 0.5 }}>
+            {params.value || ""}
+          </Box>
+        ),
       },
       {
         field: "latitude",

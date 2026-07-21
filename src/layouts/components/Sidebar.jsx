@@ -179,12 +179,6 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               icon: <ManageAccountsIcon fontSize="small" />,
               path: "/operationrole",
             },
-            {
-              key: "briefing",
-              label: t("menu.briefing", "Briefing Setup"),
-              icon: <DescriptionIcon fontSize="small" />,
-              path: "/briefing",
-            },
             canAccessWaSimulator
               ? {
                   key: "waSimulator",
@@ -325,6 +319,21 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               path: "/stockcard",
             },
           ].filter(Boolean),
+        },
+        {
+          key: "ProjectManagement",
+          menu: "ProjectControl",
+          label: t("menu.projectManagement", "Project Management"),
+          icon: <AssignmentIcon />,
+          children: [
+            {
+              key: "briefing",
+              label: t("menu.briefing", "Briefing Setup"),
+              icon: <DescriptionIcon fontSize="small" />,
+              path: "/briefing",
+              minLevel: 3,
+            },
+          ],
         },
         {
           key: "Projects",

@@ -74,6 +74,10 @@ const ProjectEdit = ({ project, customers, onCancel }) => {
       project.customerId !== null && project.customerId !== undefined
         ? project.customerId
         : "",
+    briefingId:
+      project.briefingId !== null && project.briefingId !== undefined
+        ? String(project.briefingId)
+        : "",
     startDate: project.startDate || "",
     endDate: project.endDate || "",
     projectLocation: project.projectLocation || "",
@@ -82,6 +86,7 @@ const ProjectEdit = ({ project, customers, onCancel }) => {
   const [leaders, setLeaders] = useState([]);
   const [deletedLeaderIds, setDeletedLeaderIds] = useState([]);
   const [staffList, setStaffList] = useState([]);
+  const [briefings, setBriefings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [leadersLoading, setLeadersLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
@@ -122,6 +127,31 @@ const ProjectEdit = ({ project, customers, onCancel }) => {
       })
       .finally(() => setLeadersLoading(false));
   }, [project.projectCode]);
+
+  useEffect(() => {
+    request("GET", "/api/briefings")
+      .then((res) => {
+        const rows = Array.isArray(res?.data) ? res.data : [];
+        const activeRows = rows.filter(
+          (row) => String(row?.active ?? "").trim() === "1",
+        );
+        setBriefings(activeRows);
+        if (activeRows.length > 0) {
+          const firstBriefingId = String(
+            activeRows[0]?.briefingId || "",
+          ).trim();
+          setForm((prev) => {
+            const current = String(prev.briefingId || "").trim();
+            const existsInActive = activeRows.some(
+              (row) => String(row?.briefingId || "").trim() === current,
+            );
+            if (current && existsInActive) return prev;
+            return { ...prev, briefingId: firstBriefingId };
+          });
+        }
+      })
+      .catch(() => setBriefings([]));
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -240,6 +270,7 @@ const ProjectEdit = ({ project, customers, onCancel }) => {
       await request("PUT", `/api/projects/${project.projectCode}`, {
         ...form,
         customerId: form.customerId !== "" ? Number(form.customerId) : null,
+        briefingId: form.briefingId !== "" ? Number(form.briefingId) : null,
         status: project.status,
       });
 
@@ -381,6 +412,25 @@ const ProjectEdit = ({ project, customers, onCancel }) => {
               multiline
               rows={2}
             />
+
+            <FormControl fullWidth>
+              <InputLabel>{t("project.briefingId", "Briefing")}</InputLabel>
+              <Select
+                name="briefingId"
+                value={form.briefingId}
+                onChange={handleChange}
+                label={t("project.briefingId", "Briefing")}
+              >
+                {briefings.map((briefing) => (
+                  <MenuItem
+                    key={briefing.briefingId}
+                    value={String(briefing.briefingId)}
+                  >
+                    {briefing.briefingTitle}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Box>
         </Box>
 

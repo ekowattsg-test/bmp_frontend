@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Box, MenuItem, TextField } from "@mui/material";
+import { Box, Checkbox, FormControlLabel, TextField } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import { HeaderBar } from "../common";
@@ -90,18 +90,21 @@ const BriefingAdd = ({ onCancel }) => {
         margin="normal"
       />
 
-      <TextField
-        select
+      <FormControlLabel
+        sx={{ mt: 1 }}
+        control={
+          <Checkbox
+            checked={String(form.active) === "1"}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                active: event.target.checked ? "1" : "0",
+              }))
+            }
+          />
+        }
         label={t("briefing.activeLabel", "Active")}
-        name="active"
-        value={form.active}
-        onChange={handleChange}
-        fullWidth
-        margin="normal"
-      >
-        <MenuItem value="1">{t("basic.true", "True")}</MenuItem>
-        <MenuItem value="0">{t("basic.false", "False")}</MenuItem>
-      </TextField>
+      />
 
       {errorMsg && (
         <div style={{ color: "var(--color-danger)", marginTop: 8 }}>

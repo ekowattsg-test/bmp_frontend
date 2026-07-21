@@ -45,6 +45,7 @@ export const fetchProjectOptions = async () => {
       projectCode: safeString(project?.projectCode),
       projectName: safeString(project?.projectName),
       status: safeString(project?.status),
+      briefingId: safeString(project?.briefingId),
     }))
     .filter((project) => project.projectCode)
     .sort((a, b) => a.projectCode.localeCompare(b.projectCode));
