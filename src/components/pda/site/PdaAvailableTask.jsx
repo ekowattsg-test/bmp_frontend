@@ -370,6 +370,14 @@ function TaskSections({
               {streamIds.map((sid) => {
                 const stream = streamMap[sid];
                 const streamName = stream?.streamName || `Stream ${sid}`;
+                const streamProjectCode = String(
+                  stream?.projectCode ||
+                    streamGroups[sid]?.[0]?.projectCode ||
+                    "",
+                ).trim();
+                const displayStreamLabel = streamProjectCode
+                  ? `${streamProjectCode} - ${streamName}`
+                  : streamName;
                 return (
                   <Box
                     key={sid}
@@ -395,7 +403,7 @@ function TaskSections({
                         lineHeight: 1.5,
                       }}
                     >
-                      {streamName}
+                      {displayStreamLabel}
                     </Box>
                     {streamGroups[sid].map((task) => (
                       <TaskCard

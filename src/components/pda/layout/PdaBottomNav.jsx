@@ -19,6 +19,7 @@ import Inventory2Icon from "@mui/icons-material/Inventory2";
 import PersonIcon from "@mui/icons-material/Person";
 import EngineeringIcon from "@mui/icons-material/Engineering";
 import PublishedWithChangesIcon from "@mui/icons-material/PublishedWithChanges";
+import QrCode2Icon from "@mui/icons-material/QrCode2";
 import { request } from "../../../helpers/axios_helper";
 
 const TAB_ITEMS = [
@@ -57,6 +58,13 @@ const SITE_MENU_ITEMS = [
     navigateTo: "/pda/progress-update",
     labelKey: "pda.nav.progressUpdate",
     icon: <PublishedWithChangesIcon />,
+    requiresSiteLeader: true,
+  },
+  {
+    route: "/pda/field-qr-code",
+    navigateTo: "/pda/field-qr-code",
+    labelKey: "pda.nav.fieldQrCode",
+    icon: <QrCode2Icon />,
     requiresSiteLeader: true,
   },
 ];

@@ -10,10 +10,9 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import TaskAltIcon from "@mui/icons-material/TaskAlt";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutline";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
-import ReplayIcon from "@mui/icons-material/Replay";
 import { useTranslation } from "react-i18next";
 import { request } from "../../../helpers/axios_helper";
 
@@ -62,7 +61,6 @@ export default function PdaProgressUpdate() {
   const [errorMsg, setErrorMsg] = useState("");
   const [rows, setRows] = useState([]);
   const [streamsById, setStreamsById] = useState({});
-  const [staffNamesById, setStaffNamesById] = useState({});
   const [expandedId, setExpandedId] = useState(null);
   const [draftById, setDraftById] = useState({});
   const [savingId, setSavingId] = useState("");
@@ -103,11 +101,10 @@ export default function PdaProgressUpdate() {
     setLoading(true);
     setErrorMsg("");
     try {
-      const [progressRes, tasksRes, streamsRes, staffRes] = await Promise.all([
+      const [progressRes, tasksRes, streamsRes] = await Promise.all([
         request("GET", "/api/projecttaskprogresses"),
         request("GET", "/api/projecttasks"),
         request("GET", "/api/projectstreams").catch(() => ({ data: [] })),
-        request("GET", "/api/staffs").catch(() => ({ data: [] })),
       ]);
 
       const progresses = Array.isArray(progressRes?.data)
@@ -120,27 +117,16 @@ export default function PdaProgressUpdate() {
         return acc;
       }, {});
 
-      const streamMap = (
-        Array.isArray(streamsRes?.data) ? streamsRes.data : []
-      ).reduce((acc, stream) => {
-        const streamId = String(stream?.projectStreamId || "").trim();
-        if (!streamId) return acc;
-        acc[streamId] = String(stream?.streamName || "").trim();
-        return acc;
-      }, {});
-
-      const staffMap = (
-        Array.isArray(staffRes?.data) ? staffRes.data : []
-      ).reduce((acc, staff) => {
-        const staffId = String(staff?.staffId || "").trim();
-        if (!staffId) return acc;
-        const staffName = String(
-          staff?.staffName ||
-            [staff?.firstName, staff?.lastName].filter(Boolean).join(" "),
-        ).trim();
-        acc[staffId] = staffName || staffId;
-        return acc;
-      }, {});
+      const streamMap = (Array.isArray(streamsRes?.data) ? streamsRes.data : [])
+        .reduce((acc, stream) => {
+          const streamId = String(stream?.projectStreamId || "").trim();
+          if (!streamId) return acc;
+          acc[streamId] = {
+            streamName: String(stream?.streamName || "").trim(),
+            projectCode: String(stream?.projectCode || "").trim(),
+          };
+          return acc;
+        }, {});
 
       const filtered = progresses.filter((p) => {
         const progressDate = String(p.progressDate || "");
@@ -168,8 +154,7 @@ export default function PdaProgressUpdate() {
             : markerB === "U"
               ? "U"
               : "OTHERS";
-        const byMarker =
-          (GROUP_ORDER[groupA] ?? 99) - (GROUP_ORDER[groupB] ?? 99);
+        const byMarker = (GROUP_ORDER[groupA] ?? 99) - (GROUP_ORDER[groupB] ?? 99);
         if (byMarker !== 0) return byMarker;
 
         const ta = taskById[String(a.projectTaskId)];
@@ -203,7 +188,6 @@ export default function PdaProgressUpdate() {
         })),
       );
       setStreamsById(streamMap);
-      setStaffNamesById(staffMap);
       setDraftById({});
       setExpandedId(null);
     } catch {
@@ -224,8 +208,10 @@ export default function PdaProgressUpdate() {
     }
   }, [hasRole, loadRows]);
 
-  const toGroupKey = useCallback(
-    (row) => {
+  const groupedRows = useMemo(() => {
+    const markerMap = new Map();
+
+    const toGroupKey = (row) => {
       const marker = String(row?.progress?.marker || "").trim();
       const progressDate = String(row?.progress?.progressDate || "");
       if (marker === "C") {
@@ -233,77 +219,48 @@ export default function PdaProgressUpdate() {
       }
       if (marker === "U") return "U";
       return "OTHERS";
-    },
-    [today],
-  );
-
-  const buildMarkerGroups = useCallback(
-    (sourceRows) => {
-      const markerMap = new Map();
-
-      sourceRows.forEach((row) => {
-        const groupKey = toGroupKey(row);
-        if (!markerMap.has(groupKey)) markerMap.set(groupKey, new Map());
-
-        const streamId = String(row?.task?.projectStreamId || "").trim();
-        if (!markerMap.get(groupKey).has(streamId)) {
-          markerMap.get(groupKey).set(streamId, []);
-        }
-        markerMap.get(groupKey).get(streamId).push(row);
-      });
-
-      return Array.from(markerMap.entries())
-        .sort((a, b) => (GROUP_ORDER[a[0]] ?? 99) - (GROUP_ORDER[b[0]] ?? 99))
-        .map(([groupKey, streamMap]) => {
-          const streams = Array.from(streamMap.entries())
-            .sort((a, b) =>
-              String(a[0]).localeCompare(String(b[0]), undefined, {
-                numeric: true,
-              }),
-            )
-            .map(([streamId, items]) => ({
-              streamId,
-              streamName: streamsById[streamId] || "",
-              items: [...items].sort((a, b) => {
-                const byProgressDate = String(
-                  a?.progress?.progressDate || "",
-                ).localeCompare(String(b?.progress?.progressDate || ""));
-                if (byProgressDate !== 0) return byProgressDate;
-                return String(a?.task?.actualStartDate || "").localeCompare(
-                  String(b?.task?.actualStartDate || ""),
-                );
-              }),
-            }));
-
-          return { groupKey, streams };
-        });
-    },
-    [streamsById, toGroupKey],
-  );
-
-  const executedByGroups = useMemo(() => {
-    const executedMap = new Map();
+    };
 
     rows.forEach((row) => {
-      const executedBy = String(row?.progress?.executedBy || "").trim();
-      if (!executedMap.has(executedBy)) executedMap.set(executedBy, []);
-      executedMap.get(executedBy).push(row);
+      const groupKey = toGroupKey(row);
+      if (!markerMap.has(groupKey)) markerMap.set(groupKey, new Map());
+
+      const streamId = String(row?.task?.projectStreamId || "").trim();
+      if (!markerMap.get(groupKey).has(streamId)) {
+        markerMap.get(groupKey).set(streamId, []);
+      }
+      markerMap.get(groupKey).get(streamId).push(row);
     });
 
-    return Array.from(executedMap.entries())
-      .sort((a, b) => {
-        const aIsCurrent = a[0] === currentStaffId;
-        const bIsCurrent = b[0] === currentStaffId;
-        if (aIsCurrent && !bIsCurrent) return -1;
-        if (!aIsCurrent && bIsCurrent) return 1;
-        return String(a[0]).localeCompare(String(b[0]));
-      })
-      .map(([executedBy, items]) => ({
-        executedBy,
-        executedByName: staffNamesById[executedBy] || executedBy,
-        markerGroups: buildMarkerGroups(items),
-      }));
-  }, [rows, currentStaffId, buildMarkerGroups, staffNamesById]);
+    return Array.from(markerMap.entries())
+      .sort((a, b) => (GROUP_ORDER[a[0]] ?? 99) - (GROUP_ORDER[b[0]] ?? 99))
+      .map(([groupKey, streamMap]) => {
+        const streams = Array.from(streamMap.entries())
+          .sort((a, b) =>
+            String(a[0]).localeCompare(String(b[0]), undefined, {
+              numeric: true,
+            }),
+          )
+          .map(([streamId, items]) => ({
+            streamId,
+            streamName: streamsById[streamId]?.streamName || "",
+            projectCode:
+              streamsById[streamId]?.projectCode ||
+              String(items?.[0]?.task?.projectCode || "").trim(),
+            items: [...items].sort((a, b) => {
+              const byProgressDate = String(
+                a?.progress?.progressDate || "",
+              ).localeCompare(String(b?.progress?.progressDate || ""));
+              if (byProgressDate !== 0) return byProgressDate;
+              return String(a?.task?.actualStartDate || "").localeCompare(
+                String(b?.task?.actualStartDate || ""),
+              );
+            }),
+          }));
+
+        return { groupKey, streams };
+      });
+  }, [rows, streamsById, today]);
 
   const getGroupHeaderText = (groupKey) => {
     if (groupKey === "C_BACKDATED") {
@@ -313,7 +270,10 @@ export default function PdaProgressUpdate() {
       );
     }
     if (groupKey === "C_TODAY") {
-      return t("pda.progressUpdate.group.cToday", "Tasks executed today");
+      return t(
+        "pda.progressUpdate.group.cToday",
+        "Tasks executed today",
+      );
     }
     if (groupKey === "U") {
       return t("pda.progressUpdate.group.u", "Progress reported");
@@ -336,21 +296,24 @@ export default function PdaProgressUpdate() {
     return { startDate, endDate };
   };
 
-  const handleExpand = (row) => {
-    const progressId = String(row.progress.projectTaskProgressId);
-    const baseline = getBaselineProgress(row);
-    setExpandedId((prev) => {
-      if (prev === progressId) return null;
-      // Always initialize with current task progress when selecting a task.
-      setDraftById((draftPrev) => ({
-        ...draftPrev,
+  const ensureDraft = (progressId, baseline) => {
+    setDraftById((prev) => {
+      if (prev[progressId]) return prev;
+      return {
+        ...prev,
         [progressId]: {
           progress: baseline,
           completed: baseline >= 100,
         },
-      }));
-      return progressId;
+      };
     });
+  };
+
+  const handleExpand = (row) => {
+    const progressId = String(row.progress.projectTaskProgressId);
+    const baseline = getBaselineProgress(row);
+    ensureDraft(progressId, baseline);
+    setExpandedId((prev) => (prev === progressId ? null : progressId));
   };
 
   const handleDraftProgress = (progressId, baseline, value) => {
@@ -378,7 +341,9 @@ export default function PdaProgressUpdate() {
           completed: baseline >= 100,
         }),
         completed: checked,
-        progress: checked ? 100 : baseline,
+        progress: checked
+          ? 100
+          : Math.max(baseline, prev[progressId]?.progress ?? baseline),
       },
     }));
   };
@@ -457,9 +422,9 @@ export default function PdaProgressUpdate() {
         </Alert>
       ) : (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
-          {executedByGroups.map((executedGroup, executedIndex) => (
+          {groupedRows.map((group, groupIndex) => (
             <Box
-              key={`executed-${executedGroup.executedBy || "blank"}-${executedIndex}`}
+              key={`marker-${group.groupKey || "blank"}-${groupIndex}`}
               sx={{
                 borderRadius: 1,
                 overflow: "hidden",
@@ -472,359 +437,289 @@ export default function PdaProgressUpdate() {
                 sx={{
                   px: 1.5,
                   py: 0.8,
-                  bgcolor:
-                    executedGroup.executedBy === currentStaffId
-                      ? "primary.main"
-                      : "action.hover",
-                  color:
-                    executedGroup.executedBy === currentStaffId
-                      ? "primary.contrastText"
-                      : "text.primary",
+                  bgcolor: SECTION_HEADER[group.groupKey] || SECTION_HEADER.OTHERS,
+                  color: "common.white",
                 }}
               >
                 <Typography variant="body2" fontWeight={700}>
-                  {executedGroup.executedByName}
+                  {getGroupHeaderText(group.groupKey)}
                 </Typography>
               </Box>
+
               <Box
                 sx={{
                   p: 1,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 1.25,
+                  bgcolor: SECTION_BG[group.groupKey] || SECTION_BG.OTHERS,
                 }}
               >
-                {executedGroup.markerGroups.map((group, groupIndex) => (
+                {group.streams.map((stream) => (
                   <Box
-                    key={`marker-${executedGroup.executedBy || "blank"}-${group.groupKey || "blank"}-${groupIndex}`}
+                    key={`stream-${group.groupKey}-${stream.streamId || "blank"}`}
                     sx={{
-                      borderRadius: 1,
-                      overflow: "hidden",
-                      border: "1px solid",
-                      borderColor: "divider",
-                      bgcolor: "background.paper",
+                      display: "block",
+                      bgcolor: "rgba(255,255,255,0.55)",
+                      borderLeft: "4px solid",
+                      borderColor:
+                        SECTION_HEADER[group.groupKey] || SECTION_HEADER.OTHERS,
+                      borderRadius: "0 6px 6px 0",
+                      px: 1.5,
+                      pt: 0.75,
+                      pb: 0.5,
+                      mb: 1.25,
+                      "&:last-child": { mb: 0 },
                     }}
                   >
                     <Box
                       sx={{
-                        px: 1.5,
-                        py: 0.8,
-                        bgcolor:
-                          SECTION_HEADER[group.groupKey] ||
-                          SECTION_HEADER.OTHERS,
-                        color: "common.white",
+                        display: "flex",
+                        alignItems: "center",
+                        mb: 0.75,
                       }}
                     >
-                      <Typography variant="body2" fontWeight={700}>
-                        {getGroupHeaderText(group.groupKey)}
-                      </Typography>
+                      <Box
+                        sx={{
+                          display: "block",
+                          fontWeight: 700,
+                          fontSize: "1rem",
+                          color:
+                            SECTION_HEADER[group.groupKey] || SECTION_HEADER.OTHERS,
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {stream.projectCode
+                          ? `${stream.projectCode} - ${stream.streamName}`
+                          : stream.streamName}
+                      </Box>
                     </Box>
 
+                    {stream.items.map((row) => {
+                  const progressId = String(
+                    row.progress.projectTaskProgressId || "",
+                  );
+                  const isUpdated =
+                    String(row?.progress?.marker || "").trim() === "U";
+                  const updatedProgress = toProgressValue(
+                    row?.progress?.progress,
+                  );
+                  const displayProgress = isUpdated
+                    ? updatedProgress
+                    : toProgressValue(row?.task?.progress);
+                  const { startDate, endDate } = getDisplayTaskDates(row.task);
+                  const expanded = expandedId === progressId && !isUpdated;
+                  const baseline = getBaselineProgress(row);
+                  const draft = draftById[progressId] || {
+                    progress: baseline,
+                    completed: baseline >= 100,
+                  };
+                  const canConfirm = draft.progress > baseline;
+
+                  return (
                     <Box
+                      key={progressId}
                       sx={{
-                        p: 1,
-                        bgcolor:
-                          SECTION_BG[group.groupKey] || SECTION_BG.OTHERS,
+                        bgcolor: "background.paper",
+                        borderRadius: 1,
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                        display: "flex",
+                        flexDirection: "column",
+                        border: "1px solid",
+                        borderColor: expanded ? "primary.main" : "divider",
+                        overflow: "hidden",
+                        mb: 0.75,
+                        "&:last-child": { mb: 0 },
                       }}
                     >
-                      {group.streams.map((stream) => (
+                      <Box
+                        role="button"
+                        tabIndex={isUpdated ? -1 : 0}
+                        onClick={() => {
+                          if (!isUpdated) handleExpand(row);
+                        }}
+                        onKeyDown={(e) => {
+                          if (
+                            !isUpdated &&
+                            (e.key === "Enter" || e.key === " ")
+                          ) {
+                            e.preventDefault();
+                            handleExpand(row);
+                          }
+                        }}
+                        sx={{
+                          px: 1.25,
+                          py: 1,
+                          display: "grid",
+                          gridTemplateColumns: "minmax(0,1fr) auto",
+                          gridTemplateRows: "auto auto",
+                          columnGap: 1,
+                          alignItems: "center",
+                          cursor: isUpdated ? "default" : "pointer",
+                        }}
+                      >
                         <Box
-                          key={`stream-${executedGroup.executedBy || "blank"}-${group.groupKey}-${stream.streamId || "blank"}`}
                           sx={{
-                            display: "block",
-                            bgcolor: "rgba(255,255,255,0.55)",
-                            borderLeft: "4px solid",
-                            borderColor:
-                              SECTION_HEADER[group.groupKey] ||
-                              SECTION_HEADER.OTHERS,
-                            borderRadius: "0 6px 6px 0",
-                            px: 1.5,
-                            pt: 0.75,
-                            pb: 0.5,
-                            mb: 1.25,
-                            "&:last-child": { mb: 0 },
+                            gridColumn: "2 / 3",
+                            gridRow: "1 / 3",
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            alignItems: "center",
+                            minWidth: 24,
                           }}
                         >
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              mb: 0.75,
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                display: "block",
-                                fontWeight: 700,
-                                fontSize: "1rem",
-                                color:
-                                  SECTION_HEADER[group.groupKey] ||
-                                  SECTION_HEADER.OTHERS,
-                                lineHeight: 1.5,
+                          {!isUpdated ? (
+                            <IconButton
+                              size="small"
+                              sx={{ p: 0.25 }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleExpand(row);
                               }}
+                              aria-label={t(
+                                "pda.progressUpdate.expandRow",
+                                "Expand task progress",
+                              )}
                             >
-                              {stream.streamName}
-                            </Box>
-                          </Box>
-
-                          {stream.items.map((row) => {
-                            const progressId = String(
-                              row.progress.projectTaskProgressId || "",
-                            );
-                            const isUpdated =
-                              String(row?.progress?.marker || "").trim() ===
-                              "U";
-                            const updatedProgress = toProgressValue(
-                              row?.progress?.progress,
-                            );
-                            const displayProgress = isUpdated
-                              ? updatedProgress
-                              : toProgressValue(row?.task?.progress);
-                            const { startDate, endDate } = getDisplayTaskDates(
-                              row.task,
-                            );
-                            const expanded =
-                              expandedId === progressId && !isUpdated;
-                            const baseline = getBaselineProgress(row);
-                            const draft = draftById[progressId] || {
-                              progress: baseline,
-                              completed: baseline >= 100,
-                            };
-                            const canConfirm = draft.progress > baseline;
-
-                            return (
-                              <Box
-                                key={progressId}
-                                sx={{
-                                  bgcolor: "background.paper",
-                                  borderRadius: 1,
-                                  boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  border: "1px solid",
-                                  borderColor: expanded
-                                    ? "primary.main"
-                                    : "divider",
-                                  overflow: "hidden",
-                                  mb: 0.75,
-                                  "&:last-child": { mb: 0 },
-                                }}
-                              >
-                                <Box
-                                  role="button"
-                                  tabIndex={isUpdated ? -1 : 0}
-                                  onClick={() => {
-                                    if (!isUpdated) handleExpand(row);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (
-                                      !isUpdated &&
-                                      (e.key === "Enter" || e.key === " ")
-                                    ) {
-                                      e.preventDefault();
-                                      handleExpand(row);
-                                    }
-                                  }}
-                                  sx={{
-                                    px: 1.25,
-                                    py: 1,
-                                    display: "grid",
-                                    gridTemplateColumns: "minmax(0,1fr) auto",
-                                    gridTemplateRows: "auto auto",
-                                    columnGap: 1,
-                                    alignItems: "center",
-                                    cursor: isUpdated ? "default" : "pointer",
-                                  }}
-                                >
-                                  <Box
-                                    sx={{
-                                      gridColumn: "2 / 3",
-                                      gridRow: "1 / 3",
-                                      display: "flex",
-                                      justifyContent: "flex-end",
-                                      alignItems: "center",
-                                      minWidth: 24,
-                                    }}
-                                  >
-                                    {!isUpdated ? (
-                                      <IconButton
-                                        size="small"
-                                        sx={{ p: 0.25 }}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleExpand(row);
-                                        }}
-                                        aria-label={t(
-                                          "pda.progressUpdate.expandRow",
-                                          "Expand task progress",
-                                        )}
-                                      >
-                                        {expanded ? (
-                                          <ReplayIcon
-                                            fontSize="small"
-                                            color="warning"
-                                          />
-                                        ) : (
-                                          <RadioButtonUncheckedIcon
-                                            fontSize="small"
-                                            color="disabled"
-                                          />
-                                        )}
-                                      </IconButton>
-                                    ) : (
-                                      <CheckCircleOutlineIcon
-                                        fontSize="small"
-                                        color="success"
-                                        sx={{ mr: 0.5 }}
-                                      />
-                                    )}
-                                  </Box>
-
-                                  <Box
-                                    sx={{
-                                      gridColumn: "1 / 2",
-                                      gridRow: "1 / 2",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 1,
-                                      minWidth: 0,
-                                      mb: 0.25,
-                                    }}
-                                  >
-                                    <Typography
-                                      variant="body2"
-                                      fontWeight={600}
-                                      sx={{ textAlign: "left", minWidth: 0 }}
-                                    >
-                                      {row.task?.taskName || ""}
-                                    </Typography>
-                                    <Typography
-                                      variant="caption"
-                                      color="success.main"
-                                      fontWeight={700}
-                                      sx={{ flexShrink: 0 }}
-                                    >
-                                      {`${displayProgress}%`}
-                                    </Typography>
-                                  </Box>
-
-                                  <Box
-                                    sx={{
-                                      gridColumn: "1 / 2",
-                                      gridRow: "2 / 3",
-                                      minWidth: 0,
-                                    }}
-                                  >
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      display="block"
-                                      sx={{ textAlign: "left" }}
-                                    >
-                                      {startDate || ""} - {endDate || ""}
-                                    </Typography>
-                                  </Box>
-                                </Box>
-
-                                {expanded ? (
-                                  <Box
-                                    sx={{
-                                      px: 1.25,
-                                      pb: 1.25,
-                                      display: "grid",
-                                      gridTemplateColumns:
-                                        "minmax(120px,1fr) auto auto",
-                                      gap: 1,
-                                      alignItems: "center",
-                                      borderTop: "1px solid",
-                                      borderColor: "divider",
-                                    }}
-                                  >
-                                    <TextField
-                                      size="small"
-                                      label={t(
-                                        "pda.progressUpdate.progress",
-                                        "Progress",
-                                      )}
-                                      type="number"
-                                      value={draft.progress}
-                                      onChange={(e) =>
-                                        handleDraftProgress(
-                                          progressId,
-                                          baseline,
-                                          e.target.value,
-                                        )
-                                      }
-                                      inputProps={{
-                                        min: baseline,
-                                        max: 100,
-                                        step: 1,
-                                      }}
-                                      disabled={
-                                        draft.completed ||
-                                        savingId === progressId
-                                      }
-                                      fullWidth
-                                    />
-
-                                    <FormControlLabel
-                                      sx={{ m: 0 }}
-                                      control={
-                                        <Checkbox
-                                          checked={draft.completed}
-                                          onChange={(e) =>
-                                            handleDraftCompleted(
-                                              progressId,
-                                              baseline,
-                                              e.target.checked,
-                                            )
-                                          }
-                                          disabled={savingId === progressId}
-                                        />
-                                      }
-                                      label={t(
-                                        "pda.progressUpdate.complete",
-                                        "Complete",
-                                      )}
-                                    />
-
-                                    {canConfirm ? (
-                                      <Tooltip
-                                        title={t(
-                                          "pda.progressUpdate.confirm",
-                                          "Confirm progress",
-                                        )}
-                                      >
-                                        <span>
-                                          <IconButton
-                                            color="success"
-                                            onClick={() =>
-                                              handleConfirmProgress(row)
-                                            }
-                                            disabled={savingId === progressId}
-                                          >
-                                            {savingId === progressId ? (
-                                              <CircularProgress
-                                                size={18}
-                                                color="inherit"
-                                              />
-                                            ) : (
-                                              <PlayCircleOutlineIcon fontSize="small" />
-                                            )}
-                                          </IconButton>
-                                        </span>
-                                      </Tooltip>
-                                    ) : (
-                                      <Box sx={{ width: 40, height: 40 }} />
-                                    )}
-                                  </Box>
-                                ) : null}
-                              </Box>
-                            );
-                          })}
+                              <RadioButtonUncheckedIcon
+                                fontSize="small"
+                                color={expanded ? "primary" : "disabled"}
+                              />
+                            </IconButton>
+                          ) : (
+                            <CheckCircleOutlineIcon
+                              fontSize="small"
+                              color="success"
+                              sx={{ mr: 0.5 }}
+                            />
+                          )}
                         </Box>
-                      ))}
+
+                        <Box
+                          sx={{
+                            gridColumn: "1 / 2",
+                            gridRow: "1 / 2",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                            minWidth: 0,
+                            mb: 0.25,
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            fontWeight={600}
+                            sx={{ textAlign: "left", minWidth: 0 }}
+                          >
+                            {row.task?.taskName || ""}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            color="success.main"
+                            fontWeight={700}
+                            sx={{ flexShrink: 0 }}
+                          >
+                            {`${displayProgress}%`}
+                          </Typography>
+                        </Box>
+
+                        <Box
+                          sx={{
+                            gridColumn: "1 / 2",
+                            gridRow: "2 / 3",
+                            minWidth: 0,
+                          }}
+                        >
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            display="block"
+                            sx={{ textAlign: "left" }}
+                          >
+                            {startDate || ""} - {endDate || ""}
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      {expanded ? (
+                        <Box
+                          sx={{
+                            px: 1.25,
+                            pb: 1.25,
+                            display: "grid",
+                            gridTemplateColumns: "minmax(120px,1fr) auto auto",
+                            gap: 1,
+                            alignItems: "center",
+                            borderTop: "1px solid",
+                            borderColor: "divider",
+                          }}
+                        >
+                          <TextField
+                            size="small"
+                            label={t("pda.progressUpdate.progress", "Progress")}
+                            type="number"
+                            value={draft.progress}
+                            onChange={(e) =>
+                              handleDraftProgress(
+                                progressId,
+                                baseline,
+                                e.target.value,
+                              )
+                            }
+                            inputProps={{ min: baseline, max: 100, step: 1 }}
+                            disabled={
+                              draft.completed || savingId === progressId
+                            }
+                            fullWidth
+                          />
+
+                          <FormControlLabel
+                            sx={{ m: 0 }}
+                            control={
+                              <Checkbox
+                                checked={draft.completed}
+                                onChange={(e) =>
+                                  handleDraftCompleted(
+                                    progressId,
+                                    baseline,
+                                    e.target.checked,
+                                  )
+                                }
+                                disabled={savingId === progressId}
+                              />
+                            }
+                            label={t("pda.progressUpdate.complete", "Complete")}
+                          />
+
+                          {canConfirm ? (
+                            <Tooltip
+                              title={t(
+                                "pda.progressUpdate.confirm",
+                                "Confirm progress",
+                              )}
+                            >
+                              <span>
+                                <IconButton
+                                  color="success"
+                                  onClick={() => handleConfirmProgress(row)}
+                                  disabled={savingId === progressId}
+                                >
+                                  {savingId === progressId ? (
+                                    <CircularProgress
+                                      size={18}
+                                      color="inherit"
+                                    />
+                                  ) : (
+                                    <TaskAltIcon fontSize="small" />
+                                  )}
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          ) : (
+                            <Box sx={{ width: 40, height: 40 }} />
+                          )}
+                        </Box>
+                      ) : null}
                     </Box>
+                    );
+                  })}
                   </Box>
                 ))}
               </Box>

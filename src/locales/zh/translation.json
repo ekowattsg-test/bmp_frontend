@@ -146,7 +146,8 @@
       "site": "现场作业",
       "siteMenu": "现场作业",
       "availableTasks": "任务分配看板",
-      "progressUpdate": "进度上报"
+      "progressUpdate": "进度上报",
+      "fieldQrCode": "现场二维码"
     },
     "schedule": {
       "comingSoon": "日程功能将尽快提供。",
@@ -186,6 +187,14 @@
       "progress": "进度",
       "complete": "完成",
       "confirm": "确认进度"
+    },
+    "fieldQrCode": {
+      "title": "现场二维码",
+      "projectCode": "项目编号",
+      "noProject": "暂无可用项目编号。",
+      "loadProjectsFailed": "加载项目失败。",
+      "generateFailed": "生成项目二维码失败。",
+      "timeLimitedHint": "该二维码为时效码，系统会自动刷新。"
     },
     "briefing": {
       "selectProjectHint": "请选择项目编号以加入或启动今日简报会话。",

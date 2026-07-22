@@ -39,6 +39,7 @@ import PdaBriefingPresenterPage from "./pda/briefing/PdaBriefingPresenterPage.js
 import PdaBriefingWorkerPage from "./pda/briefing/PdaBriefingWorkerPage.jsx";
 import PdaAvailableTask from "./pda/site/PdaAvailableTask.jsx";
 import PdaProgressUpdate from "./pda/site/PdaProgressUpdate.jsx";
+import PdaFieldQrCode from "./pda/site/PdaFieldQrCode.jsx";
 import StockCard from "./stock/StockCard.jsx";
 
 export default function AppContent() {
@@ -283,6 +284,7 @@ export default function AppContent() {
               path="/pda/progress-update"
               element={<PdaProgressUpdate />}
             />
+            <Route path="/pda/field-qr-code" element={<PdaFieldQrCode />} />
           </Route>
         </Routes>
       ) : !isAuthenticated ? (

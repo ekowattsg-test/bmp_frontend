@@ -57,6 +57,17 @@ const toProgressPercent = (value) => {
   return Math.max(0, Math.min(100, Math.round(n)));
 };
 
+const isSiteLeaderRole = (row) => {
+  const candidates = [row?.roleName, row?.operationRole, row?.role, row?.name];
+  return candidates.some((value) => {
+    const normalized = String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "");
+    return normalized === "siteleader";
+  });
+};
+
 /**
  * PdaMe — profile tab.
  *
@@ -151,115 +162,309 @@ export default function PdaMe() {
       request("GET", "/api/projectmanpowers"),
       request("GET", "/api/projecttasks"),
       request("GET", "/api/projectstreams"),
+      request("GET", "/api/projects"),
+      request("GET", "/api/staffs"),
+      request("GET", "/api/projecttaskprogresses"),
+      request("GET", "/api/operationstaffs"),
     ])
-      .then(([manpowerRes, tasksRes, streamsRes]) => {
-        if (manpowerRes.status !== "fulfilled") {
-          setScheduleRows([]);
-          setScheduleError(
-            t("pda.me.scheduleLoadFailed", "Failed to load schedule."),
-          );
-          return;
-        }
-
-        const manpowers = Array.isArray(manpowerRes.value?.data)
-          ? manpowerRes.value.data
-          : [];
-        const tasks =
-          tasksRes.status === "fulfilled" && Array.isArray(tasksRes.value?.data)
-            ? tasksRes.value.data
-            : [];
-        const streams =
-          streamsRes.status === "fulfilled" &&
-          Array.isArray(streamsRes.value?.data)
-            ? streamsRes.value.data
-            : [];
-
-        const taskById = tasks.reduce((acc, task) => {
-          acc[String(task?.projectTaskId || "")] = task;
-          return acc;
-        }, {});
-
-        const streamById = streams.reduce((acc, stream) => {
-          acc[String(stream?.projectStreamId || "")] = stream;
-          return acc;
-        }, {});
-
-        const today = toApiDate(new Date());
-        const staffId = String(user.staffId);
-
-        const assignments = manpowers
-          .filter((row) => String(row?.staffId || "") === staffId)
-          .map((row) => {
-            const date = normalizeDateValue(row?.manpowerDate || row?.workDate);
-            return {
-              date,
-              projectTaskId: String(row?.projectTaskId || ""),
-            };
-          })
-          .filter((row) => row.date && row.projectTaskId && row.date >= today);
-
-        const uniqueMap = new Map();
-        assignments.forEach((row) => {
-          const key = `${row.date}__${row.projectTaskId}`;
-          if (!uniqueMap.has(key)) uniqueMap.set(key, row);
-        });
-        const uniqueAssignments = Array.from(uniqueMap.values());
-
-        const groupedByDate = new Map();
-        uniqueAssignments.forEach((assignment) => {
-          const task = taskById[assignment.projectTaskId];
-          const streamId = String(task?.projectStreamId || "");
-          const stream = streamById[streamId] || null;
-          const streamName = String(stream?.streamName || streamId);
-
-          if (!groupedByDate.has(assignment.date)) {
-            groupedByDate.set(assignment.date, new Map());
-          }
-          const streamMap = groupedByDate.get(assignment.date);
-          if (!streamMap.has(streamId)) {
-            streamMap.set(streamId, {
-              streamId,
-              streamName,
-              tasks: [],
-            });
+      .then(
+        ([
+          manpowerRes,
+          tasksRes,
+          streamsRes,
+          projectsRes,
+          staffRes,
+          progressesRes,
+          operationStaffRes,
+        ]) => {
+          if (manpowerRes.status !== "fulfilled") {
+            setScheduleRows([]);
+            setScheduleError(
+              t("pda.me.scheduleLoadFailed", "Failed to load schedule."),
+            );
+            return;
           }
 
-          streamMap.get(streamId).tasks.push({
-            projectTaskId: assignment.projectTaskId,
-            taskName: String(task?.taskName || assignment.projectTaskId),
-            taskStartDate: String(task?.taskStartDate || ""),
-            taskEndDate: String(task?.taskEndDate || ""),
-            actualStartDate: String(task?.actualStartDate || ""),
-            actualEndDate: String(task?.actualEndDate || ""),
-            taskStatus: String(task?.taskStatus || ""),
-            progress: task?.progress,
+          const manpowers = Array.isArray(manpowerRes.value?.data)
+            ? manpowerRes.value.data
+            : [];
+          const tasks =
+            tasksRes.status === "fulfilled" &&
+            Array.isArray(tasksRes.value?.data)
+              ? tasksRes.value.data
+              : [];
+          const streams =
+            streamsRes.status === "fulfilled" &&
+            Array.isArray(streamsRes.value?.data)
+              ? streamsRes.value.data
+              : [];
+          const projects =
+            projectsRes.status === "fulfilled" &&
+            Array.isArray(projectsRes.value?.data)
+              ? projectsRes.value.data
+              : [];
+          const staffs =
+            staffRes.status === "fulfilled" &&
+            Array.isArray(staffRes.value?.data)
+              ? staffRes.value.data
+              : [];
+          const progresses =
+            progressesRes.status === "fulfilled" &&
+            Array.isArray(progressesRes.value?.data)
+              ? progressesRes.value.data
+              : [];
+          const operationStaffs =
+            operationStaffRes.status === "fulfilled" &&
+            Array.isArray(operationStaffRes.value?.data)
+              ? operationStaffRes.value.data
+              : [];
+
+          const taskById = tasks.reduce((acc, task) => {
+            acc[String(task?.projectTaskId || "")] = task;
+            return acc;
+          }, {});
+
+          const streamById = streams.reduce((acc, stream) => {
+            acc[String(stream?.projectStreamId || "")] = stream;
+            return acc;
+          }, {});
+
+          const projectByCode = projects.reduce((acc, project) => {
+            const code = String(project?.projectCode || "").trim();
+            if (!code) return acc;
+            acc[code] = project;
+            return acc;
+          }, {});
+
+          const staffById = staffs.reduce((acc, staff) => {
+            const id = String(staff?.staffId || "").trim();
+            if (!id) return acc;
+            const name = String(
+              staff?.staffName ||
+                [staff?.firstName, staff?.lastName].filter(Boolean).join(" "),
+            ).trim();
+            acc[id] = name || id;
+            return acc;
+          }, {});
+
+          const progressByTaskDate = {};
+          progresses.forEach((row) => {
+            const taskId = String(row?.projectTaskId || "").trim();
+            const date = normalizeDateValue(row?.progressDate);
+            if (!taskId || !date) return;
+            const key = `${taskId}__${date}`;
+            const prev = progressByTaskDate[key];
+            const prevId = Number(prev?.projectTaskProgressId || 0);
+            const nextId = Number(row?.projectTaskProgressId || 0);
+            if (!prev || nextId >= prevId) {
+              progressByTaskDate[key] = row;
+            }
           });
-        });
 
-        const normalized = Array.from(groupedByDate.entries())
-          .sort((a, b) => a[0].localeCompare(b[0]))
-          .map(([date, streamMap]) => ({
-            date,
-            streams: Array.from(streamMap.values())
-              .map((stream) => ({
-                ...stream,
-                tasks: [...stream.tasks].sort((a, b) => {
-                  const byStartDate = String(
-                    a.actualStartDate || a.taskStartDate || "",
-                  ).localeCompare(
-                    String(b.actualStartDate || b.taskStartDate || ""),
-                  );
-                  if (byStartDate !== 0) return byStartDate;
-                  return String(a.taskName).localeCompare(String(b.taskName));
-                }),
-              }))
-              .sort((a, b) =>
-                String(a.streamName).localeCompare(String(b.streamName)),
-              ),
-          }));
+          const today = toApiDate(new Date());
+          const currentStaffId = String(user.staffId || "").trim();
+          const hasSiteLeader = operationStaffs
+            .filter(
+              (row) => String(row?.staffId || "").trim() === currentStaffId,
+            )
+            .some(isSiteLeaderRole);
 
-        setScheduleRows(normalized);
-      })
+          const assignments = manpowers
+            .map((row) => {
+              const date = normalizeDateValue(
+                row?.manpowerDate || row?.workDate,
+              );
+              const assignedStaffId = String(row?.staffId || "").trim();
+              const taskId = String(row?.projectTaskId || "");
+              const task = taskById[taskId];
+              const streamId = String(task?.projectStreamId || "").trim();
+              const stream = streamById[streamId] || null;
+              const projectCode = String(
+                task?.projectCode || stream?.projectCode || "",
+              ).trim();
+              const project = projectByCode[projectCode] || null;
+              const progressRow =
+                progressByTaskDate[`${taskId}__${date}`] || null;
+              const executedBy = String(progressRow?.executedBy || "").trim();
+              const marker = String(progressRow?.marker || "").trim();
+
+              return {
+                date,
+                projectTaskId: taskId,
+                assignedStaffId,
+                assignedStaffName:
+                  staffById[assignedStaffId] || assignedStaffId,
+                projectCode,
+                projectName: String(project?.projectName || projectCode || ""),
+                streamId,
+                streamName: String(stream?.streamName || streamId || ""),
+                taskName: String(task?.taskName || taskId),
+                taskStartDate: String(task?.taskStartDate || ""),
+                taskEndDate: String(task?.taskEndDate || ""),
+                actualStartDate: String(task?.actualStartDate || ""),
+                actualEndDate: String(task?.actualEndDate || ""),
+                taskStatus: String(task?.taskStatus || ""),
+                progress: task?.progress,
+                executedBy,
+                executedByName: staffById[executedBy] || executedBy,
+                marker,
+              };
+            })
+            .filter(
+              (row) =>
+                row.date &&
+                row.projectTaskId &&
+                row.assignedStaffId &&
+                row.date >= today &&
+                row.marker !== "U",
+            )
+            .filter((row) =>
+              hasSiteLeader ? true : row.assignedStaffId === currentStaffId,
+            );
+
+          const uniqueMap = new Map();
+          assignments.forEach((row) => {
+            const key = `${row.date}__${row.projectTaskId}__${row.assignedStaffId}`;
+            if (!uniqueMap.has(key)) uniqueMap.set(key, row);
+          });
+          const uniqueAssignments = Array.from(uniqueMap.values()).sort(
+            (a, b) => {
+              if (hasSiteLeader) {
+                const aOwn =
+                  a.executedBy && a.executedBy === currentStaffId ? 0 : 1;
+                const bOwn =
+                  b.executedBy && b.executedBy === currentStaffId ? 0 : 1;
+                if (aOwn !== bOwn) return aOwn - bOwn;
+              }
+
+              const byStaff = String(a.assignedStaffName).localeCompare(
+                String(b.assignedStaffName),
+              );
+              if (byStaff !== 0) return byStaff;
+
+              const byProject = String(a.projectName).localeCompare(
+                String(b.projectName),
+              );
+              if (byProject !== 0) return byProject;
+
+              const byStream = String(a.streamName).localeCompare(
+                String(b.streamName),
+              );
+              if (byStream !== 0) return byStream;
+
+              const byDate = String(a.date).localeCompare(String(b.date));
+              if (byDate !== 0) return byDate;
+
+              return String(a.taskName).localeCompare(String(b.taskName));
+            },
+          );
+
+          const staffMap = new Map();
+          uniqueAssignments.forEach((item) => {
+            if (!staffMap.has(item.assignedStaffId)) {
+              staffMap.set(item.assignedStaffId, {
+                staffId: item.assignedStaffId,
+                staffName: item.assignedStaffName,
+                executedOwnFirst:
+                  hasSiteLeader &&
+                  item.executedBy &&
+                  item.executedBy === currentStaffId,
+                dates: new Map(),
+              });
+            }
+            const staffGroup = staffMap.get(item.assignedStaffId);
+            if (
+              hasSiteLeader &&
+              item.executedBy &&
+              item.executedBy === currentStaffId
+            ) {
+              staffGroup.executedOwnFirst = true;
+            }
+
+            if (!staffGroup.dates.has(item.date)) {
+              staffGroup.dates.set(item.date, {
+                date: item.date,
+                projects: new Map(),
+              });
+            }
+            const dateGroup = staffGroup.dates.get(item.date);
+
+            if (!dateGroup.projects.has(item.projectCode)) {
+              dateGroup.projects.set(item.projectCode, {
+                projectCode: item.projectCode,
+                projectName: item.projectName,
+                streams: new Map(),
+              });
+            }
+            const projectGroup = dateGroup.projects.get(item.projectCode);
+
+            if (!projectGroup.streams.has(item.streamId)) {
+              projectGroup.streams.set(item.streamId, {
+                streamId: item.streamId,
+                streamName: item.streamName,
+                tasks: [],
+              });
+            }
+
+            projectGroup.streams.get(item.streamId).tasks.push(item);
+          });
+
+          const normalized = Array.from(staffMap.values())
+            .sort((a, b) => {
+              if (hasSiteLeader) {
+                const aRank = a.executedOwnFirst ? 0 : 1;
+                const bRank = b.executedOwnFirst ? 0 : 1;
+                if (aRank !== bRank) return aRank - bRank;
+              }
+              return String(a.staffName).localeCompare(String(b.staffName));
+            })
+            .map((staffGroup) => ({
+              staffId: staffGroup.staffId,
+              staffName: staffGroup.staffName,
+              executedOwnFirst: staffGroup.executedOwnFirst,
+              dates: Array.from(staffGroup.dates.values())
+                .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+                .map((dateGroup) => ({
+                  date: dateGroup.date,
+                  projects: Array.from(dateGroup.projects.values())
+                    .sort((a, b) =>
+                      String(a.projectName).localeCompare(
+                        String(b.projectName),
+                      ),
+                    )
+                    .map((projectGroup) => ({
+                      projectCode: projectGroup.projectCode,
+                      projectName: projectGroup.projectName,
+                      streams: Array.from(projectGroup.streams.values())
+                        .sort((a, b) =>
+                          String(a.streamName).localeCompare(
+                            String(b.streamName),
+                          ),
+                        )
+                        .map((streamGroup) => ({
+                          streamId: streamGroup.streamId,
+                          streamName: streamGroup.streamName,
+                          tasks: [...streamGroup.tasks].sort((a, b) => {
+                            const byStart = String(
+                              a.actualStartDate || a.taskStartDate || "",
+                            ).localeCompare(
+                              String(
+                                b.actualStartDate || b.taskStartDate || "",
+                              ),
+                            );
+                            if (byStart !== 0) return byStart;
+                            return String(a.taskName).localeCompare(
+                              String(b.taskName),
+                            );
+                          }),
+                        })),
+                    })),
+                })),
+            }));
+
+          setScheduleRows(normalized);
+        },
+      )
       .catch(() => {
         setScheduleRows([]);
         setScheduleError(
@@ -426,9 +631,9 @@ export default function PdaMe() {
             </Box>
           ) : (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
-              {scheduleRows.map((dateRow) => (
+              {scheduleRows.map((staffRow) => (
                 <Box
-                  key={dateRow.date}
+                  key={staffRow.staffId}
                   sx={{
                     border: "1px solid",
                     borderColor: "divider",
@@ -442,11 +647,20 @@ export default function PdaMe() {
                       py: 0.8,
                       bgcolor: "primary.main",
                       color: "primary.contrastText",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 1,
                     }}
                   >
                     <Typography variant="body2" fontWeight={700}>
-                      {dateRow.date}
+                      {staffRow.staffName || staffRow.staffId}
                     </Typography>
+                    {staffRow.executedOwnFirst && (
+                      <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                        {t("pda.me.executedByMeFirst", "Executed by me")}
+                      </Typography>
+                    )}
                   </Box>
 
                   <Box
@@ -458,106 +672,190 @@ export default function PdaMe() {
                       bgcolor: "background.default",
                     }}
                   >
-                    {dateRow.streams.map((stream) => (
+                    {staffRow.dates.map((dateRow) => (
                       <Box
-                        key={`${dateRow.date}-${stream.streamId || "none"}`}
+                        key={`${staffRow.staffId}-${dateRow.date}`}
                         sx={{
-                          borderLeft: "4px solid",
-                          borderColor: "primary.main",
-                          borderRadius: "0 6px 6px 0",
+                          border: "1px solid",
+                          borderColor: "divider",
+                          borderRadius: 1,
                           bgcolor: "background.paper",
-                          px: 1.25,
-                          py: 0.9,
+                          px: 1,
+                          py: 1,
                         }}
                       >
                         <Typography
                           variant="body2"
                           fontWeight={700}
-                          color="primary.main"
+                          color="text.primary"
                           sx={{ mb: 0.75 }}
                         >
-                          {stream.streamName}
+                          {dateRow.date}
                         </Typography>
 
                         <Box
                           sx={{
                             display: "flex",
                             flexDirection: "column",
-                            gap: 0.75,
+                            gap: 0.85,
                           }}
                         >
-                          {stream.tasks.map((task) =>
-                            (() => {
-                              const hasStatus =
-                                String(task.taskStatus || "").trim() !== "";
-                              const progressPercent = toProgressPercent(
-                                task.progress,
-                              );
-                              const hasProgress = progressPercent !== null;
+                          {dateRow.projects.map((project) => (
+                            <Box
+                              key={`${staffRow.staffId}-${dateRow.date}-${project.projectCode || "none"}`}
+                              sx={{
+                                border: "1px solid",
+                                borderColor: "divider",
+                                borderRadius: 1,
+                                bgcolor: "background.paper",
+                                px: 1,
+                                py: 0.9,
+                              }}
+                            >
+                              <Typography
+                                variant="body2"
+                                fontWeight={700}
+                                color="text.primary"
+                                sx={{ mb: 0.75 }}
+                              >
+                                {project.projectName || project.projectCode}
+                              </Typography>
 
-                              return (
-                                <Box
-                                  key={task.projectTaskId}
-                                  sx={{
-                                    border: "1px solid",
-                                    borderColor: "divider",
-                                    borderRadius: 1,
-                                    px: 1,
-                                    py: 0.9,
-                                    bgcolor: "background.paper",
-                                  }}
-                                >
-                                  <Typography variant="body2" fontWeight={600}>
-                                    {task.taskName}
-                                  </Typography>
-                                  {(hasStatus || hasProgress) && (
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 0.85,
+                                }}
+                              >
+                                {project.streams.map((stream) => (
+                                  <Box
+                                    key={`${project.projectCode || "none"}-${stream.streamId || "none"}`}
+                                    sx={{
+                                      borderLeft: "4px solid",
+                                      borderColor: "primary.main",
+                                      borderRadius: "0 6px 6px 0",
+                                      bgcolor: "background.paper",
+                                      px: 1.1,
+                                      py: 0.8,
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight={700}
+                                      color="primary.main"
+                                      sx={{ mb: 0.65 }}
+                                    >
+                                      {stream.streamName}
+                                    </Typography>
+
                                     <Box
                                       sx={{
-                                        mt: 0.5,
-                                        mb: 0.25,
                                         display: "flex",
-                                        alignItems: "center",
+                                        flexDirection: "column",
                                         gap: 0.75,
-                                        flexWrap: "wrap",
                                       }}
                                     >
-                                      {hasStatus && (
-                                        <Chip
-                                          size="small"
-                                          color={getTaskStatusColor(
-                                            task.taskStatus,
-                                          )}
-                                          label={task.taskStatus}
-                                        />
-                                      )}
-                                      {hasProgress && (
-                                        <Typography
-                                          variant="caption"
-                                          color="text.secondary"
-                                        >
-                                          {t("pda.me.progress", "Progress")}:{" "}
-                                          {progressPercent}%
-                                        </Typography>
+                                      {stream.tasks.map((task) =>
+                                        (() => {
+                                          const hasStatus =
+                                            String(
+                                              task.taskStatus || "",
+                                            ).trim() !== "";
+                                          const progressPercent =
+                                            toProgressPercent(task.progress);
+                                          const hasProgress =
+                                            progressPercent !== null;
+
+                                          return (
+                                            <Box
+                                              key={`${task.projectTaskId}-${task.date}`}
+                                              sx={{
+                                                border: "1px solid",
+                                                borderColor: "divider",
+                                                borderRadius: 1,
+                                                px: 1,
+                                                py: 0.9,
+                                                bgcolor: "background.paper",
+                                              }}
+                                            >
+                                              <Typography
+                                                variant="body2"
+                                                fontWeight={600}
+                                              >
+                                                {task.taskName}
+                                              </Typography>
+                                              <Typography
+                                                variant="caption"
+                                                color="text.secondary"
+                                                display="block"
+                                              >
+                                                {task.actualStartDate ||
+                                                  task.taskStartDate ||
+                                                  ""}
+                                                {" - "}
+                                                {task.actualEndDate ||
+                                                  task.taskEndDate ||
+                                                  ""}
+                                              </Typography>
+                                              {task.executedByName && (
+                                                <Typography
+                                                  variant="caption"
+                                                  color="text.secondary"
+                                                  display="block"
+                                                  sx={{ mt: 0.2 }}
+                                                >
+                                                  {t(
+                                                    "pda.me.assignedBy",
+                                                    "Assigned By",
+                                                  )}
+                                                  : {task.executedByName}
+                                                </Typography>
+                                              )}
+                                              {(hasStatus || hasProgress) && (
+                                                <Box
+                                                  sx={{
+                                                    mt: 0.45,
+                                                    mb: 0.1,
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 0.75,
+                                                    flexWrap: "wrap",
+                                                  }}
+                                                >
+                                                  {hasStatus && (
+                                                    <Chip
+                                                      size="small"
+                                                      color={getTaskStatusColor(
+                                                        task.taskStatus,
+                                                      )}
+                                                      label={task.taskStatus}
+                                                    />
+                                                  )}
+                                                  {hasProgress && (
+                                                    <Typography
+                                                      variant="caption"
+                                                      color="text.secondary"
+                                                    >
+                                                      {t(
+                                                        "pda.me.progress",
+                                                        "Progress",
+                                                      )}
+                                                      : {progressPercent}%
+                                                    </Typography>
+                                                  )}
+                                                </Box>
+                                              )}
+                                            </Box>
+                                          );
+                                        })(),
                                       )}
                                     </Box>
-                                  )}
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    display="block"
-                                  >
-                                    {task.actualStartDate ||
-                                      task.taskStartDate ||
-                                      ""}
-                                    {" - "}
-                                    {task.actualEndDate ||
-                                      task.taskEndDate ||
-                                      ""}
-                                  </Typography>
-                                </Box>
-                              );
-                            })(),
-                          )}
+                                  </Box>
+                                ))}
+                              </Box>
+                            </Box>
+                          ))}
                         </Box>
                       </Box>
                     ))}

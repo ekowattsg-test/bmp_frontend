@@ -146,7 +146,8 @@
       "site": "Field Ops",
       "siteMenu": "Field Ops",
       "availableTasks": "Task Assignment Board",
-      "progressUpdate": "Progress Update"
+      "progressUpdate": "Progress Update",
+      "fieldQrCode": "Field QR Code"
     },
     "schedule": {
       "comingSoon": "Schedules coming soon.",
@@ -186,6 +187,14 @@
       "progress": "Progress",
       "complete": "Complete",
       "confirm": "Confirm progress"
+    },
+    "fieldQrCode": {
+      "title": "Field QR Code",
+      "projectCode": "Project Code",
+      "noProject": "No project code available.",
+      "loadProjectsFailed": "Failed to load projects.",
+      "generateFailed": "Failed to generate project QR code.",
+      "timeLimitedHint": "This QR code is time-limited and refreshes automatically."
     },
     "briefing": {
       "selectProjectHint": "Select a project code to join or start today\u2019s briefing session.",
