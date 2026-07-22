@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -19,6 +19,7 @@ import Inventory2Icon from "@mui/icons-material/Inventory2";
 import PersonIcon from "@mui/icons-material/Person";
 import EngineeringIcon from "@mui/icons-material/Engineering";
 import PublishedWithChangesIcon from "@mui/icons-material/PublishedWithChanges";
+import { request } from "../../../helpers/axios_helper";
 
 const TAB_ITEMS = [
   {
@@ -49,14 +50,32 @@ const SITE_MENU_ITEMS = [
     navigateTo: "/pda/available-tasks",
     labelKey: "pda.nav.availableTasks",
     icon: <WorklistIcon />,
+    requiresSiteLeader: true,
   },
   {
     route: "/pda/progress-update",
     navigateTo: "/pda/progress-update",
     labelKey: "pda.nav.progressUpdate",
     icon: <PublishedWithChangesIcon />,
+    requiresSiteLeader: true,
   },
 ];
+
+const isSiteLeaderRole = (roleRow) => {
+  const candidates = [
+    roleRow?.roleName,
+    roleRow?.operationRole,
+    roleRow?.role,
+    roleRow?.name,
+  ];
+  return candidates.some((value) => {
+    const normalized = String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "");
+    return normalized === "siteleader";
+  });
+};
 
 /**
  * PdaBottomNav — fixed bottom tab bar.
@@ -68,6 +87,56 @@ export default function PdaBottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const [siteOpen, setSiteOpen] = useState(false);
+  const [isSiteLeader, setIsSiteLeader] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadOperationRole = async () => {
+      try {
+        const info = JSON.parse(localStorage.getItem("pda_user_info") || "{}");
+        let staffId = String(info?.staffId || "").trim();
+        const mobileNumber = String(info?.mobileNumber || "").trim();
+
+        // pda_user_info.staffId may be enriched slightly later in layout.
+        // Resolve it here as fallback to avoid false-negative role checks.
+        if (!staffId && mobileNumber) {
+          const staffRes = await request(
+            "GET",
+            `/api/staffs/mobile/${encodeURIComponent(mobileNumber)}`,
+          );
+          staffId = String(staffRes?.data?.staffId || "").trim();
+        }
+
+        if (!staffId) {
+          if (!cancelled) setIsSiteLeader(false);
+          return;
+        }
+
+        const res = await request("GET", "/api/operationstaffs");
+        const rows = Array.isArray(res?.data) ? res.data : [];
+        const ownRoleRows = rows.filter(
+          (r) => String(r?.staffId || "").trim() === staffId,
+        );
+        const hasSiteLeader = ownRoleRows.some(isSiteLeaderRole);
+        if (!cancelled) setIsSiteLeader(hasSiteLeader);
+      } catch {
+        if (!cancelled) setIsSiteLeader(false);
+      }
+    };
+
+    loadOperationRole();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const visibleSiteMenuItems = useMemo(
+    () =>
+      SITE_MENU_ITEMS.filter(
+        (item) => !item.requiresSiteLeader || isSiteLeader,
+      ),
+    [isSiteLeader],
+  );
 
   // Derive active tab index from current path.
   const activeIndex = TAB_ITEMS.findIndex((tab) =>
@@ -163,7 +232,7 @@ export default function PdaBottomNav() {
           </Typography>
         </Box>
         <List disablePadding>
-          {SITE_MENU_ITEMS.map((item) => (
+          {visibleSiteMenuItems.map((item) => (
             <ListItemButton
               key={item.route}
               onClick={() => handleSiteItem(item)}

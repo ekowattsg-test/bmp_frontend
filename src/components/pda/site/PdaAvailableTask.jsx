@@ -633,6 +633,8 @@ export default function PdaAvailableTask() {
   // ── Mark task (marker = "M") ───────────────────────────────────────────────
   const handleMarkTask = async (task) => {
     const existing = progressByTask[task.projectTaskId];
+    const taskProgress = Number(task?.progress);
+    const syncedProgress = Number.isFinite(taskProgress) ? taskProgress : 0;
     try {
       const allProgressRes = await request(
         "GET",
@@ -660,6 +662,7 @@ export default function PdaAvailableTask() {
             marker: "M",
             progressDate: selectedDate,
             executedBy: currentStaffId,
+            progress: syncedProgress,
           },
         );
         const payload = res?.data || {};
@@ -670,7 +673,7 @@ export default function PdaAvailableTask() {
           progressDate: selectedDate,
           executedBy: currentStaffId,
           marker: "M",
-          progress: 0,
+          progress: syncedProgress,
         });
         const payload = res?.data || {};
         saved = payload?.projectTaskProgress || payload;

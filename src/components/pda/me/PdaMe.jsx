@@ -8,6 +8,7 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   CircularProgress,
   Divider,
   Stack,
@@ -23,6 +24,38 @@ import { getPdaUser } from "../common/pda_user_helper";
 import { signEntity } from "../../../helpers/qr_token_helper";
 import { request } from "../../../helpers/axios_helper";
 import { AuthContext } from "../../../context/authContext";
+
+const toApiDate = (date) => {
+  if (!date) return "";
+  const d = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+};
+
+const normalizeDateValue = (value) => {
+  if (!value) return "";
+  return toApiDate(value);
+};
+
+const getTaskStatusColor = (status) => {
+  const normalized = String(status || "")
+    .trim()
+    .toLowerCase();
+  if (normalized === "completed") return "success";
+  if (normalized === "in progress") return "warning";
+  if (normalized === "not started") return "default";
+  if (normalized === "cancelled") return "error";
+  return "default";
+};
+
+const toProgressPercent = (value) => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(0, Math.min(100, Math.round(n)));
+};
 
 /**
  * PdaMe — profile tab.
@@ -54,6 +87,9 @@ export default function PdaMe() {
   const [assets, setAssets] = useState([]);
   const [assetsLoading, setAssetsLoading] = useState(false);
   const [assetsError, setAssetsError] = useState("");
+  const [scheduleRows, setScheduleRows] = useState([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleError, setScheduleError] = useState("");
 
   const handleLogout = () => {
     // Reuse the same main-app logout action, then clear PDA-only payload.
@@ -104,6 +140,134 @@ export default function PdaMe() {
       .finally(() => setAssetsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayName]);
+
+  useEffect(() => {
+    if (!user.staffId) return;
+
+    setScheduleLoading(true);
+    setScheduleError("");
+
+    Promise.allSettled([
+      request("GET", "/api/projectmanpowers"),
+      request("GET", "/api/projecttasks"),
+      request("GET", "/api/projectstreams"),
+    ])
+      .then(([manpowerRes, tasksRes, streamsRes]) => {
+        if (manpowerRes.status !== "fulfilled") {
+          setScheduleRows([]);
+          setScheduleError(
+            t("pda.me.scheduleLoadFailed", "Failed to load schedule."),
+          );
+          return;
+        }
+
+        const manpowers = Array.isArray(manpowerRes.value?.data)
+          ? manpowerRes.value.data
+          : [];
+        const tasks =
+          tasksRes.status === "fulfilled" && Array.isArray(tasksRes.value?.data)
+            ? tasksRes.value.data
+            : [];
+        const streams =
+          streamsRes.status === "fulfilled" &&
+          Array.isArray(streamsRes.value?.data)
+            ? streamsRes.value.data
+            : [];
+
+        const taskById = tasks.reduce((acc, task) => {
+          acc[String(task?.projectTaskId || "")] = task;
+          return acc;
+        }, {});
+
+        const streamById = streams.reduce((acc, stream) => {
+          acc[String(stream?.projectStreamId || "")] = stream;
+          return acc;
+        }, {});
+
+        const today = toApiDate(new Date());
+        const staffId = String(user.staffId);
+
+        const assignments = manpowers
+          .filter((row) => String(row?.staffId || "") === staffId)
+          .map((row) => {
+            const date = normalizeDateValue(row?.manpowerDate || row?.workDate);
+            return {
+              date,
+              projectTaskId: String(row?.projectTaskId || ""),
+            };
+          })
+          .filter((row) => row.date && row.projectTaskId && row.date >= today);
+
+        const uniqueMap = new Map();
+        assignments.forEach((row) => {
+          const key = `${row.date}__${row.projectTaskId}`;
+          if (!uniqueMap.has(key)) uniqueMap.set(key, row);
+        });
+        const uniqueAssignments = Array.from(uniqueMap.values());
+
+        const groupedByDate = new Map();
+        uniqueAssignments.forEach((assignment) => {
+          const task = taskById[assignment.projectTaskId];
+          const streamId = String(task?.projectStreamId || "");
+          const stream = streamById[streamId] || null;
+          const streamName = String(stream?.streamName || streamId);
+
+          if (!groupedByDate.has(assignment.date)) {
+            groupedByDate.set(assignment.date, new Map());
+          }
+          const streamMap = groupedByDate.get(assignment.date);
+          if (!streamMap.has(streamId)) {
+            streamMap.set(streamId, {
+              streamId,
+              streamName,
+              tasks: [],
+            });
+          }
+
+          streamMap.get(streamId).tasks.push({
+            projectTaskId: assignment.projectTaskId,
+            taskName: String(task?.taskName || assignment.projectTaskId),
+            taskStartDate: String(task?.taskStartDate || ""),
+            taskEndDate: String(task?.taskEndDate || ""),
+            actualStartDate: String(task?.actualStartDate || ""),
+            actualEndDate: String(task?.actualEndDate || ""),
+            taskStatus: String(task?.taskStatus || ""),
+            progress: task?.progress,
+          });
+        });
+
+        const normalized = Array.from(groupedByDate.entries())
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([date, streamMap]) => ({
+            date,
+            streams: Array.from(streamMap.values())
+              .map((stream) => ({
+                ...stream,
+                tasks: [...stream.tasks].sort((a, b) => {
+                  const byStartDate = String(
+                    a.actualStartDate || a.taskStartDate || "",
+                  ).localeCompare(
+                    String(b.actualStartDate || b.taskStartDate || ""),
+                  );
+                  if (byStartDate !== 0) return byStartDate;
+                  return String(a.taskName).localeCompare(String(b.taskName));
+                }),
+              }))
+              .sort((a, b) =>
+                String(a.streamName).localeCompare(String(b.streamName)),
+              ),
+          }));
+
+        setScheduleRows(normalized);
+      })
+      .catch(() => {
+        setScheduleRows([]);
+        setScheduleError(
+          t("pda.me.scheduleLoadFailed", "Failed to load schedule."),
+        );
+      })
+      .finally(() => setScheduleLoading(false));
+  }, [t, user.staffId]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -242,15 +406,166 @@ export default function PdaMe() {
 
           <Divider sx={{ mb: 1.5 }} />
 
-          <Box sx={{ textAlign: "center", py: 2, color: "text.secondary" }}>
-            <CalendarMonthIcon sx={{ fontSize: 40, opacity: 0.35, mb: 1 }} />
-            <Typography variant="body2" sx={{ mb: 0.5 }}>
-              {t("pda.schedule.comingSoon")}
+          {scheduleLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : scheduleError ? (
+            <Typography variant="body2" color="error" sx={{ py: 1 }}>
+              {scheduleError}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {t("pda.schedule.comingSoonDesc")}
-            </Typography>
-          </Box>
+          ) : scheduleRows.length === 0 ? (
+            <Box sx={{ textAlign: "center", py: 2, color: "text.secondary" }}>
+              <CalendarMonthIcon sx={{ fontSize: 40, opacity: 0.35, mb: 1 }} />
+              <Typography variant="body2" sx={{ mb: 0.5 }}>
+                {t(
+                  "pda.me.scheduleEmpty",
+                  "No current or upcoming assignments",
+                )}
+              </Typography>
+            </Box>
+          ) : (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
+              {scheduleRows.map((dateRow) => (
+                <Box
+                  key={dateRow.date}
+                  sx={{
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 1,
+                    overflow: "hidden",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      px: 1.5,
+                      py: 0.8,
+                      bgcolor: "primary.main",
+                      color: "primary.contrastText",
+                    }}
+                  >
+                    <Typography variant="body2" fontWeight={700}>
+                      {dateRow.date}
+                    </Typography>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      p: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 1,
+                      bgcolor: "background.default",
+                    }}
+                  >
+                    {dateRow.streams.map((stream) => (
+                      <Box
+                        key={`${dateRow.date}-${stream.streamId || "none"}`}
+                        sx={{
+                          borderLeft: "4px solid",
+                          borderColor: "primary.main",
+                          borderRadius: "0 6px 6px 0",
+                          bgcolor: "background.paper",
+                          px: 1.25,
+                          py: 0.9,
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          fontWeight={700}
+                          color="primary.main"
+                          sx={{ mb: 0.75 }}
+                        >
+                          {stream.streamName}
+                        </Typography>
+
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 0.75,
+                          }}
+                        >
+                          {stream.tasks.map((task) =>
+                            (() => {
+                              const hasStatus =
+                                String(task.taskStatus || "").trim() !== "";
+                              const progressPercent = toProgressPercent(
+                                task.progress,
+                              );
+                              const hasProgress = progressPercent !== null;
+
+                              return (
+                                <Box
+                                  key={task.projectTaskId}
+                                  sx={{
+                                    border: "1px solid",
+                                    borderColor: "divider",
+                                    borderRadius: 1,
+                                    px: 1,
+                                    py: 0.9,
+                                    bgcolor: "background.paper",
+                                  }}
+                                >
+                                  <Typography variant="body2" fontWeight={600}>
+                                    {task.taskName}
+                                  </Typography>
+                                  {(hasStatus || hasProgress) && (
+                                    <Box
+                                      sx={{
+                                        mt: 0.5,
+                                        mb: 0.25,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 0.75,
+                                        flexWrap: "wrap",
+                                      }}
+                                    >
+                                      {hasStatus && (
+                                        <Chip
+                                          size="small"
+                                          color={getTaskStatusColor(
+                                            task.taskStatus,
+                                          )}
+                                          label={task.taskStatus}
+                                        />
+                                      )}
+                                      {hasProgress && (
+                                        <Typography
+                                          variant="caption"
+                                          color="text.secondary"
+                                        >
+                                          {t("pda.me.progress", "Progress")}:{" "}
+                                          {progressPercent}%
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  )}
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    display="block"
+                                  >
+                                    {task.actualStartDate ||
+                                      task.taskStartDate ||
+                                      ""}
+                                    {" - "}
+                                    {task.actualEndDate ||
+                                      task.taskEndDate ||
+                                      ""}
+                                  </Typography>
+                                </Box>
+                              );
+                            })(),
+                          )}
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          )}
         </CardContent>
       </Card>
 
