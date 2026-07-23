@@ -51,7 +51,10 @@ export default function PdaBriefingEntry() {
     setErrorMsg("");
     try {
       const result = await fetchProjectOptions();
-      setProjects(result);
+      const activeProjects = (Array.isArray(result) ? result : []).filter(
+        (project) => String(project?.status || "").trim() === "ACTIVE",
+      );
+      setProjects(activeProjects);
     } catch (error) {
       setProjects([]);
       setErrorMsg(

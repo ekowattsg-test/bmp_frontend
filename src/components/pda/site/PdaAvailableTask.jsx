@@ -560,9 +560,14 @@ export default function PdaAvailableTask() {
         setSelectedDate(toApiDate(nwd));
 
         const allProjects = Array.isArray(projRes?.data) ? projRes.data : [];
-        setProjects(allProjects);
-        if (allProjects.length > 0) {
-          setSelectedProjectCode(String(allProjects[0].projectCode || ""));
+        const activeProjects = allProjects.filter(
+          (project) => String(project?.status || "").trim() === "ACTIVE",
+        );
+        setProjects(activeProjects);
+        if (activeProjects.length > 0) {
+          setSelectedProjectCode(String(activeProjects[0].projectCode || ""));
+        } else {
+          setSelectedProjectCode("");
         }
       })
       .catch(() =>

@@ -31,7 +31,9 @@ export default function PdaFieldQrCode() {
     request("GET", "/api/projects")
       .then((res) => {
         if (cancelled) return;
-        const list = Array.isArray(res?.data) ? res.data : [];
+        const list = (Array.isArray(res?.data) ? res.data : []).filter(
+          (project) => String(project?.status || "").trim() === "ACTIVE",
+        );
         setProjects(list);
         if (list.length > 0) {
           setSelectedProjectCode(String(list[0]?.projectCode || "").trim());
