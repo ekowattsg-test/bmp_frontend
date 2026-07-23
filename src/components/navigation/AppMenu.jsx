@@ -29,6 +29,7 @@ import {
   Inventory2,
   Warehouse,
   EngineeringOutlined as EngineeringIcon,
+  PhoneIphone as PhoneIphoneIcon,
   ManageAccounts,
   Tune,
   WhatsApp,
@@ -255,6 +256,11 @@ const AppMenu = () => {
             label: t("menu.briefing", "Briefing Setup"),
             icon: <Description />,
           },
+          {
+            to: "/project-status-control",
+            label: t("menu.projectStatusControl", "Project Status Control"),
+            icon: <Task />,
+          },
         ],
       },
       {
@@ -307,6 +313,13 @@ const AppMenu = () => {
             label: t("menu.workOrderList", "Work Order List"),
             icon: <EngineeringIcon />,
           },
+          userLevel >= 1
+            ? {
+                to: "/operations/tv-mobile-approval",
+                label: t("menu.tvMobileApproval", "TV Screen Approval"),
+                icon: <PhoneIphoneIcon />,
+              }
+            : null,
         ],
       },
     ],

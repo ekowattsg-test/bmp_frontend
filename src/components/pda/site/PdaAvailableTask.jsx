@@ -118,6 +118,34 @@ const STATUS_COLOR = (status) => {
   }
 };
 
+const getStatusSensitiveTaskDates = (task) => {
+  const status = String(task?.taskStatus || "").trim();
+  const startDate =
+    status === "Not Started"
+      ? task?.taskStartDate
+      : task?.actualStartDate || task?.taskStartDate;
+  const endDate =
+    status === "Completed"
+      ? task?.actualEndDate || task?.taskEndDate
+      : task?.taskEndDate;
+  return { startDate, endDate };
+};
+
+const isDateOutsideStatusSensitiveRange = (targetDate, startDate, endDate) => {
+  const target = parseDate(targetDate);
+  if (!target) return false;
+  target.setHours(0, 0, 0, 0);
+
+  const start = parseDate(startDate);
+  const end = parseDate(endDate);
+  if (start) start.setHours(0, 0, 0, 0);
+  if (end) end.setHours(0, 0, 0, 0);
+
+  if (start && target < start) return true;
+  if (end && target > end) return true;
+  return false;
+};
+
 // ─── TaskSections sub-component ─────────────────────────────────────────────
 
 const SECTION_DEFS = [
@@ -183,15 +211,8 @@ function TaskCard({ task, progress, onMark, onManpower, onConfirm }) {
   const marker = progress?.marker;
   const isMarked = marker === "M";
   const isConfirmed = marker === "C";
-  const status = String(task?.taskStatus || "").trim();
-  const displayStartDate =
-    status === "Not Started"
-      ? task?.taskStartDate
-      : task?.actualStartDate || task?.taskStartDate;
-  const displayEndDate =
-    status === "Completed"
-      ? task?.actualEndDate || task?.taskEndDate
-      : task?.taskEndDate;
+  const { startDate: displayStartDate, endDate: displayEndDate } =
+    getStatusSensitiveTaskDates(task);
 
   return (
     <Box
@@ -735,16 +756,44 @@ export default function PdaAvailableTask() {
     if (!existing?.projectTaskProgressId) return;
     try {
       await request(
-        "PUT",
+        "DELETE",
         `/api/projecttaskprogresses/${existing.projectTaskProgressId}`,
-        {
-          ...existing,
-          marker: null,
-        },
       );
+
+      const { startDate, endDate } = getStatusSensitiveTaskDates(task);
+      const shouldRemoveManpowerBlock = isDateOutsideStatusSensitiveRange(
+        selectedDate,
+        startDate,
+        endDate,
+      );
+
+      if (shouldRemoveManpowerBlock) {
+        const manpowerRes = await request(
+          "GET",
+          `/api/projectmanpowers/task/${task.projectTaskId}`,
+        );
+        const rows = Array.isArray(manpowerRes?.data) ? manpowerRes.data : [];
+        const rowsForDate = rows.filter(
+          (row) =>
+            row?.manpowerDate === selectedDate ||
+            row?.workDate === selectedDate,
+        );
+
+        await Promise.all(
+          rowsForDate
+            .filter((row) => row?.projectManpowerId)
+            .map((row) =>
+              request(
+                "DELETE",
+                `/api/projectmanpowers/${row.projectManpowerId}`,
+              ),
+            ),
+        );
+      }
+
       setProgressByTask((prev) => ({
         ...prev,
-        [task.projectTaskId]: { ...existing, marker: null },
+        [task.projectTaskId]: null,
       }));
     } catch {
       setErrorMsg(t("pdaAvailableTask.markFailed", "Failed to update task."));

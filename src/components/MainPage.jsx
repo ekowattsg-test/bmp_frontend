@@ -42,6 +42,7 @@ import ProjectWorkbench from "./project/ProjectWorkbench";
 import ProjectManpowerGenerate from "./project/ProjectManpowerGenerate";
 import ProjectTaskRecalculate from "./project/ProjectTaskRecalculate";
 import RequisitionGenerate from "./project/RequisitionGenerate";
+import ProjectStatusControl from "./project/ProjectStatusControl";
 import VehicleModern from "./information/VehicleModern";
 import WorkOrderModern from "./workorder/WorkOrderModern";
 import OperationRoleModern from "./baseInformation/OperationRoleModern";
@@ -50,6 +51,7 @@ import WASimulator from "./baseInformation/WASimulator";
 import ParameterModern from "./baseInformation/ParameterModern";
 import BriefingModern from "./baseInformation/BriefingModern";
 import BriefingContentPage from "./baseInformation/BriefingContentPage";
+import TvMobileApproval from "./workorder/TvMobileApproval";
 
 function MainPage() {
   return (
@@ -120,8 +122,16 @@ function MainPage() {
         <Route path="/parameter" element={<ParameterModern />} />
         <Route path="/briefing" element={<BriefingModern />} />
         <Route
+          path="/project-status-control"
+          element={<ProjectStatusControl />}
+        />
+        <Route
           path="/briefing/:briefingId/content"
           element={<BriefingContentPage />}
+        />
+        <Route
+          path="/operations/tv-mobile-approval"
+          element={<TvMobileApproval />}
         />
       </Routes>
     </AdminLayout>

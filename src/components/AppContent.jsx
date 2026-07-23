@@ -41,6 +41,10 @@ import PdaAvailableTask from "./pda/site/PdaAvailableTask.jsx";
 import PdaProgressUpdate from "./pda/site/PdaProgressUpdate.jsx";
 import PdaFieldQrCode from "./pda/site/PdaFieldQrCode.jsx";
 import StockCard from "./stock/StockCard.jsx";
+import TvBootstrap from "./tv/TvBootstrap.jsx";
+import TvProjects from "./tv/TvProjects.jsx";
+
+const TV_AUTOSTART_KEY = "tv_display_autostart";
 
 export default function AppContent() {
   const { isAuthenticated, setIsAuthenticated, setUserInfo, loading } =
@@ -60,6 +64,16 @@ export default function AppContent() {
   const intervalRef = React.useRef(null);
 
   // Expose a global function the axios helper can call to show a blocking error
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const tvAutoStartEnabled = localStorage.getItem(TV_AUTOSTART_KEY) === "1";
+    if (!tvAutoStartEnabled) return;
+    if (isAuthenticated) return;
+    if (location.pathname.startsWith("/pda")) return;
+    if (location.pathname.startsWith("/tv")) return;
+    navigate("/tv/start", { replace: true });
+  }, [isAuthenticated, location.pathname, navigate]);
+
   React.useEffect(() => {
     const showFn = (message, timeoutMs) =>
       new Promise((resolve) => {
@@ -245,7 +259,14 @@ export default function AppContent() {
 
   return (
     <>
-      {location.pathname.startsWith("/pda") ? (
+      {location.pathname.startsWith("/tv") ? (
+        <Routes>
+          <Route path="/tv/start" element={<TvBootstrap />} />
+          <Route path="/tv/projects" element={<TvProjects />} />
+          <Route path="/tv" element={<Navigate to="/tv/start" replace />} />
+          <Route path="/tv/*" element={<Navigate to="/tv/start" replace />} />
+        </Routes>
+      ) : location.pathname.startsWith("/pda") ? (
         <Routes>
           <Route path="/pda/login" element={<PdaLogin />} />
           <Route
