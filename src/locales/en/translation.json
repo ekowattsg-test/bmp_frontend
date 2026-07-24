@@ -466,7 +466,7 @@
     "projects": {
       "title": "Project Boards",
       "lastRefresh": "Last refresh: {{time}}",
-      "refreshFailed": "Failed to refresh project list.",
+      "refreshFailed": "Broken data stream",
       "noData": "No active project tasks available.",
       "noProjectTasks": "No current or backdated assignments for this project.",
       "backdated": "Backdated",

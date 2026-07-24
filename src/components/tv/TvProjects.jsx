@@ -383,9 +383,7 @@ export default function TvProjects() {
         navigate("/tv/start", { replace: true });
         return;
       }
-      setErrorMsg(
-        t("tv.projects.refreshFailed", "Failed to refresh project list."),
-      );
+      setErrorMsg(t("tv.projects.refreshFailed", "Broken data stream"));
     } finally {
       setLoading(false);
     }
@@ -508,6 +506,11 @@ export default function TvProjects() {
     });
   }, []);
 
+  const handleAbortDisplay = useCallback(() => {
+    clearTvAuthState();
+    navigate("/tv/start", { replace: true });
+  }, [navigate]);
+
   return (
     <Box
       sx={{
@@ -519,34 +522,77 @@ export default function TvProjects() {
         position: "relative",
       }}
     >
-      <Typography
-        variant="caption"
-        color="text.secondary"
+      {errorMsg ? (
+        <Alert
+          severity="error"
+          sx={{
+            position: "absolute",
+            bottom: 8,
+            left: 12,
+            zIndex: 2,
+            width: "auto",
+            maxWidth: "min(40vw, 520px)",
+            alignItems: "center",
+            boxShadow: 1,
+            "& .MuiAlert-message": {
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            },
+          }}
+        >
+          {errorMsg}
+        </Alert>
+      ) : null}
+
+      <Box
+        role="button"
+        tabIndex={0}
+        onClick={handleAbortDisplay}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            handleAbortDisplay();
+          }
+        }}
         sx={{
           position: "absolute",
           bottom: 8,
           right: 12,
           zIndex: 2,
           bgcolor: "transparent",
+          color: "text.secondary",
           px: 0.75,
           py: 0.25,
+          minWidth: 0,
           borderRadius: 1,
           border: "1px solid",
           borderColor: "divider",
           display: "flex",
           alignItems: "center",
           gap: 0.75,
+          lineHeight: 1.2,
+          cursor: "default",
+          font: "inherit",
+          textAlign: "left",
+          "&:hover": {
+            backgroundColor: "transparent",
+          },
+          "&:focus": {
+            outline: "none",
+          },
+          "&:focus-visible": {
+            outline: "none",
+          },
         }}
       >
         {loading ? <CircularProgress size={12} /> : null}
         {t("tv.projects.lastRefresh", {
           time: lastRefreshAt.toLocaleString(),
         })}
-      </Typography>
+      </Box>
 
       <Stack spacing={0} sx={{ height: "100%", pt: 0 }}>
-        {errorMsg ? <Alert severity="error">{errorMsg}</Alert> : null}
-
         <Box
           sx={{
             position: "relative",

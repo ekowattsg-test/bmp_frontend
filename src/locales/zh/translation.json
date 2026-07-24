@@ -466,7 +466,7 @@
     "projects": {
       "title": "项目看板",
       "lastRefresh": "最近刷新：{{time}}",
-      "refreshFailed": "刷新项目列表失败。",
+      "refreshFailed": "数据流中断",
       "noData": "暂无有效项目任务。",
       "noProjectTasks": "该项目当前没有今日或逾期任务分配。",
       "backdated": "逾期",

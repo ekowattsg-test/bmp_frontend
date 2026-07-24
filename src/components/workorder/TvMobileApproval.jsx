@@ -59,7 +59,10 @@ const TvMobileApproval = () => {
 
     setSubmitting(true);
     try {
-      await request("POST", "/api/tv-auth/approve", payload);
+      await request("POST", "/api/tv-auth/approve", payload, {
+        skipAuthRedirect: true,
+        skipBackendErrorDialog: true,
+      });
       setSuccessMsg(
         t("tvApproval.success", "TV session approved successfully."),
       );

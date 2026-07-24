@@ -19,6 +19,9 @@ export const getAuthToken = () => {
 const isPdaPath = () =>
   typeof window !== "undefined" && window.location.pathname.startsWith("/pda/");
 
+const isTvPath = () =>
+  typeof window !== "undefined" && window.location.pathname.startsWith("/tv");
+
 const isPdaRefreshEnabled = () =>
   String(import.meta.env.VITE_PDA_USE_REFRESH || "false").toLowerCase() ===
   "true";
@@ -202,9 +205,11 @@ api.interceptors.response.use(
     if (!originalRequest) return Promise.reject(error);
 
     // Show blocking error prompt (if available in the app) and wait.
-    // Skipped for PDA paths — PDA has its own error handling.
+    // Skipped for PDA and TV paths — those surfaces handle backend failures locally.
     const tryShowBlockingError = async (msg) => {
-      if (isPdaPath()) return;
+      if (isPdaPath() || isTvPath() || originalRequest.skipBackendErrorDialog) {
+        return;
+      }
       try {
         const timeoutMs = parseInt(
           import.meta.env.VITE_ERROR_ACK_TIMEOUT_MS || "0",
