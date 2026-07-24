@@ -321,8 +321,8 @@ const StaffSkillModern = () => {
               key={item.staffSkillId || idx}
               columnDefs={blockColumnDefs}
               item={item}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
+              onEdit={checkingUsage ? undefined : handleEdit}
+              onDelete={checkingUsage ? undefined : handleDelete}
               leadingMedia={{
                 placeholder: (
                   <SkillIcon

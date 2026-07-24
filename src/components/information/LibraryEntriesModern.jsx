@@ -731,19 +731,23 @@ const LibraryEntriesModern = () => {
                 width: 40,
                 height: 40,
               }}
-              onEdit={() => {
-                setSelectedEntry(item);
-                setForm({
-                  libraryCatelogId: item.libraryCatelogId,
-                  libraryEntryName: item.libraryEntryName,
-                  libraryEntryType: item.libraryEntryType,
-                  libraryEntryKey: item.libraryEntryKey,
-                  entryQuickSearchKey: item.entryQuickSearchKey,
-                });
-                setEntryChipInput("");
-                setEditorOpen(true);
-              }}
-              onDelete={() => setDeleteEntry(item)}
+              onEdit={
+                canManage
+                  ? () => {
+                      setSelectedEntry(item);
+                      setForm({
+                        libraryCatelogId: item.libraryCatelogId,
+                        libraryEntryName: item.libraryEntryName,
+                        libraryEntryType: item.libraryEntryType,
+                        libraryEntryKey: item.libraryEntryKey,
+                        entryQuickSearchKey: item.entryQuickSearchKey,
+                      });
+                      setEntryChipInput("");
+                      setEditorOpen(true);
+                    }
+                  : undefined
+              }
+              onDelete={canManage ? () => setDeleteEntry(item) : undefined}
               t={t}
             />
           )}

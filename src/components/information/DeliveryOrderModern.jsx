@@ -162,6 +162,15 @@ const DeliveryOrderModern = () => {
     return "default";
   };
 
+  const getActionState = (order) => {
+    const status = order?.orderStatus || "NEW";
+    return {
+      canEdit: status === "NEW" || status === "ISSUED",
+      canDelete: status === "NEW",
+      hasActions: status === "NEW" || status === "READY" || status === "ISSUED",
+    };
+  };
+
   const columns = useMemo(
     () => [
       {
@@ -224,11 +233,7 @@ const DeliveryOrderModern = () => {
         headerAlign: "center",
         align: "center",
         renderCell: (params) => {
-          const status = params.row.orderStatus || "NEW";
-          const canEdit = status === "NEW" || status === "ISSUED";
-          const canDelete = status === "NEW";
-          const hasActions =
-            status === "NEW" || status === "READY" || status === "ISSUED";
+          const { canEdit, canDelete, hasActions } = getActionState(params.row);
           return (
             <Box
               sx={{
@@ -430,31 +435,52 @@ const DeliveryOrderModern = () => {
         ) : shouldUseBlockLayout ? (
           <LoadMoreBlockList
             items={normalizedOrders}
-            renderItem={(item, idx) => (
-              <BlockListItem
-                key={item.orderId || idx}
-                columnDefs={blockColumnDefs}
-                item={item}
-                onView={handleView}
-                onEdit={
-                  item.orderStatus !== "COMPLETED" &&
-                  item.orderStatus !== "CANCELLED"
-                    ? handleEdit
-                    : undefined
-                }
-                onDelete={handleDelete}
-                leadingMedia={{
-                  placeholder: (
-                    <LocalShippingIcon
-                      sx={{ color: "text.secondary", fontSize: "1.1rem" }}
-                    />
-                  ),
-                  width: 40,
-                  height: 40,
-                }}
-                t={t}
-              />
-            )}
+            renderItem={(item, idx) =>
+              (() => {
+                const { canEdit, canDelete, hasActions } = getActionState(item);
+                return (
+                  <BlockListItem
+                    key={item.orderId || idx}
+                    columnDefs={blockColumnDefs}
+                    item={item}
+                    onView={handleView}
+                    onEdit={canEdit ? handleEdit : undefined}
+                    onDelete={canDelete ? handleDelete : undefined}
+                    leadingMedia={{
+                      placeholder: (
+                        <LocalShippingIcon
+                          sx={{ color: "text.secondary", fontSize: "1.1rem" }}
+                        />
+                      ),
+                      width: 40,
+                      height: 40,
+                    }}
+                    extraContent={
+                      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                        <IconButton
+                          size="small"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleAction(item);
+                          }}
+                          disabled={!hasActions}
+                          title={t("deliveryOrderList.action.title", "Actions")}
+                          sx={{
+                            color: hasActions
+                              ? "success.main"
+                              : "text.disabled",
+                            "&:hover": { backgroundColor: "action.hover" },
+                          }}
+                        >
+                          <ActionIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    }
+                    t={t}
+                  />
+                );
+              })()
+            }
           />
         ) : (
           <Box sx={{ flex: 1, minHeight: 0 }}>

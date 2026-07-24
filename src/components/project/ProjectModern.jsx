@@ -296,7 +296,6 @@ const ProjectModern = () => {
               item={item}
               onView={handleDetail}
               onEdit={handleEdit}
-              onDelete={handleDelete}
               enableActions
               leadingMedia={{
                 placeholder: (

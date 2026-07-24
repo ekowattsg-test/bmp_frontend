@@ -406,7 +406,6 @@ const PurchaseOrderModern = () => {
                   item.orderStatus === "PROCESSING" ? handleEdit : undefined
                 }
                 onDelete={handleDelete}
-                onAction={handleAction}
                 leadingMedia={{
                   placeholder: (
                     <ShoppingCartIcon
@@ -416,6 +415,24 @@ const PurchaseOrderModern = () => {
                   width: 40,
                   height: 40,
                 }}
+                extraContent={
+                  <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                    <IconButton
+                      size="small"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleAction(item);
+                      }}
+                      title={t("purchaseOrderList.action.title", "Actions")}
+                      sx={{
+                        color: "success.main",
+                        "&:hover": { backgroundColor: "action.hover" },
+                      }}
+                    >
+                      <ActionIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                }
                 t={t}
               />
             )}

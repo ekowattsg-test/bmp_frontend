@@ -472,7 +472,7 @@ const StaffModern = () => {
               columnDefs={blockColumnDefs}
               item={item}
               onEdit={handleEdit}
-              onDelete={handleDelete}
+              onDelete={checkingUsage ? undefined : handleDelete}
               leadingMedia={{
                 placeholder: (
                   <PeopleIcon

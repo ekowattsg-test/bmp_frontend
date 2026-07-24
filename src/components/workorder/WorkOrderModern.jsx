@@ -546,10 +546,12 @@ const WorkOrderModern = () => {
     );
   }
 
-  const blockColumnDefs = columns.map((c) => ({
-    field: c.field,
-    label: c.headerName,
-  }));
+  const blockColumnDefs = columns
+    .filter((c) => c.field !== "_actions")
+    .map((c) => ({
+      field: c.field,
+      label: c.headerName,
+    }));
 
   return (
     <Box>
@@ -791,25 +793,106 @@ const WorkOrderModern = () => {
       ) : shouldUseBlockLayout ? (
         <LoadMoreBlockList
           items={filteredRows}
-          renderItem={(item, idx) => (
-            <BlockListItem
-              key={item.workOrderId || idx}
-              columnDefs={blockColumnDefs}
-              item={item}
-              onEdit={() => handleRowClick(item)}
-              enableActions
-              t={t}
-              leadingMedia={{
-                placeholder: (
-                  <AssignmentIcon
-                    sx={{ color: "text.secondary", fontSize: "1.1rem" }}
-                  />
-                ),
-                width: 40,
-                height: 40,
-              }}
-            />
-          )}
+          renderItem={(item, idx) => {
+            const status = item.workOrderStatus;
+            const stepsReady = isStepsReady(item);
+            const detailsReady = isDetailsReady(item);
+            const editable = canEdit(item);
+            const isActive =
+              status === "OPEN" ||
+              status === "ISSUED" ||
+              status === "INPROGRESS";
+
+            return (
+              <BlockListItem
+                key={item.workOrderId || idx}
+                columnDefs={blockColumnDefs}
+                item={item}
+                onView={() => setViewWorkOrder(item)}
+                onEdit={editable ? () => handleRowClick(item) : undefined}
+                enableActions
+                t={t}
+                leadingMedia={{
+                  placeholder: (
+                    <AssignmentIcon
+                      sx={{ color: "text.secondary", fontSize: "1.1rem" }}
+                    />
+                  ),
+                  width: 40,
+                  height: 40,
+                }}
+                extraContent={
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "flex-end",
+                      gap: 0.5,
+                    }}
+                  >
+                    {isActive && typeNeedsStepsMap[item.workOrderType] && (
+                      <IconButton
+                        size="small"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setStepsWorkOrder(item);
+                        }}
+                        title={t("workOrderSteps.steps", "Steps")}
+                        sx={{
+                          color: stepsReady ? "success.main" : "error.main",
+                        }}
+                      >
+                        <StepsIcon fontSize="small" />
+                      </IconButton>
+                    )}
+
+                    {isActive && typeNeedsDetailsMap[item.workOrderType] && (
+                      <IconButton
+                        size="small"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setDataFormWorkOrder(item);
+                        }}
+                        title={t("workOrderData.details", "Details")}
+                        sx={{
+                          color: detailsReady ? "success.main" : "error.main",
+                        }}
+                      >
+                        <ListAltIcon fontSize="small" />
+                      </IconButton>
+                    )}
+
+                    {status === "OPEN" && canIssue(item) && (
+                      <IconButton
+                        size="small"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setIssueDialogWorkOrder(item);
+                        }}
+                        title={t("workOrder.issue.iconTitle", "Issue")}
+                        sx={{ color: "primary.main" }}
+                      >
+                        <SendIcon fontSize="small" />
+                      </IconButton>
+                    )}
+
+                    {status === "ISSUED" && (
+                      <IconButton
+                        size="small"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleCancelWorkOrder(item);
+                        }}
+                        title={t("workOrder.cancel", "Cancel")}
+                        sx={{ color: "error.main" }}
+                      >
+                        <CancelWOIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                  </Box>
+                }
+              />
+            );
+          }}
         />
       ) : (
         <Box

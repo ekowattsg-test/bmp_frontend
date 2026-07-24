@@ -7,9 +7,10 @@ import { HeaderBar } from "../common";
 const VehicleEdit = ({ vehicle, onCancel }) => {
   const { t } = useTranslation();
   const [staffList, setStaffList] = useState([]);
+  const assignedDriverId = String(vehicle.driver ?? "");
   const [formData, setFormData] = useState({
     vehicleNumber: vehicle.vehicleNumber,
-    driver: vehicle.driver || "",
+    driver: assignedDriverId,
     active: vehicle.active ?? 1,
   });
   const [loading, setLoading] = useState(false);
@@ -17,15 +18,16 @@ const VehicleEdit = ({ vehicle, onCancel }) => {
 
   useEffect(() => {
     request("GET", "/api/staffs")
-      .then((res) =>
-        setStaffList((res.data || []).filter((s) => s.active === 1)),
-      )
+      .then((res) => setStaffList(res.data || []))
       .catch(() => setStaffList([]));
   }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === "driver" ? String(value ?? "") : value,
+    }));
   };
 
   const handleSubmit = (e) => {
@@ -79,7 +81,7 @@ const VehicleEdit = ({ vehicle, onCancel }) => {
           >
             <MenuItem value="">{t("basic.none", "— None —")}</MenuItem>
             {staffList.map((s) => (
-              <MenuItem key={s.staffId} value={s.staffId}>
+              <MenuItem key={s.staffId} value={String(s.staffId)}>
                 {s.staffName}
               </MenuItem>
             ))}

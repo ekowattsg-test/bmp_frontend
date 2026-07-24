@@ -62,23 +62,44 @@ const VehicleModern = () => {
   const staffMap = useMemo(() => {
     const m = {};
     staffList.forEach((s) => {
-      m[s.staffId] = s.staffName;
+      m[String(s.staffId)] = s.staffName;
     });
     return m;
   }, [staffList]);
 
-  const handleEdit = useCallback((vehicle) => setEditVehicle(vehicle), []);
-  const handleDelete = useCallback((vehicle) => setDeleteVehicle(vehicle), []);
+  const normalizedVehicles = useMemo(
+    () =>
+      vehicles.map((vehicle) => {
+        const driverId = String(vehicle.driver ?? "");
+        return {
+          ...vehicle,
+          _raw: vehicle,
+          displayDriver: staffMap[driverId] || driverId,
+        };
+      }),
+    [vehicles, staffMap],
+  );
+
+  const handleEdit = useCallback(
+    (vehicle) => setEditVehicle(vehicle?._raw || vehicle),
+    [],
+  );
+  const handleDelete = useCallback(
+    (vehicle) => setDeleteVehicle(vehicle?._raw || vehicle),
+    [],
+  );
 
   const filtered = useMemo(() => {
-    if (!search) return vehicles;
+    if (!search) return normalizedVehicles;
     const q = search.toLowerCase();
-    return vehicles.filter(
+    return normalizedVehicles.filter(
       (v) =>
         v.vehicleNumber?.toLowerCase().includes(q) ||
-        (staffMap[v.driver] || v.driver || "").toLowerCase().includes(q),
+        String(v.displayDriver || "")
+          .toLowerCase()
+          .includes(q),
     );
-  }, [vehicles, search, staffMap]);
+  }, [normalizedVehicles, search]);
 
   const columns = useMemo(
     () => [
@@ -89,11 +110,10 @@ const VehicleModern = () => {
         minWidth: 140,
       },
       {
-        field: "driver",
+        field: "displayDriver",
         headerName: t("vehicleList.driver", "Driver"),
         flex: 1,
         minWidth: 160,
-        valueGetter: (value) => staffMap[value] || value || "",
       },
       {
         field: "active",
@@ -155,7 +175,7 @@ const VehicleModern = () => {
         ),
       },
     ],
-    [t, handleEdit, handleDelete, staffMap],
+    [t, handleEdit, handleDelete],
   );
 
   if (loading) {
