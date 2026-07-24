@@ -5,15 +5,23 @@ import {
   Box,
   FormControlLabel,
   Checkbox,
+  MenuItem,
 } from "@mui/material";
 import { request } from "../../helpers/axios_helper";
 import { useTranslation } from "react-i18next";
 import { HeaderBar } from "../common";
+import languageset from "../../helpers/language_helper";
 
 const CompanyAdd = ({ onCancel }) => {
   const [form, setForm] = useState({
     companyId: "",
     companyName: "",
+    biZCode: "",
+    addressLine1: "",
+    addressLine2: "",
+    postalCode: "",
+    city: "",
+    language: "",
     showCompany: false,
     active: true,
   });
@@ -22,9 +30,13 @@ const CompanyAdd = ({ onCancel }) => {
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const { t } = useTranslation();
+  const languages = languageset();
 
   const validate = () => {
     let errs = {};
+    if (!form.companyId || form.companyId.trim() === "") {
+      errs.companyId = t("companyList.companyId") + " is required";
+    }
     if (!form.companyName || form.companyName.trim() === "") {
       errs.companyName = t("companyList.companyName") + " is required";
     }
@@ -54,10 +66,20 @@ const CompanyAdd = ({ onCancel }) => {
     setErrorMsg("");
     setSuccess(false);
     try {
-      await request("POST", "/api/companies", {
-        ...form,
+      const payload = {
+        companyId: String(form.companyId || "").trim(),
+        companyName: String(form.companyName || "").trim(),
+        biZCode: String(form.biZCode || "").trim(),
+        addressLine1: String(form.addressLine1 || "").trim(),
+        addressLine2: String(form.addressLine2 || "").trim(),
+        postalCode: String(form.postalCode || "").trim(),
+        city: String(form.city || "").trim(),
+        language: String(form.language || "").trim(),
+        showCompany: !!form.showCompany,
         active: form.active ? 1 : 0,
-      });
+      };
+
+      await request("POST", "/api/companies", payload);
       setSuccess(true);
       if (onCancel) {
         onCancel(true); // Pass true to indicate successful add
@@ -93,6 +115,8 @@ const CompanyAdd = ({ onCancel }) => {
         onChange={handleChange}
         fullWidth
         margin="normal"
+        error={!!errors.companyId}
+        helperText={errors.companyId}
       />
       <TextField
         label={t("companyList.companyName")}
@@ -104,6 +128,62 @@ const CompanyAdd = ({ onCancel }) => {
         error={!!errors.companyName}
         helperText={errors.companyName}
       />
+      <TextField
+        label={t("companyList.biZCode")}
+        name="biZCode"
+        value={form.biZCode}
+        onChange={handleChange}
+        fullWidth
+        margin="normal"
+      />
+      <TextField
+        label={t("companyList.addressLine1")}
+        name="addressLine1"
+        value={form.addressLine1}
+        onChange={handleChange}
+        fullWidth
+        margin="normal"
+      />
+      <TextField
+        label={t("companyList.addressLine2")}
+        name="addressLine2"
+        value={form.addressLine2}
+        onChange={handleChange}
+        fullWidth
+        margin="normal"
+      />
+      <TextField
+        label={t("companyList.postalCode")}
+        name="postalCode"
+        value={form.postalCode}
+        onChange={handleChange}
+        fullWidth
+        margin="normal"
+      />
+      <TextField
+        label={t("companyList.city")}
+        name="city"
+        value={form.city}
+        onChange={handleChange}
+        fullWidth
+        margin="normal"
+      />
+      <TextField
+        select
+        label={t("companyList.language")}
+        name="language"
+        value={form.language}
+        onChange={handleChange}
+        fullWidth
+        margin="normal"
+      >
+        <MenuItem value="">{t("companyList.languagePlaceholder", "Select language")}</MenuItem>
+        {languages.map((lang) => (
+          <MenuItem key={lang.code} value={lang.code}>
+            {lang.name}
+          </MenuItem>
+        ))}
+      </TextField>
       <FormControlLabel
         control={
           <Checkbox

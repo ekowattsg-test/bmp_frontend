@@ -8,6 +8,11 @@ const CompanyDelete = ({ company, onCancel, onDeleted }) => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  const getLanguageLabel = (language) => {
+    const code = String(language || "").trim();
+    return code ? t(`languages.${code}`, code) : "-";
+  };
+
   const handleDelete = async () => {
     setLoading(true);
     setErrorMsg("");
@@ -64,6 +69,60 @@ const CompanyDelete = ({ company, onCancel, onDeleted }) => {
                 {t("companyList.companyName")}:
               </Typography>
               <Typography variant="body2">{company.companyName}</Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 700, color: "primary.main", minWidth: 120 }}
+              >
+                {t("companyList.biZCode")}:
+              </Typography>
+              <Typography variant="body2">{company.biZCode || "-"}</Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 700, color: "primary.main", minWidth: 120 }}
+              >
+                {t("companyList.addressLine1")}:
+              </Typography>
+              <Typography variant="body2">{company.addressLine1 || "-"}</Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 700, color: "primary.main", minWidth: 120 }}
+              >
+                {t("companyList.addressLine2")}:
+              </Typography>
+              <Typography variant="body2">{company.addressLine2 || "-"}</Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 700, color: "primary.main", minWidth: 120 }}
+              >
+                {t("companyList.postalCode")}:
+              </Typography>
+              <Typography variant="body2">{company.postalCode || "-"}</Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 700, color: "primary.main", minWidth: 120 }}
+              >
+                {t("companyList.city")}:
+              </Typography>
+              <Typography variant="body2">{company.city || "-"}</Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 700, color: "primary.main", minWidth: 120 }}
+              >
+                {t("companyList.language")}:
+              </Typography>
+              <Typography variant="body2">{getLanguageLabel(company.language)}</Typography>
             </Box>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <Typography

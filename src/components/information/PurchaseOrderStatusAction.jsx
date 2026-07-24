@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
+import { AuthContext } from "../../context/authContext";
+import { generateAndStorePurchaseOrderPdf } from "../../helpers/purchase_order_pdf_helper";
 import {
   Dialog,
   DialogContent,
@@ -90,8 +92,10 @@ const today = () => new Date().toISOString().split("T")[0];
 
 const PurchaseOrderStatusAction = ({ order, onClose, onUpdated }) => {
   const { t } = useTranslation();
+  const { userInfo } = useContext(AuthContext);
+  const [currentOrder, setCurrentOrder] = useState(order);
 
-  const transitions = getTransitions(order.orderStatus || "");
+  const transitions = getTransitions(currentOrder.orderStatus || "");
 
   // Full order record fetched from GET (needed so PUT includes items)
   const [fullOrder, setFullOrder] = useState(null);
@@ -116,12 +120,16 @@ const PurchaseOrderStatusAction = ({ order, onClose, onUpdated }) => {
       if (productsRes.status === "fulfilled") {
         const map = {};
         (productsRes.value.data || []).forEach((p) => {
-          map[String(p.productCode)] = p.productName;
+          map[String(p.productCode)] = p;
         });
         setProductMap(map);
       }
     });
   }, [order.orderId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setCurrentOrder(order);
+  }, [order]);
 
   // date state keyed by dateField, defaulting to today
   const [dates, setDates] = useState(() => {
@@ -134,10 +142,12 @@ const PurchaseOrderStatusAction = ({ order, onClose, onUpdated }) => {
 
   const [loading, setLoading] = useState(null); // which newStatus is loading
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const handleAction = (transition) => {
+  const handleAction = async (transition) => {
     if (!fullOrder) return;
     setError("");
+    setSuccess("");
     setLoading(transition.newStatus);
 
     const payload = {
@@ -146,18 +156,84 @@ const PurchaseOrderStatusAction = ({ order, onClose, onUpdated }) => {
       [transition.dateField]: dates[transition.dateField],
     };
 
-    request("PUT", `/api/purchaseOrders/${order.orderId}`, payload)
-      .then(() => {
-        setLoading(null);
-        onUpdated();
-      })
-      .catch((err) => {
-        setLoading(null);
-        setError(
-          err.response?.data?.message ||
-            t("purchaseOrderList.action.failed", "Status update failed."),
-        );
+    try {
+      await request("PUT", `/api/purchaseOrders/${order.orderId}`, payload);
+
+      const nextOrder = {
+        ...currentOrder,
+        ...payload,
+      };
+      setCurrentOrder(nextOrder);
+      setFullOrder((prev) => (prev ? { ...prev, ...payload } : prev));
+
+      if (transition.newStatus === "ISSUED") {
+        try {
+          await generateAndStorePurchaseOrderPdf({
+            companyId: String(userInfo?.companyId || "").trim(),
+            order: nextOrder,
+            items: fullOrder?.items || [],
+            productMap,
+          });
+        } catch (pdfError) {
+          setLoading(null);
+          setError(
+            pdfError?.message ||
+              t(
+                "purchaseOrderList.action.pdfFailed",
+                "Purchase order was issued, but the PDF could not be stored.",
+              ),
+          );
+          return;
+        }
+      }
+
+      setLoading(null);
+      onUpdated();
+    } catch (err) {
+      setLoading(null);
+      setError(
+        err.response?.data?.message ||
+          t("purchaseOrderList.action.failed", "Status update failed."),
+      );
+    }
+  };
+
+  const handleManualRegeneratePdf = async () => {
+    if (!fullOrder) return;
+
+    setError("");
+    setSuccess("");
+    setLoading("MANUAL_PDF");
+
+    try {
+      await generateAndStorePurchaseOrderPdf({
+        companyId: String(userInfo?.companyId || "").trim(),
+        order: {
+          ...fullOrder,
+          ...currentOrder,
+        },
+        items: fullOrder?.items || [],
+        productMap,
       });
+
+      setSuccess(
+        t(
+          "purchaseOrderList.action.pdfRegenerated",
+          "Purchase order PDF regenerated and stored.",
+        ),
+      );
+      setLoading(null);
+      onUpdated();
+    } catch (pdfError) {
+      setLoading(null);
+      setError(
+        pdfError?.message ||
+          t(
+            "purchaseOrderList.action.pdfRegenerateFailed",
+            "Failed to regenerate purchase order PDF.",
+          ),
+      );
+    }
   };
 
   return (
@@ -170,7 +246,7 @@ const PurchaseOrderStatusAction = ({ order, onClose, onUpdated }) => {
           pb: 1,
         }}
       >
-        <Typography variant="h6" fontWeight={600}>
+        <Typography component="span" variant="h6" fontWeight={600}>
           {t("purchaseOrderList.action.title", "Purchase Order Actions")}
         </Typography>
         <IconButton onClick={onClose} size="small">
@@ -215,14 +291,14 @@ const PurchaseOrderStatusAction = ({ order, onClose, onUpdated }) => {
                   </Typography>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <Typography variant="body1" fontWeight={500}>
-                      {order.orderId}
+                      {currentOrder.orderId}
                     </Typography>
                     <Chip
                       label={t(
-                        `purchaseOrderList.status.${(order.orderStatus || "").toLowerCase()}`,
-                        order.orderStatus || "",
+                        `purchaseOrderList.status.${(currentOrder.orderStatus || "").toLowerCase()}`,
+                        currentOrder.orderStatus || "",
                       )}
-                      color={getStatusColor(order.orderStatus)}
+                      color={getStatusColor(currentOrder.orderStatus)}
                       size="small"
                     />
                   </Box>
@@ -233,7 +309,7 @@ const PurchaseOrderStatusAction = ({ order, onClose, onUpdated }) => {
                     {t("purchaseOrderList.vendorId", "Vendor")}
                   </Typography>
                   <Typography variant="body1" fontWeight={500}>
-                    {order.vendorName || order.vendorId}
+                    {currentOrder.vendorName || currentOrder.vendorId}
                   </Typography>
                 </Box>
 
@@ -242,8 +318,8 @@ const PurchaseOrderStatusAction = ({ order, onClose, onUpdated }) => {
                     {t("purchaseOrderList.orderDate", "Order Date")}
                   </Typography>
                   <Typography variant="body1">
-                    {order.orderDate
-                      ? new Date(order.orderDate).toLocaleDateString()
+                    {currentOrder.orderDate
+                      ? new Date(currentOrder.orderDate).toLocaleDateString()
                       : "—"}
                   </Typography>
                 </Box>
@@ -257,7 +333,7 @@ const PurchaseOrderStatusAction = ({ order, onClose, onUpdated }) => {
                     fontWeight={600}
                     color="primary.main"
                   >
-                    ${Number(order.purchaseAmount || 0).toFixed(2)}
+                    ${Number(currentOrder.purchaseAmount || 0).toFixed(2)}
                   </Typography>
                 </Box>
               </Box>
@@ -303,10 +379,14 @@ const PurchaseOrderStatusAction = ({ order, onClose, onUpdated }) => {
                     </TableHead>
                     <TableBody>
                       {fullOrder.items.map((item, index) => {
-                        const productName =
-                          productMap[String(item.productCode)] || "";
+                        const product =
+                          productMap[String(item?.productCode || "").trim()] ||
+                          null;
                         const displayProduct =
-                          productName || item.productCode || "-";
+                          String(product?.commonName || "").trim() ||
+                          String(product?.productName || "").trim() ||
+                          String(item?.productCode || "").trim() ||
+                          "-";
                         const rawType = String(item.itemType || "")
                           .trim()
                           .toUpperCase();
@@ -436,6 +516,40 @@ const PurchaseOrderStatusAction = ({ order, onClose, onUpdated }) => {
               </Box>
             )}
 
+            <Box
+              sx={{
+                mt: 2,
+                p: 1.5,
+                border: "1px solid var(--color-gray-200)",
+                borderRadius: 1,
+                backgroundColor: "background.paper",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 2,
+                flexWrap: "wrap",
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                {t(
+                  "purchaseOrderList.action.regeneratePdfHint",
+                  "Regenerate and replace the document for this PO and current status.",
+                )}
+              </Typography>
+              <Button
+                variant="outlined"
+                onClick={handleManualRegeneratePdf}
+                disabled={loading !== null || !fullOrder}
+                startIcon={
+                  loading === "MANUAL_PDF" ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : undefined
+                }
+              >
+                {t("purchaseOrderList.action.regeneratePdf", "Regenerate PDF")}
+              </Button>
+            </Box>
+
             {error && (
               <Typography
                 sx={{
@@ -445,6 +559,18 @@ const PurchaseOrderStatusAction = ({ order, onClose, onUpdated }) => {
                 }}
               >
                 {error}
+              </Typography>
+            )}
+
+            {success && (
+              <Typography
+                sx={{
+                  mt: 2,
+                  color: "var(--color-success)",
+                  fontSize: "0.875rem",
+                }}
+              >
+                {success}
               </Typography>
             )}
           </>

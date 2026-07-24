@@ -41,6 +41,11 @@ const CompanyModern = () => {
   const { shouldUseBlockLayout } = useResponsiveLayout();
   const [helpOpen, setHelpOpen] = useState(false);
 
+  const getLanguageLabel = (language) => {
+    const code = String(language || "").trim();
+    return code ? t(`languages.${code}`, code) : "-";
+  };
+
   useEffect(() => {
     setLoading(true);
     request("GET", "/api/companies")
@@ -80,9 +85,20 @@ const CompanyModern = () => {
   const filteredCompanies = companyData.filter((company) => {
     if (!search) return true;
     const searchLower = search.toLowerCase();
+    const searchableText = [
+      company.companyId,
+      company.companyName,
+      company.biZCode,
+      company.addressLine1,
+      company.addressLine2,
+      company.postalCode,
+      company.city,
+      company.language,
+    ]
+      .map((value) => String(value || "").toLowerCase())
+      .join(" ");
     return (
-      company.companyName?.toLowerCase().includes(searchLower) ||
-      company.companyId?.toString().includes(searchLower)
+      searchableText.includes(searchLower)
     );
   });
 
@@ -99,6 +115,42 @@ const CompanyModern = () => {
       headerName: t("companyList.companyName", "Company Name"),
       flex: 1,
       minWidth: 250,
+    },
+    {
+      field: "biZCode",
+      headerName: t("companyList.biZCode", "Business Code"),
+      width: 150,
+      headerAlign: "center",
+      align: "center",
+    },
+    {
+      field: "city",
+      headerName: t("companyList.city", "City"),
+      width: 140,
+      headerAlign: "center",
+      align: "center",
+    },
+    {
+      field: "language",
+      headerName: t("companyList.language", "Language"),
+      width: 140,
+      headerAlign: "center",
+      align: "center",
+      renderCell: (params) => getLanguageLabel(params.value),
+    },
+    {
+      field: "showCompany",
+      headerName: t("companyList.showCompany", "Show Company"),
+      width: 140,
+      headerAlign: "center",
+      align: "center",
+      renderCell: (params) => (
+        <Chip
+          label={params.value ? t("basic.true", "Yes") : t("basic.false", "No")}
+          color={params.value ? "success" : "default"}
+          size="small"
+        />
+      ),
     },
     {
       field: "active",
@@ -209,7 +261,7 @@ const CompanyModern = () => {
         title={t("companyList.helpTitle", "Company help")}
         content={t(
           "companyList.helpBody",
-          "This page lists companies. Use Add to create a new company. Use Edit or Delete to modify existing records.",
+          "This page lists companies. Use Add to create a new company. Use Edit or Delete to modify existing records. Company records now include business code, address, postal code, city, language, visibility, and active status.",
         )}
       />
 
