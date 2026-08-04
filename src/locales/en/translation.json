@@ -816,7 +816,12 @@
     "detailsHeading": "Project Details",
     "currentLeadershipHeading": "Current Project Leadership",
     "detail": "View Detail",
-    "addLeader": "Add Project Leader"
+    "addLeader": "Add Project Leader",
+    "captureGps": "Capture GPS",
+    "gpsDialogTitle": "Capture Project GPS",
+    "gpsDialogBody": "Capture your current device location and update this project record.",
+    "gpsNotSupported": "GPS is not supported on this device/browser.",
+    "gpsUpdateFailed": "Failed to capture GPS or update project."
   },
   "projectstream": {
     "streamName": "Stream Name",

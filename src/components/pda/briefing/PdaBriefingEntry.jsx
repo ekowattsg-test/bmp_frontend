@@ -5,15 +5,15 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardActionArea,
-  CardContent,
   CircularProgress,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
   Stack,
   Typography,
 } from "@mui/material";
-import CampaignIcon from "@mui/icons-material/Campaign";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import GpsFixedIcon from "@mui/icons-material/GpsFixed";
 import { getPdaStaffId } from "../common/pda_user_helper";
 import {
   createBriefingSession,
@@ -23,6 +23,7 @@ import {
   getSessionId,
   isLeadershipMember,
 } from "./briefingFlowHelpers";
+import { resolveNearbyProjectCode } from "../common/nearby_project_helper";
 
 const safeString = (value) =>
   value === null || value === undefined ? "" : String(value).trim();
@@ -41,10 +42,29 @@ export default function PdaBriefingEntry() {
   const staffId = useMemo(() => safeString(getPdaStaffId()), []);
 
   const [projects, setProjects] = useState([]);
+  const [selectedProjectCode, setSelectedProjectCode] = useState("");
+  const [nearbyProjectCode, setNearbyProjectCode] = useState("");
   const [loading, setLoading] = useState(true);
   const [submittingCode, setSubmittingCode] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [infoMsg, setInfoMsg] = useState("");
+
+  const prioritizeDefaultProject = useCallback((list, defaultProjectCode) => {
+    const normalizedDefault = safeString(defaultProjectCode);
+    if (!normalizedDefault) return list;
+
+    const match = list.find(
+      (project) => safeString(project?.projectCode) === normalizedDefault,
+    );
+    if (!match) return list;
+
+    return [
+      match,
+      ...list.filter(
+        (project) => safeString(project?.projectCode) !== normalizedDefault,
+      ),
+    ];
+  }, []);
 
   const loadProjects = useCallback(async () => {
     setLoading(true);
@@ -54,16 +74,28 @@ export default function PdaBriefingEntry() {
       const activeProjects = (Array.isArray(result) ? result : []).filter(
         (project) => String(project?.status || "").trim() === "ACTIVE",
       );
-      setProjects(activeProjects);
+
+      const nearbyProjectCode = await resolveNearbyProjectCode(activeProjects);
+      const prioritizedProjects = prioritizeDefaultProject(
+        activeProjects,
+        nearbyProjectCode,
+      );
+      setProjects(prioritizedProjects);
+      setNearbyProjectCode(safeString(nearbyProjectCode));
+      setSelectedProjectCode(
+        safeString(prioritizedProjects[0]?.projectCode || ""),
+      );
     } catch (error) {
       setProjects([]);
+      setSelectedProjectCode("");
+      setNearbyProjectCode("");
       setErrorMsg(
         error?.response?.data?.message || t("pda.briefing.loadProjectFailed"),
       );
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [prioritizeDefaultProject, t]);
 
   useEffect(() => {
     loadProjects();
@@ -159,6 +191,31 @@ export default function PdaBriefingEntry() {
     }
   };
 
+  const renderProjectLabel = (projectCode, includeCode = true) => {
+    const normalizedCode = safeString(projectCode);
+    const project = projects.find(
+      (item) => safeString(item?.projectCode) === normalizedCode,
+    );
+    const name =
+      safeString(project?.projectName) || t("pda.briefing.noProjectName");
+    const status = safeString(project?.status);
+    const isGpsMatched = normalizedCode === safeString(nearbyProjectCode);
+
+    return (
+      <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+        <Box component="span">{name}</Box>
+        {isGpsMatched ? (
+          <GpsFixedIcon
+            sx={{ fontSize: "0.9rem", color: "info.main" }}
+            titleAccess={t("pda.fieldQrCode.gpsDetected", "GPS detected")}
+          />
+        ) : null}
+        {includeCode ? <Box component="span">({normalizedCode})</Box> : null}
+        {status ? <Box component="span">• {status}</Box> : null}
+      </Box>
+    );
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 6 }}>
@@ -179,46 +236,44 @@ export default function PdaBriefingEntry() {
       {projects.length === 0 ? (
         <Alert severity="warning">{t("pda.briefing.noProject")}</Alert>
       ) : (
-        projects.map((project) => {
-          const busy = submittingCode === project.projectCode;
-          return (
-            <Card key={project.projectCode} variant="outlined">
-              <CardActionArea
-                onClick={() => handleSelectProject(project.projectCode)}
-                disabled={Boolean(submittingCode)}
-              >
-                <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
-                  <Box
-                    sx={{ display: "flex", alignItems: "center", gap: 1.25 }}
-                  >
-                    <CampaignIcon sx={{ color: "primary.main" }} />
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="subtitle2" fontWeight={700} noWrap>
-                        {project.projectCode}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        noWrap
-                      >
-                        {project.projectName || t("pda.briefing.noProjectName")}
-                        {project.status ? ` • ${project.status}` : ""}
-                      </Typography>
-                    </Box>
+        <>
+          <FormControl fullWidth size="small">
+            <InputLabel>
+              {t("pda.fieldQrCode.projectCode", "Project Code")}
+            </InputLabel>
+            <Select
+              value={selectedProjectCode}
+              label={t("pda.fieldQrCode.projectCode", "Project Code")}
+              renderValue={(value) => renderProjectLabel(value, true)}
+              onChange={(event) => {
+                setSelectedProjectCode(String(event.target.value || ""));
+                setInfoMsg("");
+              }}
+              disabled={Boolean(submittingCode)}
+            >
+              {projects.map((project) => {
+                const code = safeString(project?.projectCode);
+                return (
+                  <MenuItem key={code} value={code}>
+                    {renderProjectLabel(code, true)}
+                  </MenuItem>
+                );
+              })}
+            </Select>
+          </FormControl>
 
-                    {busy ? (
-                      <CircularProgress size={18} />
-                    ) : (
-                      <ChevronRightIcon
-                        sx={{ color: "text.disabled", fontSize: 20 }}
-                      />
-                    )}
-                  </Box>
-                </CardContent>
-              </CardActionArea>
-            </Card>
-          );
-        })
+          <Button
+            variant="contained"
+            onClick={() => handleSelectProject(selectedProjectCode)}
+            disabled={!selectedProjectCode || Boolean(submittingCode)}
+          >
+            {submittingCode ? (
+              <CircularProgress size={18} color="inherit" />
+            ) : (
+              t("basic.confirm")
+            )}
+          </Button>
+        </>
       )}
 
       <Button

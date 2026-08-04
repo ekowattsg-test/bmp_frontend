@@ -5,6 +5,12 @@ import {
   InputAdornment,
   IconButton,
   Chip,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Typography,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import {
@@ -12,6 +18,7 @@ import {
   Edit as EditIcon,
   Assignment as AssignmentIcon,
   Visibility as ViewIcon,
+  GpsFixed as GpsFixedIcon,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
@@ -38,6 +45,10 @@ const ProjectModern = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [gpsDialogOpen, setGpsDialogOpen] = useState(false);
+  const [gpsTargetProject, setGpsTargetProject] = useState(null);
+  const [gpsSaving, setGpsSaving] = useState(false);
+  const [gpsError, setGpsError] = useState("");
   const { t } = useTranslation();
   const { shouldUseBlockLayout } = useResponsiveLayout();
 
@@ -92,6 +103,72 @@ const ProjectModern = () => {
     setSelectedProject(null);
     if (refreshNeeded) setRefresh(true);
   };
+
+  const openGpsDialog = useCallback((project) => {
+    setGpsTargetProject(project);
+    setGpsError("");
+    setGpsDialogOpen(true);
+  }, []);
+
+  const closeGpsDialog = useCallback(() => {
+    if (gpsSaving) return;
+    setGpsDialogOpen(false);
+    setGpsTargetProject(null);
+    setGpsError("");
+  }, [gpsSaving]);
+
+  const captureAndUpdateGps = useCallback(async () => {
+    if (!gpsTargetProject?.projectCode) return;
+    if (!navigator?.geolocation) {
+      setGpsError(t("project.gpsNotSupported"));
+      return;
+    }
+
+    setGpsSaving(true);
+    setGpsError("");
+
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        });
+      });
+
+      const { latitude, longitude } = position.coords;
+      const latitudeText = Number(latitude).toFixed(13);
+      const longitudeText = Number(longitude).toFixed(13);
+      const payload = {
+        projectCode: gpsTargetProject.projectCode,
+        projectName: gpsTargetProject.projectName,
+        projectDescription: gpsTargetProject.projectDescription,
+        customerId: gpsTargetProject.customerId,
+        startDate: gpsTargetProject.startDate,
+        endDate: gpsTargetProject.endDate,
+        projectLocation: gpsTargetProject.projectLocation,
+        latitude: latitudeText,
+        longitude: longitudeText,
+        status: gpsTargetProject.status,
+        streamCount: gpsTargetProject.streamCount,
+        briefingId: gpsTargetProject.briefingId,
+      };
+
+      await request(
+        "PUT",
+        `/api/projects/${gpsTargetProject.projectCode}`,
+        payload,
+      );
+
+      setGpsDialogOpen(false);
+      setGpsTargetProject(null);
+      setRefresh(true);
+    } catch {
+      setGpsError(t("project.gpsUpdateFailed"));
+    } finally {
+      setGpsSaving(false);
+    }
+  }, [gpsTargetProject, t]);
 
   const enrichedProjects = useMemo(() => {
     const s = search.toLowerCase();
@@ -174,7 +251,7 @@ const ProjectModern = () => {
       {
         field: "actions",
         headerName: t("basic.actions"),
-        width: 100,
+        width: 150,
         sortable: false,
         filterable: false,
         headerAlign: "center",
@@ -205,11 +282,19 @@ const ProjectModern = () => {
             >
               <EditIcon fontSize="small" />
             </IconButton>
+            <IconButton
+              size="small"
+              color="secondary"
+              onClick={() => openGpsDialog(params.row)}
+              title={t("project.captureGps")}
+            >
+              <GpsFixedIcon fontSize="small" />
+            </IconButton>
           </Box>
         ),
       },
     ],
-    [t, handleEdit, handleDetail],
+    [t, handleEdit, handleDetail, openGpsDialog],
   );
 
   if (loading) return <LoadingState message={t("project.loading")} />;
@@ -297,6 +382,19 @@ const ProjectModern = () => {
               onView={handleDetail}
               onEdit={handleEdit}
               enableActions
+              extraContent={
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<GpsFixedIcon fontSize="small" />}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openGpsDialog(item);
+                  }}
+                >
+                  {t("project.captureGps")}
+                </Button>
+              }
               leadingMedia={{
                 placeholder: (
                   <AssignmentIcon
@@ -391,6 +489,39 @@ const ProjectModern = () => {
           onClose={() => handleViewCancel(false)}
         />
       )}
+
+      <Dialog
+        open={gpsDialogOpen}
+        onClose={closeGpsDialog}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>{t("project.gpsDialogTitle")}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            {gpsTargetProject?.projectName || gpsTargetProject?.projectCode}
+          </Typography>
+          <Typography variant="body2">{t("project.gpsDialogBody")}</Typography>
+          {gpsError ? (
+            <Typography variant="body2" color="error" sx={{ mt: 2 }}>
+              {gpsError}
+            </Typography>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeGpsDialog} disabled={gpsSaving}>
+            {t("basic.cancel")}
+          </Button>
+          <Button
+            variant="contained"
+            onClick={captureAndUpdateGps}
+            disabled={gpsSaving}
+            startIcon={<GpsFixedIcon fontSize="small" />}
+          >
+            {gpsSaving ? t("basic.loading") : t("project.captureGps")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

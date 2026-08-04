@@ -816,7 +816,12 @@
     "detailsHeading": "项目详情",
     "currentLeadershipHeading": "当前项目负责人",
     "detail": "查看详情",
-    "addLeader": "添加项目负责人"
+    "addLeader": "添加项目负责人",
+    "captureGps": "采集GPS",
+    "gpsDialogTitle": "采集项目GPS",
+    "gpsDialogBody": "采集当前设备位置并更新此项目记录。",
+    "gpsNotSupported": "当前设备或浏览器不支持GPS定位。",
+    "gpsUpdateFailed": "采集GPS或更新项目失败。"
   },
   "projectstream": {
     "streamName": "流程名称",
