@@ -31,6 +31,12 @@ const StaffProfile = () => {
     loadStaffProfilingData();
   }, [userCompanyId, isUserLevelNine]);
 
+  useEffect(() => {
+    if (activeTab === "dashboard") {
+      loadStaffProfilingData();
+    }
+  }, [activeTab]);
+
   const loadStaffProfilingData = async () => {
     try {
       setLoading(true);
@@ -52,12 +58,74 @@ const StaffProfile = () => {
 
         setStaffCount(staffs.length);
 
-        // TODO: Fetch skill sets data
-        setSkillSetCount(0);
+        const staffIds = staffs
+          .map((staff) => String(staff?.staffId || "").trim())
+          .filter(Boolean);
 
-        // TODO: Calculate overall merit/demerit from staff data
-        setOverallMerit(0);
-        setOverallDemerit(0);
+        if (staffIds.length === 0) {
+          setSkillSetCount(0);
+          setOverallMerit(0);
+          setOverallDemerit(0);
+          return;
+        }
+
+        const [skillProfilesByStaff, meritProfilesByStaff] = await Promise.all([
+          Promise.all(
+            staffIds.map(async (staffId) => {
+              try {
+                const skillResponse = await request(
+                  "GET",
+                  `/api/staffskillprofiles/staffid/${encodeURIComponent(staffId)}`,
+                );
+                return Array.isArray(skillResponse?.data)
+                  ? skillResponse.data
+                  : skillResponse?.data?.items || [];
+              } catch {
+                return [];
+              }
+            }),
+          ),
+          Promise.all(
+            staffIds.map(async (staffId) => {
+              try {
+                const meritResponse = await request(
+                  "GET",
+                  `/api/staffmeritprofiles?staffId=${encodeURIComponent(staffId)}`,
+                );
+                return Array.isArray(meritResponse?.data)
+                  ? meritResponse.data
+                  : meritResponse?.data?.items || [];
+              } catch {
+                return [];
+              }
+            }),
+          ),
+        ]);
+
+        const uniqueSkillIds = new Set();
+        skillProfilesByStaff.flat().forEach((profile) => {
+          const skillId = String(profile?.staffSkillId || "").trim();
+          if (skillId) {
+            uniqueSkillIds.add(skillId);
+          }
+        });
+        setSkillSetCount(uniqueSkillIds.size);
+
+        const meritPointSummary = meritProfilesByStaff.flat().reduce(
+          (acc, profile) => {
+            const points = Number(profile?.meritPoints || 0);
+            if (points > 0) {
+              acc.merit += points;
+            } else if (points < 0) {
+              acc.demerit += Math.abs(points);
+            }
+            return acc;
+          },
+          { merit: 0, demerit: 0 },
+        );
+
+        setOverallMerit(meritPointSummary.merit);
+        setOverallDemerit(meritPointSummary.demerit);
       }
     } catch (error) {
       console.error("Error loading staff profiling data:", error);
@@ -125,6 +193,11 @@ const StaffProfile = () => {
     );
   };
 
+  const handleBackToDashboard = () => {
+    setActiveTab("dashboard");
+    loadStaffProfilingData();
+  };
+
   return (
     <Box>
       <PageHeader
@@ -150,16 +223,16 @@ const StaffProfile = () => {
       <Box sx={{ p: 2 }}>
         {activeTab === "dashboard" && renderDashboard()}
         {activeTab === "skillProfile" && (
-          <StaffSkillProfile onBack={() => setActiveTab("dashboard")} />
+          <StaffSkillProfile onBack={handleBackToDashboard} />
         )}
         {activeTab === "meritProfile" && (
-          <StaffMeritProfile onBack={() => setActiveTab("dashboard")} />
+          <StaffMeritProfile onBack={handleBackToDashboard} />
         )}
         {activeTab === "skillAnalysis" && (
-          <StaffSkillProfileAnalysis onBack={() => setActiveTab("dashboard")} />
+          <StaffSkillProfileAnalysis onBack={handleBackToDashboard} />
         )}
         {activeTab === "meritAnalysis" && (
-          <StaffMeritProfileAnalysis onBack={() => setActiveTab("dashboard")} />
+          <StaffMeritProfileAnalysis onBack={handleBackToDashboard} />
         )}
       </Box>
     </Box>

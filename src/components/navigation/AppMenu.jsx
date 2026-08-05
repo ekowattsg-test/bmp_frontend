@@ -126,6 +126,11 @@ const AppMenu = () => {
             icon: <AutoStories />,
           },
           {
+            to: "/staffmerit",
+            label: t("menu.staffMeritList", "Staff Merit List"),
+            icon: <AutoStories />,
+          },
+          {
             to: "/staff-excel-upload",
             label: t("menu.staffExcelUpload", "Staff Excel Upload"),
             icon: <UploadFile />,
@@ -259,6 +264,14 @@ const AppMenu = () => {
           {
             to: "/project-status-control",
             label: t("menu.projectStatusControl", "Project Status Control"),
+            icon: <Task />,
+          },
+          {
+            to: "/project-skill-match-analysis",
+            label: t(
+              "menu.projectSkillMatchAnalysis",
+              "Project Skill Match Analysis",
+            ),
             icon: <Task />,
           },
         ],

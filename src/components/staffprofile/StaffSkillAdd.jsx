@@ -270,6 +270,14 @@ const StaffSkillAdd = ({ staff, onCancel, onSuccess }) => {
           }}
         >
           <TextField
+            label={t("projectTask.staffName", "Staff Name")}
+            value={String(staff?.staffName || "")}
+            fullWidth
+            size="small"
+            disabled
+          />
+
+          <TextField
             label={t("staffManagement.issuedBy")}
             value={skillFormData.issuedBy}
             onChange={(e) => handleSkillFormChange("issuedBy", e.target.value)}
@@ -490,8 +498,18 @@ const StaffSkillAdd = ({ staff, onCancel, onSuccess }) => {
             overflow: "hidden",
             textOverflow: "ellipsis",
           }}
-        ></Typography>
+        >
+          {t("staffManagement.selectSkill")}
+        </Typography>
       </Box>
+
+      <TextField
+        label={t("projectTask.staffName", "Staff Name")}
+        value={String(staff?.staffName || "")}
+        fullWidth
+        size="small"
+        disabled
+      />
 
       {error && <Alert severity="error">{error}</Alert>}
 

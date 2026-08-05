@@ -47,6 +47,9 @@ import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 const ListContainer = ({
   title,
   subtitle,
+  showBackButton = false,
+  onBack,
+  backLabel,
   onHelpClick,
   searchPlaceholder = "Search...",
   data = [],
@@ -81,6 +84,9 @@ const ListContainer = ({
       <HeaderBar
         title={title}
         subtitle={subtitle}
+        showBackButton={showBackButton}
+        onBack={onBack}
+        backLabel={backLabel}
         onHelp={onHelpClick}
         actions={
           <>

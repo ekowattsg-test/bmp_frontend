@@ -163,6 +163,12 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               path: "/staffskill",
             },
             {
+              key: "staffMerits",
+              label: t("menu.staffMeritList", "Staff Merit List"),
+              icon: <AutoStoriesIcon fontSize="small" />,
+              path: "/staffmerit",
+            },
+            {
               key: "staffExcelUpload",
               label: t("menu.staffExcelUpload", "Staff Excel Upload"),
               icon: <UploadFileIcon fontSize="small" />,
@@ -339,6 +345,16 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               label: t("menu.projectStatusControl", "Project Status Control"),
               icon: <TaskIcon fontSize="small" />,
               path: "/project-status-control",
+              minLevel: 3,
+            },
+            {
+              key: "projectSkillMatchAnalysis",
+              label: t(
+                "menu.projectSkillMatchAnalysis",
+                "Project Skill Match Analysis",
+              ),
+              icon: <TaskIcon fontSize="small" />,
+              path: "/project-skill-match-analysis",
               minLevel: 3,
             },
           ],

@@ -80,6 +80,7 @@ const StaffSkillProfile = ({ onBack }) => {
   // Get user level and company info
   const userLevel = userInfo?.userLevel || userInfo?.level || 0;
   const isUserLevelNine = userLevel === 9 || userLevel === "9";
+  const canDeleteProfileRecord = Number(userLevel) >= 5;
   const userCompanyId = userInfo?.companyId;
 
   // Load staff list
@@ -274,11 +275,13 @@ const StaffSkillProfile = ({ onBack }) => {
   };
 
   const handleDeleteSkillClick = (skill) => {
+    if (!canDeleteProfileRecord) return;
     setSkillToDelete(skill);
     setShowDeleteConfirmation(true);
   };
 
   const handleDeleteSkillConfirm = async () => {
+    if (!canDeleteProfileRecord) return;
     setError("");
     try {
       if (!skillToDelete || !skillToDelete.staffSkillProfileId) {
@@ -514,7 +517,11 @@ const StaffSkillProfile = ({ onBack }) => {
                     setSkillToEdit(item);
                     setShowEditFrame(true);
                   }}
-                  onDelete={(item) => handleDeleteSkillClick(item)}
+                  onDelete={
+                    canDeleteProfileRecord
+                      ? (item) => handleDeleteSkillClick(item)
+                      : undefined
+                  }
                   t={t}
                 />
               )}
@@ -596,14 +603,16 @@ const StaffSkillProfile = ({ onBack }) => {
                           >
                             <EditIcon fontSize="small" />
                           </IconButton>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleDeleteSkillClick(skill)}
-                            title={t("staffManagement.delete")}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
+                          {canDeleteProfileRecord ? (
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleDeleteSkillClick(skill)}
+                              title={t("staffManagement.delete")}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          ) : null}
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -663,13 +672,14 @@ const StaffSkillProfile = ({ onBack }) => {
         "staffManagement.staffSkillProfileSubtitle",
         "Manage staff member skills and certifications",
       )}
+      showBackButton={Boolean(onBack)}
+      onBack={onBack}
+      backLabel={t("common.back")}
       searchPlaceholder={t("staffManagement.searchStaff", "Search staff...")}
       data={staffListViewData}
       columns={["staffName", "skillCountDisplay"]}
       t={t}
-      onAdd={() => {}}
       onEdit={handleStaffClick}
-      onDelete={() => {}}
       searchValue={staffSearch}
       onSearchChange={setStaffSearch}
       filterFunction={filterStaffList}

@@ -14,6 +14,8 @@ import PurchaseOrderModern from "./information/PurchaseOrderModern";
 import RequisitionOrderModern from "./information/RequisitionOrderModern";
 import DeliveryOrderModern from "./information/DeliveryOrderModern";
 import StaffProfile from "./staffprofile/staffProfile";
+import StaffMeritList from "./staffprofile/StaffMeritList";
+import StaffProjectSkillMatchAnalysis from "./staffprofile/StaffProjectSkillMatchAnalysis";
 import StaffSkillModern from "./baseInformation/StaffSkillModern";
 import StockTakeOn from "./stock/StockTakeOn";
 import StockIn from "./stock/StockIn";
@@ -75,6 +77,7 @@ function MainPage() {
         />
         <Route path="/deliveryorder" element={<DeliveryOrderModern />} />
         <Route path="/staffskill" element={<StaffSkillModern />} />
+        <Route path="/staffmerit" element={<StaffMeritList />} />
         <Route path="/staff-excel-upload" element={<StaffExcelUpload />} />
         <Route path="/product-excel-upload" element={<ProductExcelUpload />} />
         <Route path="/stockmovementcode" element={<StockMovementCode />} />
@@ -94,6 +97,10 @@ function MainPage() {
         />
         <Route path="/product" element={<ProductModern />} />
         <Route path="/staffprofile" element={<StaffProfile />} />
+        <Route
+          path="/project-skill-match-analysis"
+          element={<StaffProjectSkillMatchAnalysis />}
+        />
         <Route path="/language-settings" element={<LanguageSettings />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/profile" element={<UserProfile />} />

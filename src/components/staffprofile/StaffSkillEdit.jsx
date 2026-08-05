@@ -206,7 +206,9 @@ const StaffSkillEdit = ({ skill, staff, onCancel, onSuccess }) => {
             overflow: "hidden",
             textOverflow: "ellipsis",
           }}
-        ></Typography>
+        >
+          {t("staffManagement.editSkillDetails")} - {skill.skillName}
+        </Typography>
       </Box>
 
       {error && <Alert severity="error">{error}</Alert>}
@@ -225,6 +227,22 @@ const StaffSkillEdit = ({ skill, staff, onCancel, onSuccess }) => {
           borderColor: "divider",
         }}
       >
+        <TextField
+          label={t("projectTask.staffName", "Staff Name")}
+          value={String(staff?.staffName || "")}
+          fullWidth
+          size="small"
+          disabled
+        />
+
+        <TextField
+          label={t("staffManagement.skillName")}
+          value={String(skill?.skillName || "")}
+          fullWidth
+          size="small"
+          disabled
+        />
+
         <TextField
           label={t("staffManagement.issuedBy")}
           value={skillFormData.issuedBy}
