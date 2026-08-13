@@ -45,6 +45,7 @@ import ProjectManpowerGenerate from "./project/ProjectManpowerGenerate";
 import ProjectTaskRecalculate from "./project/ProjectTaskRecalculate";
 import RequisitionGenerate from "./project/RequisitionGenerate";
 import ProjectStatusControl from "./project/ProjectStatusControl";
+import BuildingProgressPage from "./project/buildingProgress/BuildingProgressPage";
 import VehicleModern from "./information/VehicleModern";
 import WorkOrderModern from "./workorder/WorkOrderModern";
 import OperationRoleModern from "./baseInformation/OperationRoleModern";
@@ -131,6 +132,10 @@ function MainPage() {
         <Route
           path="/project-status-control"
           element={<ProjectStatusControl />}
+        />
+        <Route
+          path="/project/building-progress"
+          element={<BuildingProgressPage />}
         />
         <Route
           path="/briefing/:briefingId/content"

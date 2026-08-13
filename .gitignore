@@ -42,3 +42,6 @@ Thumbs.db
 
 # Project references folder (canonical API/field docs)
 src/references/
+
+# Local Copilot workflow instructions
+.github/copilot-instructions.md

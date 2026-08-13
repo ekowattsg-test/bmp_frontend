@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useState } from "react";
+﻿import React, { useContext, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -23,6 +23,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { Assessment as AssessmentIcon } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import {
   Bar,
@@ -38,7 +39,8 @@ import {
 } from "recharts";
 import { AuthContext } from "../../context/authContext";
 import { request } from "../../helpers/axios_helper";
-import { HeaderBar } from "../common";
+import { PageHeader } from "../common";
+import HelpDialog from "../common/HelpDialog";
 
 const ENABLE_DEPARTMENT_ANALYSIS =
   String(import.meta.env.VITE_ENABLE_DEPARTMENT_ANALYSIS || "false")
@@ -188,6 +190,7 @@ const StaffProjectSkillMatchAnalysis = ({ onBack }) => {
   const [selectedKpiDrilldown, setSelectedKpiDrilldown] = useState("all");
   const [showZeroRequirementDays, setShowZeroRequirementDays] = useState(false);
   const [selectedMatchDay, setSelectedMatchDay] = useState("");
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     const earliestDate = getEarliestUncompletedTaskDate(
@@ -823,12 +826,24 @@ const StaffProjectSkillMatchAnalysis = ({ onBack }) => {
 
   return (
     <Box>
-      <HeaderBar
-        showBackButton={Boolean(onBack)}
-        onBack={onBack}
-        backLabel={t("common.back")}
+      <PageHeader
         title={t("staffManagement.projectSkillMatchAnalysis")}
         subtitle={t("staffManagement.projectSkillMatchSubtitle")}
+        icon={AssessmentIcon}
+        onHelpClick={() => setHelpOpen(true)}
+      />
+
+      <HelpDialog
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title={t(
+          "staffManagement.projectSkillMatchHelpTitle",
+          "Project Skill Match Help",
+        )}
+        content={t(
+          "staffManagement.projectSkillMatchHelpBody",
+          "The report counts by skill and by day, not as one total across all tasks.\n\nIf the same skill appears in multiple tasks on the same day, the required units are first aggregated for that skill. Matching then compares the aggregated requirement with the number of unique qualified staff available for that skill.\n\nExample 1: Task 1 needs Skill A (2 units) and Task 2 needs Skill A (1 unit). Three staff have Skill A. Result: required 3, matched 3, shortage 0, excess 0.\n\nExample 2: Task 1 needs Skill A (2 units) and Task 2 needs Skill A (1 unit). Two staff have Skill A. Result: required 3, matched 2, shortage 1, excess 0.\n\nExample 3: Task 1 needs Skill A (2 units) and Task 2 needs Skill A (1 unit). Four staff have Skill A. Result: required 3, matched 3, shortage 0, excess 1.\n\nExample 4: Staff 1 has Skill A and Skill B. Task 1 needs Skill A. Task 2 needs Skill B. Staff 1 can satisfy both skills separately because the report counts each skill requirement independently.",
+        )}
       />
 
       <Box sx={{ mb: 2, display: "flex", gap: 2, flexWrap: "wrap" }}>
@@ -1400,26 +1415,174 @@ const StaffProjectSkillMatchAnalysis = ({ onBack }) => {
               {t("staffManagement.matchCandidateTitle")}
             </DialogTitle>
             <DialogContent>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                {t("staffManagement.analysisProject")}:{" "}
-                {selectedRequirement?.projectCode || "-"} |{" "}
-                {t("staffManagement.taskName")}:{" "}
-                {selectedRequirement?.taskName || "-"}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {t("staffManagement.skillName")}:{" "}
-                {selectedRequirement?.skillName || "-"} |{" "}
-                {t("staffManagement.matchRequiredUnits")}:{" "}
-                {selectedRequirement?.requiredUnits || 0} |{" "}
-                {t("staffManagement.matchAvailableQualified")}:{" "}
-                {selectedRequirement?.availableQualified || 0}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {t("staffManagement.analysisDateFrom")} -{" "}
-                {t("staffManagement.analysisDateTo")}: {periodFrom} - {periodTo}{" "}
-                | {t("staffManagement.matchEvaluationDate")}:{" "}
-                {selectedRequirement?.checkDate || "-"}
-              </Typography>
+              <Box
+                sx={{
+                  mb: 2,
+                  p: 2,
+                  bgcolor: "background.default",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 1,
+                }}
+              >
+                <Grid container spacing={1.5}>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" color="text.secondary">
+                      {t("staffManagement.analysisProject")}
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                      {selectedRequirement?.projectCode || "-"}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" color="text.secondary">
+                      {t("staffManagement.taskName")}
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                      {selectedRequirement?.taskName || "-"}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" color="text.secondary">
+                      {t("staffManagement.skillName")}
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                      {selectedRequirement?.skillName || "-"}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" color="text.secondary">
+                      {t("staffManagement.matchEvaluationDate")}
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                      {selectedRequirement?.checkDate || "-"}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              <Box
+                sx={{
+                  mb: 2,
+                  p: 1.5,
+                  bgcolor: "background.paper",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 1,
+                }}
+              >
+                <Box
+                  sx={{
+                    mb: 1.25,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 1,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary">
+                    {t("staffManagement.matchStatus")}
+                  </Typography>
+                  <Box
+                    component="span"
+                    sx={{
+                      px: 1,
+                      py: 0.25,
+                      borderRadius: 999,
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      bgcolor:
+                        Number(selectedRequirement?.availableQualified || 0) >=
+                        Number(selectedRequirement?.requiredUnits || 0)
+                          ? "success.light"
+                          : "warning.light",
+                      color:
+                        Number(selectedRequirement?.availableQualified || 0) >=
+                        Number(selectedRequirement?.requiredUnits || 0)
+                          ? "success.contrastText"
+                          : "warning.contrastText",
+                    }}
+                  >
+                    {Number(selectedRequirement?.availableQualified || 0) >=
+                    Number(selectedRequirement?.requiredUnits || 0)
+                      ? t("staffManagement.matchMatchedStatus")
+                      : t("staffManagement.matchShortageStatus")}
+                  </Box>
+                </Box>
+
+                <Grid container spacing={1.5}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="caption" color="text.secondary">
+                      {t("staffManagement.analysisDateFrom")} -{" "}
+                      {t("staffManagement.analysisDateTo")}
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                      {periodFrom} - {periodTo}
+                    </Typography>
+                  </Grid>
+                  <Grid
+                    item
+                    xs={6}
+                    md={3}
+                    sx={{
+                      borderLeft: { md: "1px solid" },
+                      borderColor: { md: "divider" },
+                      pl: { md: 2 },
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{
+                        display: "block",
+                        textAlign: { xs: "center", md: "right" },
+                      }}
+                    >
+                      {t("staffManagement.matchRequiredUnits")}
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        fontWeight: 600,
+                        textAlign: { xs: "center", md: "right" },
+                      }}
+                    >
+                      {selectedRequirement?.requiredUnits || 0}
+                    </Typography>
+                  </Grid>
+                  <Grid
+                    item
+                    xs={6}
+                    md={3}
+                    sx={{
+                      borderLeft: { md: "1px solid" },
+                      borderColor: { md: "divider" },
+                      pl: { md: 2 },
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{
+                        display: "block",
+                        textAlign: { xs: "center", md: "right" },
+                      }}
+                    >
+                      {t("staffManagement.matchAvailableQualified")}
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        fontWeight: 600,
+                        textAlign: { xs: "center", md: "right" },
+                      }}
+                    >
+                      {selectedRequirement?.availableQualified || 0}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Box>
 
               {candidateError ? (
                 <Alert severity="error">{candidateError}</Alert>
