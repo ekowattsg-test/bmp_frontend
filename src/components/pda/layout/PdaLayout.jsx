@@ -20,7 +20,7 @@ import { getPdaDisplayName } from "../common/pda_user_helper";
 import PdaBottomNav from "./PdaBottomNav";
 
 // Tab root paths — no back button shown on these
-const TAB_ROOTS = ["/pda/orders", "/pda/stockcard", "/pda/briefing", "/pda/me"];
+const TAB_ROOTS = ["/pda/stockcard", "/pda/briefing", "/pda/me"];
 
 /**
  * PdaLayout — mobile shell for all /pda/* routes (except /pda/login).
@@ -67,10 +67,18 @@ export default function PdaLayout() {
   // Hide back button on the three tab root pages
   const isTabRoot = TAB_ROOTS.includes(location.pathname);
 
+  const isInventoryRoute =
+    location.pathname.startsWith("/pda/stockcard") ||
+    location.pathname.startsWith("/pda/receive-po-stock") ||
+    location.pathname.startsWith("/pda/stock-issue") ||
+    location.pathname.startsWith("/pda/stock-transfer-out") ||
+    location.pathname.startsWith("/pda/stock-transfer-in") ||
+    location.pathname.startsWith("/pda/asset-assignment");
+
   const pageTitle =
     location.state?.title ??
-    (location.pathname.startsWith("/pda/stockcard")
-      ? t("pda.nav.stockCard", t("menu.stockCard", "Inventory Card"))
+    (isInventoryRoute
+      ? t("pda.nav.stockCard", t("menu.stockCard", "Inventory"))
       : t("pda.layout.title"));
 
   // ── Session expired: fired by axios_helper when PDA token is rejected ───

@@ -151,7 +151,9 @@ export default function TransferIn() {
                 size="small"
                 variant="outlined"
                 endIcon={<OpenInNewIcon />}
-                onClick={() => navigate(isPda ? "/pda/orders" : "/workorder")}
+                onClick={() =>
+                  navigate(isPda ? "/pda/stockcard" : "/workorder")
+                }
               >
                 {t("transferIn.viewWorkOrders")}
               </Button>

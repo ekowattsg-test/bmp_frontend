@@ -144,7 +144,9 @@ export default function AssetAssignment() {
                 size="small"
                 variant="outlined"
                 endIcon={<OpenInNewIcon />}
-                onClick={() => navigate(isPda ? "/pda/orders" : "/workorder")}
+                onClick={() =>
+                  navigate(isPda ? "/pda/stockcard" : "/workorder")
+                }
               >
                 {t("assetAssignment.viewWorkOrders")}
               </Button>

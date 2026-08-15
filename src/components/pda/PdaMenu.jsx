@@ -1,8 +1,13 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Box, Card, CardActionArea, CardContent, Typography } from "@mui/material";
-import AssignmentIcon from "@mui/icons-material/Assignment";
+import {
+  Box,
+  Card,
+  CardActionArea,
+  CardContent,
+  Typography,
+} from "@mui/material";
 
 /**
  * PdaMenu — landing page after PDA login.
@@ -14,15 +19,7 @@ export default function PdaMenu() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const menuItems = [
-    {
-      key: "workorder",
-      label: t("pda.menu.workorder"),
-      description: t("pda.menu.workorderDesc"),
-      icon: <AssignmentIcon sx={{ fontSize: 40, color: "primary.main" }} />,
-      path: "/pda/workorder",
-    },
-  ];
+  const menuItems = [];
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>

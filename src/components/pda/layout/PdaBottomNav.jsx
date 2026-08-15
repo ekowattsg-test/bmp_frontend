@@ -13,7 +13,6 @@ import {
   Paper,
   Typography,
 } from "@mui/material";
-import AssignmentIcon from "@mui/icons-material/Assignment";
 import CampaignIcon from "@mui/icons-material/Campaign";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import PersonIcon from "@mui/icons-material/Person";
@@ -24,24 +23,60 @@ import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import MoveUpIcon from "@mui/icons-material/MoveUp";
 import HandymanIcon from "@mui/icons-material/Handyman";
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
+import WorklistIcon from "@mui/icons-material/PlaylistAddCheck";
 import { request } from "../../../helpers/axios_helper";
 
 const TAB_ITEMS = [
   {
-    route: "/pda/orders",
-    navigateTo: "/pda/orders",
-    labelKey: "pda.nav.orders",
-    icon: <AssignmentIcon />,
+    route: "/pda/stockcard",
+    labelKey: "pda.nav.stockCard",
+    icon: <Inventory2Icon />,
   },
+];
+
+const INVENTORY_MENU_ITEMS = [
   {
     route: "/pda/stockcard",
     navigateTo: "/pda/stockcard?pda=1",
     labelKey: "pda.nav.stockCard",
     icon: <Inventory2Icon />,
   },
+  {
+    route: "/pda/receive-po-stock",
+    navigateTo: "/pda/receive-po-stock",
+    labelKey: "pda.nav.receivePoStock",
+    icon: <LocalShippingIcon />,
+    requiresStockOrSiteLeader: true,
+  },
+  {
+    route: "/pda/stock-issue",
+    navigateTo: "/pda/stock-issue",
+    labelKey: "pda.nav.stockIssue",
+    icon: <MoveUpIcon />,
+    requiresStockOrSiteLeader: true,
+  },
+  {
+    route: "/pda/stock-transfer-out",
+    navigateTo: "/pda/stock-transfer-out",
+    labelKey: "pda.nav.stockTransferOut",
+    icon: <CompareArrowsIcon />,
+    requiresStockOrSiteLeader: true,
+  },
+  {
+    route: "/pda/stock-transfer-in",
+    navigateTo: "/pda/stock-transfer-in",
+    labelKey: "pda.nav.stockTransferIn",
+    icon: <CompareArrowsIcon />,
+    requiresStockOrSiteLeader: true,
+  },
+  {
+    route: "/pda/asset-assignment",
+    navigateTo: "/pda/asset-assignment",
+    labelKey: "pda.nav.assetAssignment",
+    icon: <HandymanIcon />,
+    requiresStockOrSiteLeader: true,
+  },
 ];
-
-import WorklistIcon from "@mui/icons-material/PlaylistAddCheck";
 
 const SITE_MENU_ITEMS = [
   {
@@ -71,41 +106,6 @@ const SITE_MENU_ITEMS = [
     icon: <QrCode2Icon />,
     requiresSiteLeader: true,
   },
-  {
-    route: "/pda/receive-po-stock",
-    navigateTo: "/pda/receive-po-stock",
-    labelKey: "pda.nav.receivePoStock",
-    icon: <LocalShippingIcon />,
-    requiresSiteLeader: true,
-  },
-  {
-    route: "/pda/stock-issue",
-    navigateTo: "/pda/stock-issue",
-    labelKey: "pda.nav.stockIssue",
-    icon: <MoveUpIcon />,
-    requiresSiteLeader: true,
-  },
-  {
-    route: "/pda/asset-assignment",
-    navigateTo: "/pda/asset-assignment",
-    labelKey: "pda.nav.assetAssignment",
-    icon: <HandymanIcon />,
-    requiresSiteLeader: true,
-  },
-  {
-    route: "/pda/stock-transfer-out",
-    navigateTo: "/pda/stock-transfer-out",
-    labelKey: "pda.nav.stockTransferOut",
-    icon: <CompareArrowsIcon />,
-    requiresSiteLeader: true,
-  },
-  {
-    route: "/pda/stock-transfer-in",
-    navigateTo: "/pda/stock-transfer-in",
-    labelKey: "pda.nav.stockTransferIn",
-    icon: <CompareArrowsIcon />,
-    requiresSiteLeader: true,
-  },
 ];
 
 const isSiteLeaderRole = (roleRow) => {
@@ -124,17 +124,35 @@ const isSiteLeaderRole = (roleRow) => {
   });
 };
 
+const isStockRole = (roleRow) => {
+  const candidates = [
+    roleRow?.roleName,
+    roleRow?.operationRole,
+    roleRow?.role,
+    roleRow?.name,
+  ];
+  return candidates.some((value) => {
+    const normalized = String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "");
+    return normalized === "stock";
+  });
+};
+
 /**
  * PdaBottomNav — fixed bottom tab bar.
- * Tabs: Orders | Inventory Card | Me | Site
- * "Site" opens a bottom drawer with additional navigation items (e.g. Briefing).
+ * Tabs: Inventory | Site | Me
+ * "Inventory" opens a drawer with stock functions; "Site" opens a drawer with field ops.
  */
 export default function PdaBottomNav() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [siteOpen, setSiteOpen] = useState(false);
+  const [inventoryOpen, setInventoryOpen] = useState(false);
   const [isSiteLeader, setIsSiteLeader] = useState(false);
+  const [isStock, setIsStock] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -165,9 +183,12 @@ export default function PdaBottomNav() {
           (r) => String(r?.staffId || "").trim() === staffId,
         );
         const hasSiteLeader = ownRoleRows.some(isSiteLeaderRole);
+        const hasStock = ownRoleRows.some(isStockRole);
         if (!cancelled) setIsSiteLeader(hasSiteLeader);
+        if (!cancelled) setIsStock(hasStock);
       } catch {
         if (!cancelled) setIsSiteLeader(false);
+        if (!cancelled) setIsStock(false);
       }
     };
 
@@ -177,6 +198,14 @@ export default function PdaBottomNav() {
     };
   }, []);
 
+  const visibleInventoryMenuItems = useMemo(
+    () =>
+      INVENTORY_MENU_ITEMS.filter(
+        (item) => !item.requiresStockOrSiteLeader || isSiteLeader || isStock,
+      ),
+    [isSiteLeader, isStock],
+  );
+
   const visibleSiteMenuItems = useMemo(
     () =>
       SITE_MENU_ITEMS.filter(
@@ -185,9 +214,9 @@ export default function PdaBottomNav() {
     [isSiteLeader],
   );
 
-  // Derive active tab index from current path.
-  const activeIndex = TAB_ITEMS.findIndex((tab) =>
-    location.pathname.startsWith(tab.route),
+  // Check if current path is within an inventory-menu route (for Inventory tab highlight)
+  const isInventoryActive = INVENTORY_MENU_ITEMS.some((item) =>
+    location.pathname.startsWith(item.route),
   );
 
   // Check if current path is within a site-menu route (for Site tab highlight)
@@ -195,19 +224,30 @@ export default function PdaBottomNav() {
     location.pathname.startsWith(item.route),
   );
 
+  const inventoryTabIndex = 0;
+  const siteTabIndex = inventoryTabIndex + 1;
+  const meTabIndex = siteTabIndex + 1;
+
   const handleTabChange = (_, newIndex) => {
-    if (newIndex === TAB_ITEMS.length) {
-      // "Site" tab
+    if (newIndex === inventoryTabIndex) {
+      setInventoryOpen(true);
+      return;
+    }
+    if (newIndex === siteTabIndex) {
       setSiteOpen(true);
       return;
     }
-    if (newIndex === TAB_ITEMS.length + 1) {
+    if (newIndex === meTabIndex) {
       // "Me" tab — always last
       navigate("/pda/me", { state: { title: t("pda.nav.me") } });
       return;
     }
-    navigate(TAB_ITEMS[newIndex].navigateTo, {
-      state: { title: t(TAB_ITEMS[newIndex].labelKey) },
+  };
+
+  const handleInventoryItem = (item) => {
+    setInventoryOpen(false);
+    navigate(item.navigateTo, {
+      state: { title: t(item.labelKey) },
     });
   };
 
@@ -218,18 +258,15 @@ export default function PdaBottomNav() {
     });
   };
 
-  const meTabIndex = TAB_ITEMS.length + 1; // always last
-  const siteTabIndex = TAB_ITEMS.length;
-
   const isMeActive = location.pathname.startsWith("/pda/me");
 
   const activeValue = isMeActive
     ? meTabIndex
     : isSiteActive || siteOpen
       ? siteTabIndex
-      : activeIndex === -1
-        ? 0
-        : activeIndex;
+      : isInventoryActive || inventoryOpen
+        ? inventoryTabIndex
+        : inventoryTabIndex;
 
   return (
     <>
@@ -259,6 +296,39 @@ export default function PdaBottomNav() {
           />
         </BottomNavigation>
       </Paper>
+
+      <Drawer
+        anchor="bottom"
+        open={inventoryOpen}
+        onClose={() => setInventoryOpen(false)}
+        PaperProps={{
+          sx: { borderRadius: "16px 16px 0 0", pb: 2 },
+        }}
+      >
+        <Box sx={{ px: 2, pt: 2, pb: 1 }}>
+          <Typography
+            variant="subtitle2"
+            color="text.secondary"
+            fontWeight={700}
+            textTransform="uppercase"
+          >
+            {t("pda.nav.inventoryMenu", "Inventory")}
+          </Typography>
+        </Box>
+        <List disablePadding>
+          {visibleInventoryMenuItems.map((item) => (
+            <ListItemButton
+              key={item.route}
+              onClick={() => handleInventoryItem(item)}
+              selected={location.pathname.startsWith(item.route)}
+              sx={{ px: 3, py: 1.5 }}
+            >
+              <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+              <ListItemText primary={t(item.labelKey)} />
+            </ListItemButton>
+          ))}
+        </List>
+      </Drawer>
 
       <Drawer
         anchor="bottom"

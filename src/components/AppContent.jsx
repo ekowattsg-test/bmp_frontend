@@ -28,8 +28,6 @@ import {
 } from "@mui/material";
 import PdaLogin from "./pda/PdaLogin.jsx";
 import PdaLayout from "./pda/layout/PdaLayout.jsx";
-import PdaWorkOrderList from "./pda/workorder/PdaWorkOrderList.jsx";
-import PdaWorkOrderDetail from "./pda/workorder/PdaWorkOrderDetail.jsx";
 import PdaSchedule from "./pda/schedule/PdaSchedule.jsx";
 import PdaMe from "./pda/me/PdaMe.jsx";
 import PdaBriefingEntry from "./pda/briefing/PdaBriefingEntry.jsx";
@@ -276,15 +274,13 @@ export default function AppContent() {
           <Route path="/pda/login" element={<PdaLogin />} />
           <Route
             path="/pda/menu"
-            element={<Navigate to="/pda/orders" replace />}
+            element={<Navigate to="/pda/stockcard" replace />}
           />
-          <Route path="/pda" element={<Navigate to="/pda/orders" replace />} />
+          <Route
+            path="/pda"
+            element={<Navigate to="/pda/stockcard" replace />}
+          />
           <Route element={<PdaLayout />}>
-            <Route path="/pda/orders" element={<PdaWorkOrderList />} />
-            <Route
-              path="/pda/orders/:workOrderId"
-              element={<PdaWorkOrderDetail />}
-            />
             <Route path="/pda/schedule" element={<PdaSchedule />} />
             <Route path="/pda/stockcard" element={<StockCard />} />
             <Route path="/pda/briefing" element={<PdaBriefingEntry />} />

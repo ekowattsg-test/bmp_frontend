@@ -158,7 +158,9 @@ export default function TransferOut() {
                 size="small"
                 variant="outlined"
                 endIcon={<OpenInNewIcon />}
-                onClick={() => navigate(isPda ? "/pda/orders" : "/workorder")}
+                onClick={() =>
+                  navigate(isPda ? "/pda/stockcard" : "/workorder")
+                }
               >
                 {t("transferOut.viewWorkOrders")}
               </Button>

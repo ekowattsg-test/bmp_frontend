@@ -147,7 +147,9 @@ export default function ReceivePoStock() {
                 size="small"
                 variant="outlined"
                 endIcon={<OpenInNewIcon />}
-                onClick={() => navigate(isPda ? "/pda/orders" : "/workorder")}
+                onClick={() =>
+                  navigate(isPda ? "/pda/stockcard" : "/workorder")
+                }
               >
                 {t("receivePoStock.viewWorkOrders")}
               </Button>

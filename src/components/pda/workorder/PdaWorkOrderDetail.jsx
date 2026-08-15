@@ -1831,7 +1831,7 @@ export default function PdaWorkOrderDetail() {
 
         if (newSteps.every((s) => s.stepStatus === "DONE")) {
           setWorkOrder((prev) => ({ ...prev, workOrderStatus: "CLOSED" }));
-          setTimeout(() => navigate("/pda/orders"), 1800);
+          setTimeout(() => navigate("/pda/stockcard"), 1800);
         }
       } catch (err) {
         const msg = err?.response?.data;
