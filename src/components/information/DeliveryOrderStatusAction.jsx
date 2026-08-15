@@ -23,9 +23,11 @@ import {
 import { Close as CloseIcon } from "@mui/icons-material";
 
 // Lifecycle:
-//   NEW    → READY (readyDate)
-//   READY  → NEW  (no date)  |  READY → ISSUED (issuedDate)
-//   ISSUED → DELIVERED (deliveredDate)  |  ISSUED → CANCELLED (cancelledDate)
+//   NEW        → READY (readyDate)
+//   READY      → NEW (no date)  |  READY → ISSUED (issuedDate)
+//   ISSUED     → IN_TRANSIT (set automatically by transfer-out endAction)
+//   IN_TRANSIT → DELIVERED (deliveredDate)  |  IN_TRANSIT → CANCELLED (cancelledDate)
+//   ISSUED     → DELIVERED (deliveredDate)  |  ISSUED → CANCELLED (cancelledDate)
 const getTransitions = (currentStatus) => {
   switch (currentStatus) {
     case "NEW":
@@ -67,6 +69,21 @@ const getTransitions = (currentStatus) => {
           labelFallback: "Cancel",
         },
       ];
+    case "IN_TRANSIT":
+      return [
+        {
+          newStatus: "DELIVERED",
+          dateField: "deliveredDate",
+          labelKey: "deliveryOrderList.action.deliver",
+          labelFallback: "Mark Delivered",
+        },
+        {
+          newStatus: "CANCELLED",
+          dateField: "cancelledDate",
+          labelKey: "deliveryOrderList.action.cancel",
+          labelFallback: "Cancel",
+        },
+      ];
     default:
       return [];
   }
@@ -79,6 +96,8 @@ const getStatusColor = (status) => {
     case "READY":
       return "secondary";
     case "ISSUED":
+      return "warning";
+    case "IN_TRANSIT":
       return "warning";
     case "DELIVERED":
       return "success";

@@ -11,7 +11,7 @@ import UserModern from "./baseInformation/UserModern";
 import CustomerModern from "./information/CustomerModern";
 import VendorModern from "./information/VendorModern";
 import PurchaseOrderModern from "./information/PurchaseOrderModern";
-import RequisitionOrderModern from "./information/RequisitionOrderModern";
+import InventoryRequisitionModern from "./information/InventoryRequisitionModern";
 import DeliveryOrderModern from "./information/DeliveryOrderModern";
 import StaffProfile from "./staffprofile/staffProfile";
 import StaffMeritList from "./staffprofile/StaffMeritList";
@@ -24,6 +24,11 @@ import StockTransfer from "./stock/StockTransfer";
 import StockEnquiry from "./stock/StockEnquiry";
 import StockCard from "./stock/StockCard";
 import StockAdjustment from "./stock/StockAdjustment";
+import ReceivePoStock from "./stock/ReceivePoStock";
+import StockIssue from "./stock/StockIssue";
+import AssetAssignment from "./stock/AssetAssignment";
+import TransferOut from "./stock/TransferOut";
+import TransferIn from "./stock/TransferIn";
 import UOMHierarchy from "./stock/UOMHierarchy";
 import LanguageSettings from "./baseInformation/LanguageSettings";
 import UserProfile from "./baseInformation/UserProfile";
@@ -74,7 +79,7 @@ function MainPage() {
         <Route path="/purchaseorder" element={<PurchaseOrderModern />} />
         <Route
           path="/requisition-orders"
-          element={<RequisitionOrderModern />}
+          element={<InventoryRequisitionModern />}
         />
         <Route path="/deliveryorder" element={<DeliveryOrderModern />} />
         <Route path="/staffskill" element={<StaffSkillModern />} />
@@ -87,6 +92,11 @@ function MainPage() {
         <Route path="/stockout" element={<StockOut />} />
         <Route path="/stocktransfer" element={<StockTransfer />} />
         <Route path="/stockadjustment" element={<StockAdjustment />} />
+        <Route path="/receive-po-stock" element={<ReceivePoStock />} />
+        <Route path="/stock-issue" element={<StockIssue />} />
+        <Route path="/asset-assignment" element={<AssetAssignment />} />
+        <Route path="/stock-transfer-out" element={<TransferOut />} />
+        <Route path="/stock-transfer-in" element={<TransferIn />} />
         <Route path="/stockenquiry" element={<StockEnquiry />} />
         <Route path="/stockcard" element={<StockCard />} />
         <Route path="/uomhierarchy" element={<UOMHierarchy />} />

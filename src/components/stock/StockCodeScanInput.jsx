@@ -38,20 +38,25 @@ const normalizeScannedValue = (raw) => {
   return value;
 };
 
-const StockCodeScanInput = ({
-  value,
-  onChange,
-  onSubmit,
-  busy = false,
-  label,
-  placeholder,
-  submitLabel,
-  showSubmitButton = true,
-  allowProductSearch = false,
-}) => {
+const StockCodeScanInput = React.forwardRef(function StockCodeScanInput(
+  {
+    value,
+    onChange,
+    onSubmit,
+    busy = false,
+    label,
+    placeholder,
+    submitLabel,
+    showSubmitButton = true,
+    allowProductSearch = false,
+    disabled = false,
+  },
+  ref,
+) {
   const { t } = useTranslation();
   const html5QrRef = useRef(null);
   const inputRef = useRef(null);
+  React.useImperativeHandle(ref, () => ({ inputRef }), []);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSearch, setPickerSearch] = useState("");
@@ -190,63 +195,68 @@ const StockCodeScanInput = ({
     return () => clearTimeout(id);
   }, [pickerOpen, scannerOpen, busy]);
 
-  return (
-    <>
-      <Box
-        sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}
-      >
-        <TextField
-          label={label || t("stockTake.stockCode", "Stock code")}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          inputRef={inputRef}
-          placeholder={placeholder || t("stockTake.scanPlaceholder")}
-          fullWidth
-          size="small"
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                {allowProductSearch && (
-                  <IconButton
-                    size="small"
-                    onClick={openPicker}
-                    aria-label={t(
-                      "stockCodeScan.searchByProduct",
-                      "Search by product",
-                    )}
-                    disabled={busy}
-                  >
-                    <SearchIcon />
-                  </IconButton>
-                )}
+  const renderInput = () => (
+    <Box
+      sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}
+    >
+      <TextField
+        label={label || t("stockTake.stockCode", "Stock code")}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        inputRef={inputRef}
+        placeholder={placeholder || t("stockTake.scanPlaceholder")}
+        fullWidth
+        size="small"
+        disabled={disabled}
+        InputProps={{
+          endAdornment: (
+            <InputAdornment position="end">
+              {allowProductSearch && (
                 <IconButton
                   size="small"
-                  onClick={openScanner}
-                  aria-label={t("stockTake.openScannerHtml5", "Scan")}
-                  disabled={busy}
+                  onClick={openPicker}
+                  aria-label={t(
+                    "stockCodeScan.searchByProduct",
+                    "Search by product",
+                  )}
+                  disabled={busy || disabled}
                 >
-                  <QrCodeScannerIcon />
+                  <SearchIcon />
                 </IconButton>
-              </InputAdornment>
-            ),
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              onSubmit(value);
-            }
-          }}
-        />
-        {showSubmitButton && (
-          <Button
-            variant="contained"
-            onClick={() => onSubmit(value)}
-            disabled={busy || !String(value || "").trim()}
-          >
-            {submitLabel || t("stockTake.scan", "Scan")}
-          </Button>
-        )}
-      </Box>
+              )}
+              <IconButton
+                size="small"
+                onClick={openScanner}
+                aria-label={t("stockTake.openScannerHtml5", "Scan")}
+                disabled={busy || disabled}
+              >
+                <QrCodeScannerIcon />
+              </IconButton>
+            </InputAdornment>
+          ),
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            if (!disabled) onSubmit(value);
+          }
+        }}
+      />
+      {showSubmitButton && (
+        <Button
+          variant="contained"
+          onClick={() => onSubmit(value)}
+          disabled={busy || disabled || !String(value || "").trim()}
+        >
+          {submitLabel || t("stockTake.scan", "Scan")}
+        </Button>
+      )}
+    </Box>
+  );
+
+  return (
+    <>
+      {renderInput()}
 
       {scannerOpen && (
         <Box
@@ -336,6 +346,6 @@ const StockCodeScanInput = ({
       )}
     </>
   );
-};
+});
 
 export default StockCodeScanInput;

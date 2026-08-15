@@ -41,6 +41,11 @@ import PdaAvailableTask from "./pda/site/PdaAvailableTask.jsx";
 import PdaProgressUpdate from "./pda/site/PdaProgressUpdate.jsx";
 import PdaFieldQrCode from "./pda/site/PdaFieldQrCode.jsx";
 import StockCard from "./stock/StockCard.jsx";
+import ReceivePoStock from "./stock/ReceivePoStock.jsx";
+import StockIssue from "./stock/StockIssue.jsx";
+import AssetAssignment from "./stock/AssetAssignment.jsx";
+import TransferOut from "./stock/TransferOut.jsx";
+import TransferIn from "./stock/TransferIn.jsx";
 import TvBootstrap from "./tv/TvBootstrap.jsx";
 import TvProjects from "./tv/TvProjects.jsx";
 
@@ -306,6 +311,11 @@ export default function AppContent() {
               element={<PdaProgressUpdate />}
             />
             <Route path="/pda/field-qr-code" element={<PdaFieldQrCode />} />
+            <Route path="/pda/receive-po-stock" element={<ReceivePoStock />} />
+            <Route path="/pda/stock-issue" element={<StockIssue />} />
+            <Route path="/pda/asset-assignment" element={<AssetAssignment />} />
+            <Route path="/pda/stock-transfer-out" element={<TransferOut />} />
+            <Route path="/pda/stock-transfer-in" element={<TransferIn />} />
           </Route>
         </Routes>
       ) : !isAuthenticated ? (

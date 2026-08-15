@@ -4,7 +4,11 @@ import {
   Box,
   Button,
   Checkbox,
+  FormControl,
+  InputLabel,
+  MenuItem,
   Paper,
+  Select,
   Stack,
   Table,
   TableBody,
@@ -18,6 +22,7 @@ import {
   Typography,
 } from "@mui/material";
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
+import { generateAndStoreAdjustmentPdf } from "../../helpers/adjustment_pdf_helper";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import { toLocalISO } from "../../helpers/date_helper";
@@ -119,8 +124,27 @@ const StockAdjustment = () => {
   const [stocks, setStocks] = useState([]);
   const [selectedStockKey, setSelectedStockKey] = useState("");
   const [adjustmentType, setAdjustmentType] = useState("in");
+  const [reason, setReason] = useState("");
   const [reference, setReference] = useState("");
   const [adjustmentQty, setAdjustmentQty] = useState(1);
+
+  const adjustmentReasons = useMemo(
+    () => [
+      { value: "STOCK_COUNT", label: t("stockAdjustment.reasons.stockCount") },
+      { value: "DAMAGED", label: t("stockAdjustment.reasons.damaged") },
+      { value: "EXPIRED", label: t("stockAdjustment.reasons.expired") },
+      { value: "LOST", label: t("stockAdjustment.reasons.lost") },
+      { value: "FOUND", label: t("stockAdjustment.reasons.found") },
+      { value: "OTHER", label: t("stockAdjustment.reasons.other") },
+    ],
+    [t],
+  );
+
+  const resolvedReasonText = useMemo(() => {
+    if (reason === "OTHER") return String(reference || "").trim();
+    const matched = adjustmentReasons.find((r) => r.value === reason);
+    return matched ? matched.label : String(reference || "").trim();
+  }, [reason, reference, adjustmentReasons]);
 
   const loadStocksForCode = async (codeToUse) => {
     const response = await request(
@@ -333,6 +357,16 @@ const StockAdjustment = () => {
       return;
     }
 
+    if (!reason) {
+      setWarnMsg(t("stockAdjustment.reasonRequired"));
+      return;
+    }
+
+    if (reason === "OTHER" && !String(reference || "").trim()) {
+      setWarnMsg(t("stockAdjustment.otherReasonRequired"));
+      return;
+    }
+
     setSaveBusy(true);
     setErrorMsg("");
     setWarnMsg("");
@@ -340,15 +374,47 @@ const StockAdjustment = () => {
 
     try {
       const previousSelectionKey = selectedStock.key;
-      await request("POST", "/api/stockmovements", {
+      const previousQuantity = selectedStock.currentQuantity;
+      const reasonText = resolvedReasonText;
+
+      const movementResponse = await request("POST", "/api/stockmovements", {
         stockId: Number(selectedStock.stockId),
         movementType: adjustmentType === "in" ? "M" : "L",
         quantity: qty,
         location: selectedStock.location || "central",
-        reference: String(reference || "").trim(),
+        reference: reasonText,
         actionBy: userInfo?.login || "",
         recordDate: toLocalISO(),
       });
+
+      const movementId = movementResponse?.data?.movementId;
+
+      if (movementId) {
+        try {
+          await generateAndStoreAdjustmentPdf({
+            companyId: String(userInfo?.companyId || "").trim(),
+            movementId: String(movementId),
+            direction: adjustmentType,
+            stockCode: selectedStock.stockCode,
+            location: selectedStock.location || "central",
+            reason: reasonText,
+            quantity: qty,
+            productName: selectedStock.productName || "-",
+            operator: userInfo?.login || "",
+            previousQuantity,
+            newQuantity:
+              adjustmentType === "in"
+                ? previousQuantity + qty
+                : previousQuantity - qty,
+          });
+        } catch (pdfError) {
+          // Do not fail the adjustment if PDF storage fails.
+          console.warn(
+            "[StockAdjustment] PDF generation failed:",
+            pdfError?.message || pdfError,
+          );
+        }
+      }
 
       const refreshedRows = await loadStocksForCode(selectedStock.stockCode);
       setStocks(refreshedRows);
@@ -363,6 +429,7 @@ const StockAdjustment = () => {
 
       setSuccessMsg(t("stockAdjustment.saveSuccess"));
       setAdjustmentQty(1);
+      setReason("");
       setReference("");
     } catch (error) {
       setErrorMsg(error?.message || t("stockAdjustment.saveFailed"));
@@ -497,13 +564,33 @@ const StockAdjustment = () => {
               </ToggleButton>
             </ToggleButtonGroup>
 
-            <TextField
-              size="small"
-              label={t("stockAdjustment.reference")}
-              value={reference}
-              onChange={(event) => setReference(event.target.value)}
-              sx={{ minWidth: 200 }}
-            />
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel id="adjustment-reason-label">
+                {t("stockAdjustment.reason")}
+              </InputLabel>
+              <Select
+                labelId="adjustment-reason-label"
+                value={reason}
+                label={t("stockAdjustment.reason")}
+                onChange={(event) => setReason(event.target.value)}
+              >
+                {adjustmentReasons.map((item) => (
+                  <MenuItem key={item.value} value={item.value}>
+                    {item.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {reason === "OTHER" && (
+              <TextField
+                size="small"
+                label={t("stockAdjustment.reference")}
+                value={reference}
+                onChange={(event) => setReference(event.target.value)}
+                sx={{ minWidth: 200 }}
+              />
+            )}
 
             <Stack direction="row" spacing={1} alignItems="center">
               <TextField

@@ -228,11 +228,13 @@ const AppMenu = () => {
                 icon: <Store />,
               }
             : null,
-          {
-            to: "/stocktransfer",
-            label: t("menu.stockTransfer", "Stock Transfer"),
-            icon: <CompareArrows />,
-          },
+          userLevel >= 5
+            ? {
+                to: "/stocktransfer",
+                label: t("menu.stockTransfer", "Stock Transfer"),
+                icon: <CompareArrows />,
+              }
+            : null,
           {
             to: "/stockadjustment",
             label: t("menu.stockAdjustment", "Stock Adjustment"),
@@ -320,27 +322,29 @@ const AppMenu = () => {
             : null,
         ],
       },
-      {
-        key: "WorkOrders",
-        menu: null,
-        role: "WorkOrders",
-        label: t("menu.workOrders", "Work Orders"),
-        icon: <EngineeringIcon />,
-        items: [
-          {
-            to: "/workorder",
-            label: t("menu.workOrderList", "Work Order List"),
-            icon: <EngineeringIcon />,
-          },
-          userLevel >= 1
-            ? {
-                to: "/operations/tv-mobile-approval",
-                label: t("menu.tvMobileApproval", "TV Screen Approval"),
-                icon: <PhoneIphoneIcon />,
-              }
-            : null,
-        ],
-      },
+      // WorkOrders menu disabled — work orders are created automatically by
+      // stock and transfer flows; manual work order list access is not needed.
+      // {
+      //   key: "WorkOrders",
+      //   menu: null,
+      //   role: "WorkOrders",
+      //   label: t("menu.workOrders", "Work Orders"),
+      //   icon: <EngineeringIcon />,
+      //   items: [
+      //     {
+      //       to: "/workorder",
+      //       label: t("menu.workOrderList", "Work Order List"),
+      //       icon: <EngineeringIcon />,
+      //     },
+      //     userLevel >= 1
+      //       ? {
+      //           to: "/operations/tv-mobile-approval",
+      //           label: t("menu.tvMobileApproval", "TV Screen Approval"),
+      //           icon: <PhoneIphoneIcon />,
+      //         }
+      //       : null,
+      //   ],
+      // },
     ],
     [t, userLevel, canAccessWaSimulator],
   );

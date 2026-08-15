@@ -47,6 +47,9 @@ import {
   QrCode2 as QrCode2Icon,
   Tune as TuneIcon,
   WhatsApp as WhatsAppIcon,
+  ReceiptLong as ReceiptIcon,
+  MoveUp as MoveUpIcon,
+  Handyman as HandymanIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -307,12 +310,43 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               label: t("menu.stockTransfer", "Stock Transfer"),
               icon: <CompareArrowsIcon fontSize="small" />,
               path: "/stocktransfer",
+              minLevel: 5,
             },
             {
               key: "stockAdjustment",
               label: t("menu.stockAdjustment", "Stock Adjustment"),
               icon: <CompareArrowsIcon fontSize="small" />,
               path: "/stockadjustment",
+            },
+            {
+              key: "receivePoStock",
+              label: t("menu.receivePoStock", "Receive PO Stock"),
+              icon: <ReceiptIcon fontSize="small" />,
+              path: "/receive-po-stock",
+            },
+            {
+              key: "stockIssue",
+              label: t("menu.stockIssue", "Stock Issue"),
+              icon: <MoveUpIcon fontSize="small" />,
+              path: "/stock-issue",
+            },
+            {
+              key: "assetAssignment",
+              label: t("menu.assetAssignment", "Asset Assignment"),
+              icon: <HandymanIcon fontSize="small" />,
+              path: "/asset-assignment",
+            },
+            {
+              key: "stockTransferOut",
+              label: t("menu.stockTransferOut", "Transfer Out"),
+              icon: <CompareArrowsIcon fontSize="small" />,
+              path: "/stock-transfer-out",
+            },
+            {
+              key: "stockTransferIn",
+              label: t("menu.stockTransferIn", "Transfer In"),
+              icon: <CompareArrowsIcon fontSize="small" />,
+              path: "/stock-transfer-in",
             },
             {
               key: "stockEnquiry",
@@ -444,12 +478,14 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               icon: <LocalShippingIcon fontSize="small" />,
               path: "/deliveryorder",
             },
-            {
-              key: "workOrderList",
-              label: t("menu.workOrderList", "Work Orders"),
-              icon: <EngineeringIcon fontSize="small" />,
-              path: "/workorder",
-            },
+            // Work order list menu disabled — work orders are created
+            // automatically by stock and transfer flows.
+            // {
+            //   key: "workOrderList",
+            //   label: t("menu.workOrderList", "Work Orders"),
+            //   icon: <EngineeringIcon fontSize="small" />,
+            //   path: "/workorder",
+            // },
             {
               key: "tvMobileApproval",
               label: t("menu.tvMobileApproval", "TV Screen Approval"),

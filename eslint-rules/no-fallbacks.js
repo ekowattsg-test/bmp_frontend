@@ -27,6 +27,7 @@ const noFallbacks = {
       /src[\\/]components[\\/]information[\\/]/,
       /src[\\/]components[\\/]stock[\\/]ProductDialog\.(js|jsx)$/,
       /src[\\/]components[\\/]stock[\\/]UOMHierarchy\.(js|jsx)$/,
+      /src[\\/]helpers[\\/]stock_operations_service\.(js|jsx)$/,
     ];
 
     const isAllowedFile = allowedPatterns.some((p) => p.test(filename));

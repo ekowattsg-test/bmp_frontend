@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Box, Button } from "@mui/material";
 import { useTranslation } from "react-i18next";
+import { decodeToken } from "./qr_token_helper";
 
 /**
  * Normalise a raw scanned value.
@@ -25,6 +26,23 @@ export const normalizeScannedValue = (raw) => {
     // Not a URL — use raw value.
   }
   return value;
+};
+
+/**
+ * Resolve a scanned value to its underlying entity id.
+ * First normalises the raw input, then attempts to decode a signed QR token.
+ * Falls back to the normalised value if decoding fails or is not applicable.
+ */
+export const resolveScannedValue = async (raw) => {
+  const normalized = normalizeScannedValue(raw);
+  if (!normalized) return "";
+  try {
+    const decoded = await decodeToken(normalized);
+    if (decoded) return decoded;
+  } catch {
+    // Not a valid QR token — use normalised value.
+  }
+  return normalized;
 };
 
 /**

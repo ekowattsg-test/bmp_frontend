@@ -20,6 +20,10 @@ import PersonIcon from "@mui/icons-material/Person";
 import EngineeringIcon from "@mui/icons-material/Engineering";
 import PublishedWithChangesIcon from "@mui/icons-material/PublishedWithChanges";
 import QrCode2Icon from "@mui/icons-material/QrCode2";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import MoveUpIcon from "@mui/icons-material/MoveUp";
+import HandymanIcon from "@mui/icons-material/Handyman";
+import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import { request } from "../../../helpers/axios_helper";
 
 const TAB_ITEMS = [
@@ -65,6 +69,41 @@ const SITE_MENU_ITEMS = [
     navigateTo: "/pda/field-qr-code",
     labelKey: "pda.nav.fieldQrCode",
     icon: <QrCode2Icon />,
+    requiresSiteLeader: true,
+  },
+  {
+    route: "/pda/receive-po-stock",
+    navigateTo: "/pda/receive-po-stock",
+    labelKey: "pda.nav.receivePoStock",
+    icon: <LocalShippingIcon />,
+    requiresSiteLeader: true,
+  },
+  {
+    route: "/pda/stock-issue",
+    navigateTo: "/pda/stock-issue",
+    labelKey: "pda.nav.stockIssue",
+    icon: <MoveUpIcon />,
+    requiresSiteLeader: true,
+  },
+  {
+    route: "/pda/asset-assignment",
+    navigateTo: "/pda/asset-assignment",
+    labelKey: "pda.nav.assetAssignment",
+    icon: <HandymanIcon />,
+    requiresSiteLeader: true,
+  },
+  {
+    route: "/pda/stock-transfer-out",
+    navigateTo: "/pda/stock-transfer-out",
+    labelKey: "pda.nav.stockTransferOut",
+    icon: <CompareArrowsIcon />,
+    requiresSiteLeader: true,
+  },
+  {
+    route: "/pda/stock-transfer-in",
+    navigateTo: "/pda/stock-transfer-in",
+    labelKey: "pda.nav.stockTransferIn",
+    icon: <CompareArrowsIcon />,
     requiresSiteLeader: true,
   },
 ];
