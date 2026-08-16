@@ -33,7 +33,7 @@ import {
   OpenInNew as OpenInNewIcon,
   CameraAlt as CameraAltIcon,
 } from "@mui/icons-material";
-import { PageHeader } from "../common";
+import { PageHeader, LocationScanner } from "../common";
 import HelpDialog from "../common/HelpDialog";
 import StockCodeScanInput from "./StockCodeScanInput";
 import useReceivePoStock from "../../hooks/useReceivePoStock";
@@ -43,7 +43,6 @@ export default function ReceivePoStock() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const hook = useReceivePoStock();
-  const [locationScanInput, setLocationScanInput] = React.useState("");
   const [scanInput, setScanInput] = React.useState("");
 
   const {
@@ -58,10 +57,7 @@ export default function ReceivePoStock() {
     order,
     orderLoading,
     scannedLocation,
-    locationGpsBusy,
-    locationGpsFailed,
-    handleAutoDetectLocation,
-    handleScanLocation,
+    setScannedLocation,
     handleClearLocation,
     orderItems,
     lineTotals,
@@ -195,69 +191,21 @@ export default function ReceivePoStock() {
         )}
       />
 
-      {scannedLocation ? (
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-            p: 1.5,
-            bgcolor: "action.selected",
-            borderRadius: 1,
-            border: "1px solid var(--color-gray-300)",
-          }}
-        >
-          <Typography variant="body2" sx={{ flex: 1, fontWeight: 500 }}>
-            {scannedLocation}
-          </Typography>
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={handleClearLocation}
-            disabled={busy || Boolean(completedResult)}
-          >
-            {t("receivePoStock.changeLocation")}
-          </Button>
-        </Box>
-      ) : locationGpsBusy ? (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 1 }}>
-          <CircularProgress size={20} />
-          <Typography variant="body2" color="text.secondary">
-            {t("receivePoStock.detectingLocation")}
-          </Typography>
-        </Box>
-      ) : (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <Button
-            variant="outlined"
-            onClick={handleAutoDetectLocation}
-            disabled={busy}
-            sx={{ alignSelf: "flex-start" }}
-          >
-            {t("receivePoStock.detectByGps")}
-          </Button>
-          {locationGpsFailed && (
-            <Alert severity="info" sx={{ py: 0.5 }}>
-              {t("receivePoStock.gpsLocationFailed")}
-            </Alert>
-          )}
-          <StockCodeScanInput
-            value={locationScanInput}
-            onChange={setLocationScanInput}
-            onSubmit={(value) => {
-              handleScanLocation(value).then(() => {
-                setLocationScanInput("");
-              });
-            }}
-            busy={busy}
-            label={t("receivePoStock.scanLocationLabel")}
-            placeholder={t("receivePoStock.scanLocationPlaceholder")}
-            submitLabel={t("receivePoStock.setLocation")}
-            showSubmitButton
-            allowProductSearch={false}
-          />
-        </Box>
-      )}
+      <LocationScanner
+        value={scannedLocation}
+        onChange={setScannedLocation}
+        gpsEnabled
+        autoDetectGpsOnMount
+        disabled={busy || Boolean(completedResult)}
+        labels={{
+          detectByGps: t("receivePoStock.detectByGps"),
+          detectingLocation: t("receivePoStock.detectingLocation"),
+          gpsLocationFailed: t("receivePoStock.gpsLocationFailed"),
+          changeLocation: t("receivePoStock.changeLocation"),
+          scanLabel: t("receivePoStock.scanLocationLabel"),
+          scanPlaceholder: t("receivePoStock.scanLocationPlaceholder"),
+        }}
+      />
     </Box>
   );
 

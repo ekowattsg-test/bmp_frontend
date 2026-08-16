@@ -101,8 +101,10 @@ export const resolveLocationByScan = async (
   rawValue,
   { projectCodes = [], inventoryLocations = [] },
 ) => {
-  const decoded = await resolveScannedValue(rawValue);
-  const code = safeString(decoded || rawValue);
+  const decoded = await resolveScannedValue(rawValue, {
+    requireEncoded: true,
+  });
+  const code = safeString(decoded);
   if (!code) {
     throw new Error("No location code scanned.");
   }

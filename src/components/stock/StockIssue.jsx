@@ -33,7 +33,7 @@ import {
   OpenInNew as OpenInNewIcon,
   CameraAlt as CameraAltIcon,
 } from "@mui/icons-material";
-import { PageHeader } from "../common";
+import { PageHeader, LocationScanner } from "../common";
 import HelpDialog from "../common/HelpDialog";
 import StockCodeScanInput from "./StockCodeScanInput";
 import useStockIssue from "../../hooks/useStockIssue";
@@ -42,7 +42,6 @@ export default function StockIssue() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const hook = useStockIssue();
-  const [locationScanInput, setLocationScanInput] = React.useState("");
   const [recipientScanInput, setRecipientScanInput] = React.useState("");
   const [scanInput, setScanInput] = React.useState("");
   const scanInputRef = React.useRef(null);
@@ -55,10 +54,7 @@ export default function StockIssue() {
     helpOpen,
     setHelpOpen,
     scannedLocation,
-    locationGpsBusy,
-    locationGpsFailed,
-    handleAutoDetectLocation,
-    handleScanLocation,
+    setScannedLocation,
     handleClearLocation,
     operatorName,
     actionByLabel,
@@ -161,77 +157,23 @@ export default function StockIssue() {
   );
 
   const renderLocationScan = () => (
-    <Card variant="outlined" sx={{ mb: 3 }}>
-      <CardContent>
-        <Typography variant="subtitle2" gutterBottom>
-          {t("stockIssue.scanLocationTitle")}
-        </Typography>
-        {scannedLocation ? (
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              mb: 2,
-              p: 1.5,
-              bgcolor: "action.selected",
-              borderRadius: 1,
-              border: "1px solid var(--color-gray-300)",
-            }}
-          >
-            <Typography variant="body2" sx={{ flex: 1, fontWeight: 500 }}>
-              {scannedLocation}
-            </Typography>
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={handleClearLocation}
-              disabled={busy || Boolean(completedResult)}
-            >
-              {t("stockIssue.changeLocation")}
-            </Button>
-          </Box>
-        ) : locationGpsBusy ? (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 1 }}>
-            <CircularProgress size={20} />
-            <Typography variant="body2" color="text.secondary">
-              {t("stockIssue.detectingLocation")}
-            </Typography>
-          </Box>
-        ) : (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <Button
-              variant="outlined"
-              onClick={handleAutoDetectLocation}
-              disabled={busy}
-              sx={{ alignSelf: "flex-start" }}
-            >
-              {t("stockIssue.detectByGps")}
-            </Button>
-            {locationGpsFailed && (
-              <Alert severity="info" sx={{ py: 0.5 }}>
-                {t("stockIssue.gpsLocationFailed")}
-              </Alert>
-            )}
-            <StockCodeScanInput
-              value={locationScanInput}
-              onChange={setLocationScanInput}
-              onSubmit={(value) => {
-                handleScanLocation(value).then(() => {
-                  setLocationScanInput("");
-                  focusStockInput();
-                });
-              }}
-              busy={busy}
-              label={t("stockIssue.fromLocation")}
-              placeholder={t("stockIssue.fromLocationPlaceholder")}
-              showSubmitButton={false}
-              allowProductSearch={false}
-            />
-          </Box>
-        )}
-      </CardContent>
-    </Card>
+    <LocationScanner
+      value={scannedLocation}
+      onChange={setScannedLocation}
+      gpsEnabled
+      autoDetectGpsOnMount
+      disabled={busy || Boolean(completedResult)}
+      onScanSuccess={focusStockInput}
+      title={t("stockIssue.scanLocationTitle")}
+      labels={{
+        detectByGps: t("stockIssue.detectByGps"),
+        detectingLocation: t("stockIssue.detectingLocation"),
+        gpsLocationFailed: t("stockIssue.gpsLocationFailed"),
+        changeLocation: t("stockIssue.changeLocation"),
+        scanLabel: t("stockIssue.fromLocation"),
+        scanPlaceholder: t("stockIssue.fromLocationPlaceholder"),
+      }}
+    />
   );
 
   const renderActionBy = () => (

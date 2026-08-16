@@ -27,7 +27,7 @@ import {
   OpenInNew as OpenInNewIcon,
   CameraAlt as CameraAltIcon,
 } from "@mui/icons-material";
-import { PageHeader } from "../common";
+import { PageHeader, LocationScanner } from "../common";
 import HelpDialog from "../common/HelpDialog";
 import StockCodeScanInput from "./StockCodeScanInput";
 import useTransferIn from "../../hooks/useTransferIn";
@@ -37,7 +37,6 @@ export default function TransferIn() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const hook = useTransferIn();
-  const [locationScanInput, setLocationScanInput] = React.useState("");
   const [scanInput, setScanInput] = React.useState("");
   const scanInputRef = React.useRef(null);
   const [carouselOpen, setCarouselOpen] = React.useState(false);
@@ -55,13 +54,8 @@ export default function TransferIn() {
     selectedDo,
     doItems,
     fromLocation,
-    handleScanFromLocation,
+    setFromLocation,
     handleClearFromLocation,
-    locationGpsBusy,
-    locationGpsFailed,
-    handleAutoDetectLocation,
-    handleScanLocation,
-    handleClearLocation,
     toLocation,
     productMap,
     scannedItems,
@@ -223,70 +217,22 @@ export default function TransferIn() {
         )}
       />
 
-      {fromLocation ? (
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-            p: 1.5,
-            bgcolor: "action.selected",
-            borderRadius: 1,
-            border: "1px solid var(--color-gray-300)",
-          }}
-        >
-          <Typography variant="body2" sx={{ flex: 1, fontWeight: 500 }}>
-            {fromLocation}
-          </Typography>
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={handleClearFromLocation}
-            disabled={busy || Boolean(completedResult)}
-          >
-            {t("transferIn.changeLocation")}
-          </Button>
-        </Box>
-      ) : locationGpsBusy ? (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 1 }}>
-          <CircularProgress size={20} />
-          <Typography variant="body2" color="text.secondary">
-            {t("transferIn.detectingLocation")}
-          </Typography>
-        </Box>
-      ) : (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <Button
-            variant="outlined"
-            onClick={handleAutoDetectLocation}
-            disabled={busy}
-            sx={{ alignSelf: "flex-start" }}
-          >
-            {t("transferIn.detectByGps")}
-          </Button>
-          {locationGpsFailed && (
-            <Alert severity="info" sx={{ py: 0.5 }}>
-              {t("transferIn.gpsLocationFailed")}
-            </Alert>
-          )}
-          <StockCodeScanInput
-            value={locationScanInput}
-            onChange={setLocationScanInput}
-            onSubmit={(value) => {
-              handleScanFromLocation(value).then(() => {
-                setLocationScanInput("");
-                focusScanInput();
-              });
-            }}
-            busy={busy}
-            label={t("transferIn.fromLocation")}
-            placeholder={t("transferIn.fromLocationPlaceholder")}
-            submitLabel={t("transferIn.setLocation", "Set Location")}
-            showSubmitButton
-            allowProductSearch={false}
-          />
-        </Box>
-      )}
+      <LocationScanner
+        value={fromLocation}
+        onChange={setFromLocation}
+        gpsEnabled
+        autoDetectGpsOnMount
+        disabled={busy || Boolean(completedResult)}
+        onScanSuccess={focusScanInput}
+        labels={{
+          detectByGps: t("transferIn.detectByGps"),
+          detectingLocation: t("transferIn.detectingLocation"),
+          gpsLocationFailed: t("transferIn.gpsLocationFailed"),
+          changeLocation: t("transferIn.changeLocation"),
+          scanLabel: t("transferIn.fromLocation"),
+          scanPlaceholder: t("transferIn.fromLocationPlaceholder"),
+        }}
+      />
     </Box>
   );
 

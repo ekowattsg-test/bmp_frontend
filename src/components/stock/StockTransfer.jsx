@@ -23,6 +23,7 @@ import { AuthContext } from "../../context/authContext";
 import { PageHeader, ProductInfoCard } from "../common";
 import HelpDialog from "../common/HelpDialog";
 import { getDisplayImageInfo } from "../../helpers/file_helper";
+import { getOperatorName } from "../../helpers/user_display_helper";
 import {
   buildLocationSuggestions,
   isLocationCreationDisabled,
@@ -448,7 +449,7 @@ const StockTransfer = () => {
         quantity: qty,
         location: transferOutStock.location || "central",
         reference: ref,
-        actionBy: userInfo?.login || "",
+        actionBy: getOperatorName(userInfo),
         recordDate: toLocalISO(),
       });
 
@@ -459,7 +460,7 @@ const StockTransfer = () => {
         quantity: qty,
         location: targetInLocation,
         reference: ref,
-        actionBy: userInfo?.login || "",
+        actionBy: getOperatorName(userInfo),
         recordDate: toLocalISO(),
       });
 

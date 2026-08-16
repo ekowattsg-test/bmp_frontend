@@ -34,6 +34,7 @@ import { AuthContext } from "../../context/authContext";
 import { PageHeader, ProductInfoCard } from "../common";
 import HelpDialog from "../common/HelpDialog";
 import Modal from "../common/Modal";
+import { getOperatorName } from "../../helpers/user_display_helper";
 import {
   getDisplayImageInfo,
   normalizeFileMetadata,
@@ -1395,7 +1396,7 @@ const StockTakeOnNew = () => {
         quantity: qty,
         location: targetLocation,
         reference: "",
-        actionBy: userInfo?.login || "",
+        actionBy: getOperatorName(userInfo),
         recordDate: toLocalISO(),
       });
 

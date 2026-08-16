@@ -19,27 +19,10 @@ import {
 import { generateAndStoreAssignmentPdf } from "../helpers/assignment_pdf_helper";
 import { uploadFileToDrive } from "../helpers/file_helper";
 import {
-  fetchValidLocationCodes,
-  resolveLocationByGps,
-  resolveLocationByScan,
-} from "../helpers/location_scan_helper";
-import {
   fetchActiveStaffList,
   resolveStaffByScan,
 } from "../helpers/staff_scan_helper";
-
-const getOperatorName = (info) => {
-  if (!info) return "";
-  return (
-    String(info.staffName || "").trim() ||
-    `${info.firstName ?? ""} ${info.lastName ?? ""}`.trim() ||
-    getUserLogin(info)
-  );
-};
-
-const getUserLogin = (info) => {
-  return String(info?.login || info?.userName || "").trim();
-};
+import { getOperatorName, getUserLogin } from "../helpers/user_display_helper";
 
 const toNumber = (value) => {
   if (value === null || value === undefined || value === "") return 0;
@@ -65,16 +48,14 @@ export default function useAssetAssignment() {
 
   const [helpOpen, setHelpOpen] = useState(false);
 
-  const [scannedLocation, setScannedLocation] = useState("");
+  const [scannedLocation, setScannedLocationState] = useState("");
   const scannedLocationRef = useRef("");
 
-  const [locationGpsBusy, setLocationGpsBusy] = useState(false);
-  const [locationGpsFailed, setLocationGpsFailed] = useState(false);
-  const [validLocationCodes, setValidLocationCodes] = useState({
-    projectCodes: [],
-    inventoryLocations: [],
-    all: [],
-  });
+  const setScannedLocation = useCallback((code) => {
+    const value = String(code || "").trim();
+    setScannedLocationState(value);
+    scannedLocationRef.current = value;
+  }, []);
 
   const [recipientStaffId, setRecipientStaffId] = useState("");
   const [recipientStaffName, setRecipientStaffName] = useState("");
@@ -121,34 +102,6 @@ export default function useAssetAssignment() {
         setProductIdToCodeMap({});
       });
 
-    fetchValidLocationCodes()
-      .then((codes) => {
-        setValidLocationCodes(codes);
-        return codes;
-      })
-      .catch(() => {
-        setValidLocationCodes({
-          projectCodes: [],
-          inventoryLocations: [],
-          all: [],
-        });
-        return { projectCodes: [], inventoryLocations: [], all: [] };
-      })
-      .then((codes) => {
-        setLocationGpsBusy(true);
-        return resolveLocationByGps(codes.projectCodes)
-          .then((code) => {
-            if (code) {
-              setScannedLocation(code);
-              scannedLocationRef.current = code;
-            } else {
-              setLocationGpsFailed(true);
-            }
-          })
-          .catch(() => setLocationGpsFailed(true))
-          .finally(() => setLocationGpsBusy(false));
-      });
-
     fetchActiveStaffList()
       .then(setActiveStaffList)
       .catch(() => setActiveStaffList([]));
@@ -168,53 +121,9 @@ export default function useAssetAssignment() {
     );
   }, [scannedLocation, recipientStaffId, scannedItems, assignmentPhotos]);
 
-  const handleAutoDetectLocation = useCallback(async () => {
-    setLocationGpsBusy(true);
-    setLocationGpsFailed(false);
-    setErrorMsg("");
-    try {
-      const code = await resolveLocationByGps(validLocationCodes.projectCodes);
-      if (code) {
-        setScannedLocation(code);
-        scannedLocationRef.current = code;
-        setLocationGpsFailed(false);
-      } else {
-        setLocationGpsFailed(true);
-      }
-    } catch {
-      setLocationGpsFailed(true);
-    } finally {
-      setLocationGpsBusy(false);
-    }
-  }, [validLocationCodes.projectCodes]);
-
-  const handleScanLocation = useCallback(
-    async (rawValue) => {
-      const value = String(rawValue || "").trim();
-      if (!value) return;
-      setBusy(true);
-      try {
-        const code = await resolveLocationByScan(value, validLocationCodes);
-        setScannedLocation(code);
-        scannedLocationRef.current = code;
-        setErrorMsg("");
-      } catch (err) {
-        setErrorMsg(
-          err?.message ||
-            t("assetAssignment.invalidLocationCode", { code: value }),
-        );
-      } finally {
-        setBusy(false);
-      }
-    },
-    [t, validLocationCodes],
-  );
-
   const handleClearLocation = useCallback(() => {
     setScannedLocation("");
-    scannedLocationRef.current = "";
-    setLocationGpsFailed(false);
-  }, []);
+  }, [setScannedLocation]);
 
   const handleScanRecipient = useCallback(
     async (rawValue) => {
@@ -447,7 +356,7 @@ export default function useAssetAssignment() {
           subQuantity: toNumber(scan.subQuantity),
         })),
         photos: assignmentPhotos.map((p) => p.metadata),
-        issuedBy: userLogin,
+        issuedBy: operatorName,
       });
 
       let pdfResult = null;
@@ -457,7 +366,7 @@ export default function useAssetAssignment() {
           workOrderId: result.workOrderId,
           fromLocation: String(scannedLocation || "").trim(),
           toLocation: recipientStaffName || recipientId,
-          operator: userLogin,
+          operator: operatorName,
           items: scannedItems.map((scan) => ({
             productCode: scan.productCode,
             stockCode: scan.stockId,
@@ -505,8 +414,6 @@ export default function useAssetAssignment() {
 
   const handleReset = useCallback(() => {
     setScannedLocation("");
-    scannedLocationRef.current = "";
-    setLocationGpsFailed(false);
     setRecipientStaffId("");
     setRecipientStaffName("");
     setScannedItems([]);
@@ -515,7 +422,7 @@ export default function useAssetAssignment() {
     setErrorMsg("");
     setSuccessMsg("");
     setCompletedResult(null);
-  }, []);
+  }, [setScannedLocation]);
 
   return {
     isPda,
@@ -525,13 +432,10 @@ export default function useAssetAssignment() {
     setHelpOpen,
 
     operatorName: getOperatorName(userInfo),
-    actionByLabel: getUserLogin(userInfo),
+    actionByLabel: getOperatorName(userInfo),
 
     scannedLocation,
-    locationGpsBusy,
-    locationGpsFailed,
-    handleAutoDetectLocation,
-    handleScanLocation,
+    setScannedLocation,
     handleClearLocation,
 
     recipientStaffId,

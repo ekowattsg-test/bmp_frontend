@@ -20,29 +20,12 @@ import {
   searchTransferStockByCode,
 } from "../helpers/transfer_service";
 import { generateAndStoreTransferOutPdf } from "../helpers/transfer_pdf_helper";
-import {
-  fetchValidLocationCodes,
-  resolveLocationByGps,
-  resolveLocationByScan,
-} from "../helpers/location_scan_helper";
+import { getOperatorName, getUserLogin } from "../helpers/user_display_helper";
 
 const toNumber = (value) => {
   if (value === null || value === undefined || value === "") return 0;
   const numberValue = Number(value);
   return Number.isFinite(numberValue) ? numberValue : 0;
-};
-
-const getOperatorName = (info) => {
-  if (!info) return "";
-  return (
-    String(info.staffName || "").trim() ||
-    `${info.firstName ?? ""} ${info.lastName ?? ""}`.trim() ||
-    getUserLogin(info)
-  );
-};
-
-const getUserLogin = (info) => {
-  return String(info?.login || info?.userName || "").trim();
 };
 
 export default function useTransferOut() {
@@ -65,15 +48,14 @@ export default function useTransferOut() {
   const [selectedDo, setSelectedDo] = useState(null);
   const [doItems, setDoItems] = useState([]);
 
-  const [scannedLocation, setScannedLocation] = useState("");
+  const [scannedLocation, setScannedLocationState] = useState("");
   const scannedLocationRef = useRef("");
-  const [locationGpsBusy, setLocationGpsBusy] = useState(false);
-  const [locationGpsFailed, setLocationGpsFailed] = useState(false);
-  const [validLocationCodes, setValidLocationCodes] = useState({
-    projectCodes: [],
-    inventoryLocations: [],
-    all: [],
-  });
+
+  const setScannedLocation = useCallback((code) => {
+    const value = String(code || "").trim();
+    setScannedLocationState(value);
+    scannedLocationRef.current = value;
+  }, []);
 
   const [productMap, setProductMap] = useState({});
   const [productCategoryMap, setProductCategoryMap] = useState({});
@@ -114,34 +96,6 @@ export default function useTransferOut() {
         setProductMap({});
         setProductCategoryMap({});
         setProductIdToCodeMap({});
-      });
-
-    fetchValidLocationCodes()
-      .then((codes) => {
-        setValidLocationCodes(codes);
-        return codes;
-      })
-      .catch(() => {
-        setValidLocationCodes({
-          projectCodes: [],
-          inventoryLocations: [],
-          all: [],
-        });
-        return { projectCodes: [], inventoryLocations: [], all: [] };
-      })
-      .then((codes) => {
-        setLocationGpsBusy(true);
-        return resolveLocationByGps(codes.projectCodes)
-          .then((code) => {
-            if (code) {
-              setScannedLocation(code);
-              scannedLocationRef.current = code;
-            } else {
-              setLocationGpsFailed(true);
-            }
-          })
-          .catch(() => setLocationGpsFailed(true))
-          .finally(() => setLocationGpsBusy(false));
       });
 
     setDosLoading(true);
@@ -222,51 +176,9 @@ export default function useTransferOut() {
     );
   }, [scannedLocation, scannedItems, transferPhotos, quantityWarnings]);
 
-  const handleAutoDetectLocation = useCallback(async () => {
-    setLocationGpsBusy(true);
-    setLocationGpsFailed(false);
-    setErrorMsg("");
-    try {
-      const code = await resolveLocationByGps(validLocationCodes.projectCodes);
-      if (code) {
-        setScannedLocation(code);
-        scannedLocationRef.current = code;
-      } else {
-        setLocationGpsFailed(true);
-      }
-    } catch {
-      setLocationGpsFailed(true);
-    } finally {
-      setLocationGpsBusy(false);
-    }
-  }, [validLocationCodes.projectCodes]);
-
-  const handleScanLocation = useCallback(
-    async (rawValue) => {
-      const value = String(rawValue || "").trim();
-      if (!value) return;
-      setBusy(true);
-      try {
-        const code = await resolveLocationByScan(value, validLocationCodes);
-        setScannedLocation(code);
-        scannedLocationRef.current = code;
-        setErrorMsg("");
-      } catch (err) {
-        setErrorMsg(
-          err?.message || t("transferOut.invalidLocationCode", { code: value }),
-        );
-      } finally {
-        setBusy(false);
-      }
-    },
-    [validLocationCodes, t],
-  );
-
   const handleClearLocation = useCallback(() => {
     setScannedLocation("");
-    scannedLocationRef.current = "";
-    setLocationGpsFailed(false);
-  }, []);
+  }, [setScannedLocation]);
 
   const handleScanSubmit = useCallback(
     async (rawStockId) => {
@@ -455,8 +367,9 @@ export default function useTransferOut() {
     setCompletedResult(null);
 
     try {
+      const operatorName = getOperatorName(userInfo);
       const userLogin = getUserLogin(userInfo);
-      if (!userLogin) {
+      if (!operatorName || !userLogin) {
         throw new Error("Unable to determine the current user.");
       }
 
@@ -471,7 +384,7 @@ export default function useTransferOut() {
           subQuantity: toNumber(scan.subQuantity),
         })),
         photos: transferPhotos.map((p) => p.metadata),
-        issuedBy: userLogin,
+        issuedBy: operatorName,
         workByStaffId: userLogin,
         description: selectedDoId
           ? `Transfer out for ${selectedDoId}`
@@ -539,19 +452,17 @@ export default function useTransferOut() {
   ]);
 
   const handleReset = useCallback(() => {
+    setScannedLocation("");
     setSelectedDoId("");
     setSelectedDo(null);
     setDoItems([]);
-    setScannedLocation("");
-    scannedLocationRef.current = "";
-    setLocationGpsFailed(false);
     setScannedItems([]);
     setTransferPhotos([]);
     setPendingProductChoice(null);
     setErrorMsg("");
     setSuccessMsg("");
     setCompletedResult(null);
-  }, []);
+  }, [setScannedLocation]);
 
   return {
     isPda,
@@ -561,7 +472,7 @@ export default function useTransferOut() {
     setHelpOpen,
 
     operatorName: getOperatorName(userInfo),
-    actionByLabel: getUserLogin(userInfo),
+    actionByLabel: getOperatorName(userInfo),
 
     deliveryOrders,
     dosLoading,
@@ -571,10 +482,7 @@ export default function useTransferOut() {
     doItems,
 
     scannedLocation,
-    locationGpsBusy,
-    locationGpsFailed,
-    handleAutoDetectLocation,
-    handleScanLocation,
+    setScannedLocation,
     handleClearLocation,
 
     toLocation,

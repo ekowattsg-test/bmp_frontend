@@ -16,3 +16,4 @@ export {
   FormActions,
   useCRUDState,
 } from "./CRUDActions";
+export { default as LocationScanner } from "./LocationScanner";

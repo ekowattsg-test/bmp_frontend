@@ -32,8 +32,10 @@ export const fetchActiveStaffList = async () => {
  * @throws {Error} If the code is empty or the staff is not found/inactive
  */
 export const resolveStaffByScan = async (rawValue, activeStaff = []) => {
-  const decoded = await resolveScannedValue(rawValue);
-  const scannedId = safeString(decoded || rawValue);
+  const decoded = await resolveScannedValue(rawValue, {
+    requireEncoded: true,
+  });
+  const scannedId = safeString(decoded);
   if (!scannedId) {
     throw new Error("No staff code scanned.");
   }

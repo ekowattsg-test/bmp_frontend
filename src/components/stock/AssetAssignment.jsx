@@ -33,7 +33,7 @@ import {
   OpenInNew as OpenInNewIcon,
   CameraAlt as CameraAltIcon,
 } from "@mui/icons-material";
-import { PageHeader } from "../common";
+import { PageHeader, LocationScanner } from "../common";
 import HelpDialog from "../common/HelpDialog";
 import StockCodeScanInput from "./StockCodeScanInput";
 import useAssetAssignment from "../../hooks/useAssetAssignment";
@@ -42,7 +42,6 @@ export default function AssetAssignment() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const hook = useAssetAssignment();
-  const [locationScanInput, setLocationScanInput] = React.useState("");
   const [recipientScanInput, setRecipientScanInput] = React.useState("");
   const [scanInput, setScanInput] = React.useState("");
   const scanInputRef = React.useRef(null);
@@ -55,10 +54,7 @@ export default function AssetAssignment() {
     helpOpen,
     setHelpOpen,
     scannedLocation,
-    locationGpsBusy,
-    locationGpsFailed,
-    handleAutoDetectLocation,
-    handleScanLocation,
+    setScannedLocation,
     handleClearLocation,
     operatorName,
     actionByLabel,
@@ -161,77 +157,23 @@ export default function AssetAssignment() {
   );
 
   const renderLocationScan = () => (
-    <Card variant="outlined" sx={{ mb: 3 }}>
-      <CardContent>
-        <Typography variant="subtitle2" gutterBottom>
-          {t("assetAssignment.scanLocationTitle")}
-        </Typography>
-        {scannedLocation ? (
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              mb: 2,
-              p: 1.5,
-              bgcolor: "action.selected",
-              borderRadius: 1,
-              border: "1px solid var(--color-gray-300)",
-            }}
-          >
-            <Typography variant="body2" sx={{ flex: 1, fontWeight: 500 }}>
-              {scannedLocation}
-            </Typography>
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={handleClearLocation}
-              disabled={busy || Boolean(completedResult)}
-            >
-              {t("assetAssignment.changeLocation")}
-            </Button>
-          </Box>
-        ) : locationGpsBusy ? (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 1 }}>
-            <CircularProgress size={20} />
-            <Typography variant="body2" color="text.secondary">
-              {t("assetAssignment.detectingLocation")}
-            </Typography>
-          </Box>
-        ) : (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <Button
-              variant="outlined"
-              onClick={handleAutoDetectLocation}
-              disabled={busy}
-              sx={{ alignSelf: "flex-start" }}
-            >
-              {t("assetAssignment.detectByGps")}
-            </Button>
-            {locationGpsFailed && (
-              <Alert severity="info" sx={{ py: 0.5 }}>
-                {t("assetAssignment.gpsLocationFailed")}
-              </Alert>
-            )}
-            <StockCodeScanInput
-              value={locationScanInput}
-              onChange={setLocationScanInput}
-              onSubmit={(value) => {
-                handleScanLocation(value).then(() => {
-                  setLocationScanInput("");
-                  focusAssetInput();
-                });
-              }}
-              busy={busy}
-              label={t("assetAssignment.fromLocation")}
-              placeholder={t("assetAssignment.fromLocationPlaceholder")}
-              showSubmitButton={false}
-              allowProductSearch={false}
-            />
-          </Box>
-        )}
-      </CardContent>
-    </Card>
+    <LocationScanner
+      value={scannedLocation}
+      onChange={setScannedLocation}
+      gpsEnabled
+      autoDetectGpsOnMount
+      disabled={busy || Boolean(completedResult)}
+      onScanSuccess={focusAssetInput}
+      title={t("assetAssignment.scanLocationTitle")}
+      labels={{
+        detectByGps: t("assetAssignment.detectByGps"),
+        detectingLocation: t("assetAssignment.detectingLocation"),
+        gpsLocationFailed: t("assetAssignment.gpsLocationFailed"),
+        changeLocation: t("assetAssignment.changeLocation"),
+        scanLabel: t("assetAssignment.fromLocation"),
+        scanPlaceholder: t("assetAssignment.fromLocationPlaceholder"),
+      }}
+    />
   );
 
   const renderActionBy = () => (

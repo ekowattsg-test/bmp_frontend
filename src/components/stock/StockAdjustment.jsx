@@ -30,6 +30,7 @@ import { AuthContext } from "../../context/authContext";
 import { PageHeader, ProductInfoCard } from "../common";
 import HelpDialog from "../common/HelpDialog";
 import { getDisplayImageInfo } from "../../helpers/file_helper";
+import { getOperatorName } from "../../helpers/user_display_helper";
 import StockCodeScanInput from "./StockCodeScanInput";
 
 const toArray = (value) => {
@@ -383,7 +384,7 @@ const StockAdjustment = () => {
         quantity: qty,
         location: selectedStock.location || "central",
         reference: reasonText,
-        actionBy: userInfo?.login || "",
+        actionBy: getOperatorName(userInfo),
         recordDate: toLocalISO(),
       });
 
@@ -400,7 +401,7 @@ const StockAdjustment = () => {
             reason: reasonText,
             quantity: qty,
             productName: selectedStock.productName || "-",
-            operator: userInfo?.login || "",
+            operator: getOperatorName(userInfo),
             previousQuantity,
             newQuantity:
               adjustmentType === "in"

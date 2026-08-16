@@ -210,7 +210,7 @@ export const searchStockByCode = async (stockCode, location, options = {}) => {
  * Create the Drawing work order.
  *
  * @param {object} params
- * @param {string} params.issuedBy - Operator login/userName (work order header)
+ * @param {string} params.issuedBy - Operator display name (work order header)
  * @param {string} params.workByStaffId - Assigned worker staffId
  * @param {string} [params.workByStaffName] - Assigned worker display name for description
  */

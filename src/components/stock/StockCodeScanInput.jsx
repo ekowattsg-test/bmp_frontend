@@ -38,6 +38,9 @@ const normalizeScannedValue = (raw) => {
   return value;
 };
 
+const isEnterKey = (event) =>
+  event.key === "Enter" || event.keyCode === 13 || event.which === 13;
+
 const StockCodeScanInput = React.forwardRef(function StockCodeScanInput(
   {
     value,
@@ -236,7 +239,13 @@ const StockCodeScanInput = React.forwardRef(function StockCodeScanInput(
           ),
         }}
         onKeyDown={(event) => {
-          if (event.key === "Enter") {
+          if (isEnterKey(event)) {
+            event.preventDefault();
+            if (!disabled) onSubmit(value);
+          }
+        }}
+        onKeyPress={(event) => {
+          if (isEnterKey(event)) {
             event.preventDefault();
             if (!disabled) onSubmit(value);
           }

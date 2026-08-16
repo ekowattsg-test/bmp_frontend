@@ -34,7 +34,7 @@ import {
   OpenInNew as OpenInNewIcon,
   CameraAlt as CameraAltIcon,
 } from "@mui/icons-material";
-import { PageHeader } from "../common";
+import { PageHeader, LocationScanner } from "../common";
 import HelpDialog from "../common/HelpDialog";
 import StockCodeScanInput from "./StockCodeScanInput";
 import useTransferOut from "../../hooks/useTransferOut";
@@ -44,7 +44,6 @@ export default function TransferOut() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const hook = useTransferOut();
-  const [locationScanInput, setLocationScanInput] = React.useState("");
   const [scanInput, setScanInput] = React.useState("");
   const scanInputRef = React.useRef(null);
   const [carouselOpen, setCarouselOpen] = React.useState(false);
@@ -57,17 +56,11 @@ export default function TransferOut() {
     actionByLabel,
     deliveryOrders,
     dosLoading,
-    selectedDoId,
     setSelectedDoId,
     selectedDo,
     doItems,
     scannedLocation,
-    locationGpsBusy,
-    locationGpsFailed,
-    handleAutoDetectLocation,
-    handleScanLocation,
-    handleClearLocation,
-    toLocation,
+    setScannedLocation,
     productMap,
     scannedItems,
     handleScanSubmit,
@@ -202,70 +195,22 @@ export default function TransferOut() {
         )}
       />
 
-      {scannedLocation ? (
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-            p: 1.5,
-            bgcolor: "action.selected",
-            borderRadius: 1,
-            border: "1px solid var(--color-gray-300)",
-          }}
-        >
-          <Typography variant="body2" sx={{ flex: 1, fontWeight: 500 }}>
-            {scannedLocation}
-          </Typography>
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={handleClearLocation}
-            disabled={busy || Boolean(completedResult)}
-          >
-            {t("transferOut.changeLocation")}
-          </Button>
-        </Box>
-      ) : locationGpsBusy ? (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 1 }}>
-          <CircularProgress size={20} />
-          <Typography variant="body2" color="text.secondary">
-            {t("transferOut.detectingLocation")}
-          </Typography>
-        </Box>
-      ) : (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <Button
-            variant="outlined"
-            onClick={handleAutoDetectLocation}
-            disabled={busy}
-            sx={{ alignSelf: "flex-start" }}
-          >
-            {t("transferOut.detectByGps")}
-          </Button>
-          {locationGpsFailed && (
-            <Alert severity="info" sx={{ py: 0.5 }}>
-              {t("transferOut.gpsLocationFailed")}
-            </Alert>
-          )}
-          <StockCodeScanInput
-            value={locationScanInput}
-            onChange={setLocationScanInput}
-            onSubmit={(value) => {
-              handleScanLocation(value).then(() => {
-                setLocationScanInput("");
-                focusScanInput();
-              });
-            }}
-            busy={busy}
-            label={t("transferOut.fromLocation")}
-            placeholder={t("transferOut.fromLocationPlaceholder")}
-            submitLabel={t("transferOut.setLocation", "Set Location")}
-            showSubmitButton
-            allowProductSearch={false}
-          />
-        </Box>
-      )}
+      <LocationScanner
+        value={scannedLocation}
+        onChange={setScannedLocation}
+        gpsEnabled
+        autoDetectGpsOnMount
+        disabled={busy || Boolean(completedResult)}
+        onScanSuccess={focusScanInput}
+        labels={{
+          detectByGps: t("transferOut.detectByGps"),
+          detectingLocation: t("transferOut.detectingLocation"),
+          gpsLocationFailed: t("transferOut.gpsLocationFailed"),
+          changeLocation: t("transferOut.changeLocation"),
+          scanLabel: t("transferOut.fromLocation"),
+          scanPlaceholder: t("transferOut.fromLocationPlaceholder"),
+        }}
+      />
     </Box>
   );
 

@@ -31,16 +31,30 @@ export const normalizeScannedValue = (raw) => {
 /**
  * Resolve a scanned value to its underlying entity id.
  * First normalises the raw input, then attempts to decode a signed QR token.
- * Falls back to the normalised value if decoding fails or is not applicable.
+ *
+ * @param {string} raw - Raw scanned input
+ * @param {object} [options]
+ * @param {boolean} [options.requireEncoded=false] - If true, rejects non-token values instead of falling back to the normalised text.
+ * @returns {Promise<string>} Decoded token value, or normalised value when fallback is allowed.
+ * @throws {Error} When requireEncoded is true and the value is not a valid encoded QR token.
  */
-export const resolveScannedValue = async (raw) => {
+export const resolveScannedValue = async (
+  raw,
+  { requireEncoded = false } = {},
+) => {
   const normalized = normalizeScannedValue(raw);
   if (!normalized) return "";
   try {
     const decoded = await decodeToken(normalized);
     if (decoded) return decoded;
   } catch {
-    // Not a valid QR token — use normalised value.
+    if (requireEncoded) {
+      // Silently ignore non-token values when encoded input is required.
+      return "";
+    }
+  }
+  if (requireEncoded) {
+    return "";
   }
   return normalized;
 };
