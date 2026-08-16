@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState } from "react";
 import { TextField, Button, Box, MenuItem, Autocomplete } from "@mui/material";
 import { request } from "../../helpers/axios_helper";
-import { AuthContext } from "../../context/authContext";
-import { generateProductCode } from "../../helpers/itemcode_helper";
 import { useTranslation } from "react-i18next";
 import { DEFAULT_UOM_OPTIONS } from "../../helpers/common_options_helper";
 import FileGallery from "../common/FileGallery";
@@ -32,19 +30,8 @@ const ProductAdd = ({ onCancel }) => {
   const [errorMsg, setErrorMsg] = useState("");
   const [success, setSuccess] = useState(false);
 
-  const { userInfo } = useContext(AuthContext);
-
-  useEffect(() => {
-    const prefix = String(userInfo?.companyId || "").trim();
-    setForm((prev) => ({ ...prev, productCode: generateProductCode(prefix) }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const validate = () => {
     const errs = {};
-    if (!form.productCode || form.productCode.trim() === "") {
-      errs.productCode = t("product.productCode") + " is required";
-    }
     if (!productFiles || productFiles.length === 0) {
       errs.productFiles = t(
         "product.photoRequired",
@@ -109,17 +96,6 @@ const ProductAdd = ({ onCancel }) => {
       }}
     >
       <HeaderBar title={t("product.addTitle", "Add Product")} sx={{ mb: 1 }} />
-      <TextField
-        label={t("product.productCode", "Product Code")}
-        name="productCode"
-        value={form.productCode}
-        onChange={handleChange}
-        inputProps={{ readOnly: true }}
-        fullWidth
-        margin="normal"
-        error={!!errors.productCode}
-        helperText={errors.productCode}
-      />
       <TextField
         label={t("product.productName", "Product Name")}
         name="productName"
