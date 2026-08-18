@@ -370,7 +370,7 @@ export default function useReceivePoStock() {
         scannedItems: scansForService,
         photos: receiptPhotos.map((p) => p.metadata),
         issuedBy: operatorName,
-        workByStaffId: userLogin,
+        workByStaffId: operatorName,
       });
 
       const pdfItems = orderItems.map((item) => ({

@@ -44,6 +44,11 @@ import StockIssue from "./stock/StockIssue.jsx";
 import AssetAssignment from "./stock/AssetAssignment.jsx";
 import TransferOut from "./stock/TransferOut.jsx";
 import TransferIn from "./stock/TransferIn.jsx";
+import StockReturn from "./stock/StockReturn.jsx";
+import TransferReturnIn from "./stock/TransferReturnIn.jsx";
+import PurchaseReturn from "./stock/PurchaseReturn.jsx";
+import AssetReturn from "./stock/AssetReturn.jsx";
+import StockDisposal from "./stock/StockDisposal.jsx";
 import TvBootstrap from "./tv/TvBootstrap.jsx";
 import TvProjects from "./tv/TvProjects.jsx";
 
@@ -312,6 +317,14 @@ export default function AppContent() {
             <Route path="/pda/asset-assignment" element={<AssetAssignment />} />
             <Route path="/pda/stock-transfer-out" element={<TransferOut />} />
             <Route path="/pda/stock-transfer-in" element={<TransferIn />} />
+            <Route path="/pda/stock-return" element={<StockReturn />} />
+            <Route
+              path="/pda/transfer-return-in"
+              element={<TransferReturnIn />}
+            />
+            <Route path="/pda/purchase-return" element={<PurchaseReturn />} />
+            <Route path="/pda/asset-return" element={<AssetReturn />} />
+            <Route path="/pda/stock-disposal" element={<StockDisposal />} />
           </Route>
         </Routes>
       ) : !isAuthenticated ? (

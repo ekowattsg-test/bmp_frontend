@@ -73,7 +73,12 @@ export default function PdaLayout() {
     location.pathname.startsWith("/pda/stock-issue") ||
     location.pathname.startsWith("/pda/stock-transfer-out") ||
     location.pathname.startsWith("/pda/stock-transfer-in") ||
-    location.pathname.startsWith("/pda/asset-assignment");
+    location.pathname.startsWith("/pda/stock-return") ||
+    location.pathname.startsWith("/pda/transfer-return-in") ||
+    location.pathname.startsWith("/pda/purchase-return") ||
+    location.pathname.startsWith("/pda/asset-assignment") ||
+    location.pathname.startsWith("/pda/asset-return") ||
+    location.pathname.startsWith("/pda/stock-disposal");
 
   const pageTitle =
     location.state?.title ??

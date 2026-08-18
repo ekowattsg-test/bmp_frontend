@@ -106,22 +106,6 @@ export const searchAssetByCode = async (stockCode, location, options = {}) => {
     { skipBackendErrorDialog: true },
   );
 
-  const rows = toArray(response?.data).filter(
-    (row) =>
-      String(row?.stockCode || "")
-        .trim()
-        .toLowerCase() ===
-        String(stockCode || "")
-          .trim()
-          .toLowerCase() ||
-      String(row?.stockId || "")
-        .trim()
-        .toLowerCase() ===
-        String(stockCode || "")
-          .trim()
-          .toLowerCase(),
-  );
-
   const selectedLocation = String(location || "")
     .trim()
     .toLowerCase();
@@ -131,8 +115,20 @@ export const searchAssetByCode = async (stockCode, location, options = {}) => {
     );
   }
 
-  let matches = rows.filter(
+  const rows = toArray(response?.data).filter(
     (row) =>
+      (String(row?.stockCode || "")
+        .trim()
+        .toLowerCase() ===
+        String(stockCode || "")
+          .trim()
+          .toLowerCase() ||
+        String(row?.stockId || "")
+          .trim()
+          .toLowerCase() ===
+          String(stockCode || "")
+            .trim()
+            .toLowerCase()) &&
       String(row?.location || "")
         .trim()
         .toLowerCase() === selectedLocation,
@@ -141,6 +137,8 @@ export const searchAssetByCode = async (stockCode, location, options = {}) => {
   const allowedCategories = (options.allowedProductCategories || [])
     .map((c) => String(c || "").toUpperCase())
     .filter(Boolean);
+
+  let matches = rows;
   if (allowedCategories.length > 0) {
     matches = matches.filter((row) =>
       allowedCategories.includes(

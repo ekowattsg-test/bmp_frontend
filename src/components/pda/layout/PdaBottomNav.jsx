@@ -21,8 +21,11 @@ import PublishedWithChangesIcon from "@mui/icons-material/PublishedWithChanges";
 import QrCode2Icon from "@mui/icons-material/QrCode2";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import MoveUpIcon from "@mui/icons-material/MoveUp";
+import MoveDownIcon from "@mui/icons-material/MoveDown";
 import HandymanIcon from "@mui/icons-material/Handyman";
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
+import ReplyIcon from "@mui/icons-material/Reply";
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import WorklistIcon from "@mui/icons-material/PlaylistAddCheck";
 import { request } from "../../../helpers/axios_helper";
 
@@ -70,10 +73,45 @@ const INVENTORY_MENU_ITEMS = [
     requiresStockOrSiteLeader: true,
   },
   {
+    route: "/pda/stock-return",
+    navigateTo: "/pda/stock-return",
+    labelKey: "pda.nav.stockReturn",
+    icon: <MoveDownIcon />,
+    requiresStockOrSiteLeader: true,
+  },
+  {
+    route: "/pda/transfer-return-in",
+    navigateTo: "/pda/transfer-return-in",
+    labelKey: "pda.nav.transferReturnIn",
+    icon: <CompareArrowsIcon />,
+    requiresStockOrSiteLeader: true,
+  },
+  {
+    route: "/pda/purchase-return",
+    navigateTo: "/pda/purchase-return",
+    labelKey: "pda.nav.purchaseReturn",
+    icon: <ReplyIcon />,
+    requiresStockOrSiteLeader: true,
+  },
+  {
     route: "/pda/asset-assignment",
     navigateTo: "/pda/asset-assignment",
     labelKey: "pda.nav.assetAssignment",
     icon: <HandymanIcon />,
+    requiresStockOrSiteLeader: true,
+  },
+  {
+    route: "/pda/asset-return",
+    navigateTo: "/pda/asset-return",
+    labelKey: "pda.nav.assetReturn",
+    icon: <HandymanIcon />,
+    requiresStockOrSiteLeader: true,
+  },
+  {
+    route: "/pda/stock-disposal",
+    navigateTo: "/pda/stock-disposal",
+    labelKey: "pda.nav.stockDisposal",
+    icon: <DeleteSweepIcon />,
     requiresStockOrSiteLeader: true,
   },
 ];

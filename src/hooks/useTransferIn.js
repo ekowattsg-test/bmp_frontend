@@ -357,7 +357,7 @@ export default function useTransferIn() {
         })),
         photos: transferPhotos.map((p) => p.metadata),
         issuedBy: operatorName,
-        workByStaffId: userLogin,
+        workByStaffId: operatorName,
         description: selectedDoId
           ? `Transfer in for ${selectedDoId}`
           : "Transfer stock in",

@@ -29,6 +29,13 @@ import StockIssue from "./stock/StockIssue";
 import AssetAssignment from "./stock/AssetAssignment";
 import TransferOut from "./stock/TransferOut";
 import TransferIn from "./stock/TransferIn";
+import StockReturn from "./stock/StockReturn";
+import TransferReturnIn from "./stock/TransferReturnIn";
+import PurchaseReturn from "./stock/PurchaseReturn";
+import PurchaseReturnList from "./stock/PurchaseReturnList";
+import AssetReturn from "./stock/AssetReturn";
+import StockDisposal from "./stock/StockDisposal";
+import StockDisposalList from "./stock/StockDisposalList";
 import UOMHierarchy from "./stock/UOMHierarchy";
 import LanguageSettings from "./baseInformation/LanguageSettings";
 import UserProfile from "./baseInformation/UserProfile";
@@ -97,6 +104,13 @@ function MainPage() {
         <Route path="/asset-assignment" element={<AssetAssignment />} />
         <Route path="/stock-transfer-out" element={<TransferOut />} />
         <Route path="/stock-transfer-in" element={<TransferIn />} />
+        <Route path="/stock-return" element={<StockReturn />} />
+        <Route path="/transfer-return-in" element={<TransferReturnIn />} />
+        <Route path="/purchase-return" element={<PurchaseReturn />} />
+        <Route path="/purchase-return-list" element={<PurchaseReturnList />} />
+        <Route path="/asset-return" element={<AssetReturn />} />
+        <Route path="/stock-disposal" element={<StockDisposal />} />
+        <Route path="/stock-disposal-list" element={<StockDisposalList />} />
         <Route path="/stockenquiry" element={<StockEnquiry />} />
         <Route path="/stockcard" element={<StockCard />} />
         <Route path="/uomhierarchy" element={<UOMHierarchy />} />

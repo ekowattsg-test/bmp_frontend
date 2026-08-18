@@ -385,7 +385,7 @@ export default function useTransferOut() {
         })),
         photos: transferPhotos.map((p) => p.metadata),
         issuedBy: operatorName,
-        workByStaffId: userLogin,
+        workByStaffId: operatorName,
         description: selectedDoId
           ? `Transfer out for ${selectedDoId}`
           : "Transfer stock out",

@@ -49,7 +49,10 @@ import {
   WhatsApp as WhatsAppIcon,
   ReceiptLong as ReceiptIcon,
   MoveUp as MoveUpIcon,
+  MoveDown as MoveDownIcon,
+  Reply as ReplyIcon,
   Handyman as HandymanIcon,
+  DeleteSweep as DeleteSweepIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -349,6 +352,36 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               path: "/stock-transfer-in",
             },
             {
+              key: "stockReturn",
+              label: t("menu.stockReturn", "Stock Return"),
+              icon: <MoveDownIcon fontSize="small" />,
+              path: "/stock-return",
+            },
+            {
+              key: "transferReturnIn",
+              label: t("menu.transferReturnIn", "Transfer Return In"),
+              icon: <CompareArrowsIcon fontSize="small" />,
+              path: "/transfer-return-in",
+            },
+            {
+              key: "purchaseReturn",
+              label: t("menu.purchaseReturn", "Purchase Return"),
+              icon: <ReplyIcon fontSize="small" />,
+              path: "/purchase-return",
+            },
+            {
+              key: "assetReturn",
+              label: t("menu.assetReturn", "Asset Return"),
+              icon: <HandymanIcon fontSize="small" />,
+              path: "/asset-return",
+            },
+            {
+              key: "stockDisposal",
+              label: t("menu.stockDisposal", "Stock Disposal"),
+              icon: <DeleteSweepIcon fontSize="small" />,
+              path: "/stock-disposal",
+            },
+            {
               key: "stockEnquiry",
               label: t("menu.stockEnquiry", "Stock Enquiry"),
               icon: <HistoryIcon fontSize="small" />,
@@ -461,22 +494,34 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
           icon: <EngineeringIcon />,
           children: [
             {
-              key: "purchaseOrders",
-              label: t("menu.purchaseOrder"),
-              icon: <BusinessIcon fontSize="small" />,
-              path: "/purchaseorder",
-            },
-            {
               key: "requisitionOrders",
-              label: t("menu.requisitionOrder", "Requisition Order"),
+              label: t("menu.requisitionOrder", "Inventory Requisition"),
               icon: <AssignmentIcon fontSize="small" />,
               path: "/requisition-orders",
             },
             {
+              key: "purchaseOrders",
+              label: t("menu.purchaseOrder", "Purchase Order"),
+              icon: <BusinessIcon fontSize="small" />,
+              path: "/purchaseorder",
+            },
+            {
               key: "deliveryOrders",
-              label: t("menu.deliveryOrder", "Delivery Orders"),
+              label: t("menu.deliveryOrder", "Delivery Order"),
               icon: <LocalShippingIcon fontSize="small" />,
               path: "/deliveryorder",
+            },
+            {
+              key: "purchaseReturnList",
+              label: t("menu.purchaseReturnList", "Purchase Return Record"),
+              icon: <ReplyIcon fontSize="small" />,
+              path: "/purchase-return-list",
+            },
+            {
+              key: "stockDisposalList",
+              label: t("menu.stockDisposalList", "Stock Disposal Records"),
+              icon: <DeleteSweepIcon fontSize="small" />,
+              path: "/stock-disposal-list",
             },
             // Work order list menu disabled — work orders are created
             // automatically by stock and transfer flows.

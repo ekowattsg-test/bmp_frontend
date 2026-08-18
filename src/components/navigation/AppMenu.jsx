@@ -241,6 +241,21 @@ const AppMenu = () => {
             icon: <CompareArrows />,
           },
           {
+            to: "/asset-return",
+            label: t("menu.assetReturn", "Asset Return"),
+            icon: <History />,
+          },
+          {
+            to: "/stock-disposal",
+            label: t("menu.stockDisposal", "Stock Disposal"),
+            icon: <History />,
+          },
+          {
+            to: "/stock-disposal-list",
+            label: t("menu.stockDisposalList", "Stock Disposal Records"),
+            icon: <History />,
+          },
+          {
             to: "/stockenquiry",
             label: t("menu.stockEnquiry", "Stock Enquiry"),
             icon: <History />,

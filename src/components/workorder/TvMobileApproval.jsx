@@ -5,6 +5,7 @@ import {
   Button,
   IconButton,
   InputAdornment,
+  MenuItem,
   Stack,
   TextField,
   Typography,
@@ -14,11 +15,15 @@ import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import { useCameraScanner } from "../../helpers/camera_scanner_helper";
 import HeaderBar from "../common/HeaderBar";
+import TV_CONTENT_OPTIONS from "../../config/tvContentOptions";
 
 const TvMobileApproval = () => {
   const { t } = useTranslation();
   const [sessionCode, setSessionCode] = useState("");
   const [pin, setPin] = useState("");
+  const [destinationUrl, setDestinationUrl] = useState(
+    TV_CONTENT_OPTIONS[0]?.value || "",
+  );
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -26,6 +31,7 @@ const TvMobileApproval = () => {
   const resetForm = () => {
     setSessionCode("");
     setPin("");
+    setDestinationUrl(TV_CONTENT_OPTIONS[0]?.value || "");
     setSuccessMsg("");
     setErrorMsg("");
   };
@@ -47,7 +53,7 @@ const TvMobileApproval = () => {
     const payload = {
       sessionCode: String(sessionCode || "").trim(),
       pin: String(pin || "").trim(),
-      destinationUrl: "/tv/projects",
+      destinationUrl: String(destinationUrl || "").trim(),
     };
 
     if (!payload.sessionCode || !payload.pin) {
@@ -163,6 +169,21 @@ const TvMobileApproval = () => {
               required
               fullWidth
             />
+            <TextField
+              select
+              label={t("tvApproval.destinationUrl", "Content to Display")}
+              value={destinationUrl}
+              onChange={(e) => setDestinationUrl(e.target.value)}
+              required
+              fullWidth
+              disabled={TV_CONTENT_OPTIONS.length <= 1}
+            >
+              {TV_CONTENT_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {t(option.labelKey)}
+                </MenuItem>
+              ))}
+            </TextField>
             {errorMsg ? <Alert severity="error">{errorMsg}</Alert> : null}
 
             <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
