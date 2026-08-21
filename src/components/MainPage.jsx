@@ -12,6 +12,7 @@ import CustomerModern from "./information/CustomerModern";
 import VendorModern from "./information/VendorModern";
 import PurchaseOrderModern from "./information/PurchaseOrderModern";
 import InventoryRequisitionModern from "./information/InventoryRequisitionModern";
+import TaskDeliveryRequirementModern from "./information/TaskDeliveryRequirementModern";
 import DeliveryOrderModern from "./information/DeliveryOrderModern";
 import StaffProfile from "./staffprofile/staffProfile";
 import StaffMeritList from "./staffprofile/StaffMeritList";
@@ -56,6 +57,8 @@ import ProjectWorkbench from "./project/ProjectWorkbench";
 import ProjectManpowerGenerate from "./project/ProjectManpowerGenerate";
 import ProjectTaskRecalculate from "./project/ProjectTaskRecalculate";
 import RequisitionGenerate from "./project/RequisitionGenerate";
+import ProjectTaskDeliveryExtract from "./project/ProjectTaskDeliveryExtract";
+import RebuildHoldMovements from "./project/RebuildHoldMovements";
 import ProjectStatusControl from "./project/ProjectStatusControl";
 import BuildingProgressPage from "./project/buildingProgress/BuildingProgressPage";
 import VehicleModern from "./information/VehicleModern";
@@ -87,6 +90,10 @@ function MainPage() {
         <Route
           path="/requisition-orders"
           element={<InventoryRequisitionModern />}
+        />
+        <Route
+          path="/task-delivery-requirements"
+          element={<TaskDeliveryRequirementModern />}
         />
         <Route path="/deliveryorder" element={<DeliveryOrderModern />} />
         <Route path="/staffskill" element={<StaffSkillModern />} />
@@ -142,6 +149,14 @@ function MainPage() {
           element={<ProjectTaskRecalculate />}
         />
         <Route path="/requisition-generate" element={<RequisitionGenerate />} />
+        <Route
+          path="/projecttask-delivery-extract"
+          element={<ProjectTaskDeliveryExtract />}
+        />
+        <Route
+          path="/rebuild-hold-movements"
+          element={<RebuildHoldMovements />}
+        />
         <Route
           path="/projectplanning/:projectCode/workbench"
           element={<ProjectWorkbench />}

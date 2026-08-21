@@ -465,16 +465,6 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               minLevel: 5,
             },
             {
-              key: "projectTaskRecalculate",
-              label: t(
-                "menu.projectTaskRecalculate",
-                "Recalculate Project Tasks",
-              ),
-              icon: <TaskIcon fontSize="small" />,
-              path: "/projecttask-recalculate",
-              minLevel: 5,
-            },
-            {
               key: "requisitionGenerate",
               label: t(
                 "menu.requisitionGenerate",
@@ -482,6 +472,26 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               ),
               icon: <AssignmentIcon fontSize="small" />,
               path: "/requisition-generate",
+              minLevel: 5,
+            },
+            {
+              key: "projectTaskDeliveryExtract",
+              label: t(
+                "menu.projectTaskDeliveryExtract",
+                "Extract Task Delivery Requirements",
+              ),
+              icon: <LocalShippingIcon fontSize="small" />,
+              path: "/projecttask-delivery-extract",
+              minLevel: 5,
+            },
+            {
+              key: "rebuildHoldMovements",
+              label: t(
+                "menu.rebuildHoldMovements",
+                "Rebuild DO/PO Hold Movements",
+              ),
+              icon: <CompareArrowsIcon fontSize="small" />,
+              path: "/rebuild-hold-movements",
               minLevel: 5,
             },
           ],
@@ -498,6 +508,15 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               label: t("menu.requisitionOrder", "Inventory Requisition"),
               icon: <AssignmentIcon fontSize="small" />,
               path: "/requisition-orders",
+            },
+            {
+              key: "taskDeliveryRequirements",
+              label: t(
+                "menu.taskDeliveryRequirement",
+                "Task Inventory Dispatch",
+              ),
+              icon: <LocalShippingIcon fontSize="small" />,
+              path: "/task-delivery-requirements",
             },
             {
               key: "purchaseOrders",

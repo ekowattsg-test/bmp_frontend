@@ -11,6 +11,7 @@ import {
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import SearchIcon from "@mui/icons-material/Search";
+import AutorenewIcon from "@mui/icons-material/Autorenew";
 import { DataGrid } from "@mui/x-data-grid";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -103,6 +104,11 @@ const ProjectPlanningModern = () => {
   const [search, setSearch] = useState("");
   const [selectedProjectCode, setSelectedProjectCode] = useState("");
   const [eligibleProjects, setEligibleProjects] = useState([]);
+  const [recalcProject, setRecalcProject] = useState(null);
+  const [recalcSubmitting, setRecalcSubmitting] = useState(false);
+  const [recalcSuccess, setRecalcSuccess] = useState("");
+  const userLevel = Number(userInfo?.userLevel ?? userInfo?.level ?? 0);
+  const canRecalculate = userLevel >= 5;
 
   const selectedProject = useMemo(
     () =>
@@ -252,37 +258,67 @@ const ProjectPlanningModern = () => {
     {
       field: "actions",
       headerName: t("basic.actions", "Actions"),
-      width: 320,
+      width: 420,
       sortable: false,
       filterable: false,
-      renderCell: (params) => (
-        <Box
-          sx={{ display: "flex", gap: 1, alignItems: "center", height: "100%" }}
-        >
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={(event) => {
-              event.stopPropagation();
-              openWorkbench(params.row);
+      renderCell: (params) => {
+        const projectCode = String(params.row?.projectCode || "").trim();
+        const isRecalculating =
+          recalcSubmitting && recalcProject === projectCode;
+        return (
+          <Box
+            sx={{
+              display: "flex",
+              gap: 1,
+              alignItems: "center",
+              height: "100%",
             }}
           >
-            {t("projectPlanning.openWorkbench", "Open Workbench")}
-          </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            color="info"
-            startIcon={<FolderOpenIcon fontSize="small" />}
-            onClick={(event) => {
-              event.stopPropagation();
-              openDocuments(params.row);
-            }}
-          >
-            {t("projectPlanning.documents", "Documents")}
-          </Button>
-        </Box>
-      ),
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={(event) => {
+                event.stopPropagation();
+                openWorkbench(params.row);
+              }}
+            >
+              {t("projectPlanning.openWorkbench", "Open Workbench")}
+            </Button>
+            {canRecalculate ? (
+              <Button
+                size="small"
+                variant="outlined"
+                color="secondary"
+                startIcon={<AutorenewIcon fontSize="small" />}
+                disabled={isRecalculating}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleRecalculate(params.row);
+                }}
+              >
+                {isRecalculating
+                  ? t(
+                      "projectTaskRecalculate.recalculating",
+                      "Recalculating...",
+                    )
+                  : t("projectTaskRecalculate.recalculate", "Recalculate")}
+              </Button>
+            ) : null}
+            <Button
+              size="small"
+              variant="outlined"
+              color="info"
+              startIcon={<FolderOpenIcon fontSize="small" />}
+              onClick={(event) => {
+                event.stopPropagation();
+                openDocuments(params.row);
+              }}
+            >
+              {t("projectPlanning.documents", "Documents")}
+            </Button>
+          </Box>
+        );
+      },
     },
   ];
 
@@ -293,6 +329,45 @@ const ProjectPlanningModern = () => {
     navigate(`/projectplanning/${projectCode}/workbench`, {
       state: { project },
     });
+  };
+
+  const handleRecalculate = async (project) => {
+    const projectCode = String(project?.projectCode || "").trim();
+    if (!projectCode || recalcSubmitting) return;
+
+    setRecalcProject(projectCode);
+    setRecalcSubmitting(true);
+    setRecalcSuccess("");
+    setError("");
+
+    try {
+      const response = await request(
+        "POST",
+        `/api/projecttasks/recalculate/project/${encodeURIComponent(projectCode)}`,
+      );
+      const resultText =
+        typeof response?.data === "string"
+          ? response.data
+          : t(
+              "projectTaskRecalculate.recalculateSuccess",
+              "Task dates were recalculated successfully.",
+            );
+      setRecalcSuccess(resultText);
+    } catch (err) {
+      const backendMessage = String(
+        err?.response?.data?.message || err?.response?.data || "",
+      ).trim();
+      setError(
+        backendMessage ||
+          t(
+            "projectTaskRecalculate.recalculateFailed",
+            "Failed to recalculate task dates.",
+          ),
+      );
+    } finally {
+      setRecalcSubmitting(false);
+      setRecalcProject(null);
+    }
   };
 
   const openDocuments = async (project) => {
@@ -387,6 +462,12 @@ const ProjectPlanningModern = () => {
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
+        </Alert>
+      )}
+
+      {recalcSuccess && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {recalcSuccess}
         </Alert>
       )}
 
