@@ -12,10 +12,10 @@ The backend now exposes a simple chat/messaging API. This document describes how
 
 Two new `param` entries control project group chat scope:
 
-| Param key | Default | Meaning |
-|---|---|---|
-| `chatProjectGroupDefaultScope` | `LEADERSHIP` | Default audience for project group messages. `LEADERSHIP` = project leaders only. `ALL` = leaders + task owners + manpower. |
-| `chatAllowProjectGroupScopeChoice` | `1` | If `1`/`true`, the sender can override the default per message. If `0`/`false`, the default is always used. |
+| Param key                          | Default      | Meaning                                                                                                                     |
+| ---------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `chatProjectGroupDefaultScope`     | `LEADERSHIP` | Default audience for project group messages. `LEADERSHIP` = project leaders only. `ALL` = leaders + task owners + manpower. |
+| `chatAllowProjectGroupScopeChoice` | `1`          | If `1`/`true`, the sender can override the default per message. If `0`/`false`, the default is always used.                 |
 
 The frontend does **not** need to manage these values directly, but it should read them from `/api/params` if you want to show/hide the scope toggle in the project chat UI.
 
@@ -114,22 +114,22 @@ PUT /api/messages/{messageId}/read
 
 ## MessageDto Fields
 
-| Field | Meaning |
-|---|---|
-| `messageId` | Unique id |
-| `senderStaffId` | Sender staff id (or `SYSTEM`) |
-| `senderName` | Resolved staff name |
-| `recipientType` | `DIRECT` / `PROJECT` / `BROADCAST` |
-| `recipientStaffId` | For DIRECT |
-| `recipientName` | For DIRECT |
-| `projectCode` | For PROJECT |
-| `content` | Message text |
-| `source` | `USER` or `SYSTEM` |
-| `category` | Optional system label |
-| `referenceId` | Optional linked entity id |
-| `createdAt` | ISO timestamp |
-| `readByMe` | Whether current staff has read it |
-| `projectGroupScope` | `LEADERSHIP` or `ALL` for PROJECT |
+| Field               | Meaning                            |
+| ------------------- | ---------------------------------- |
+| `messageId`         | Unique id                          |
+| `senderStaffId`     | Sender staff id (or `SYSTEM`)      |
+| `senderName`        | Resolved staff name                |
+| `recipientType`     | `DIRECT` / `PROJECT` / `BROADCAST` |
+| `recipientStaffId`  | For DIRECT                         |
+| `recipientName`     | For DIRECT                         |
+| `projectCode`       | For PROJECT                        |
+| `content`           | Message text                       |
+| `source`            | `USER` or `SYSTEM`                 |
+| `category`          | Optional system label              |
+| `referenceId`       | Optional linked entity id          |
+| `createdAt`         | ISO timestamp                      |
+| `readByMe`          | Whether current staff has read it  |
+| `projectGroupScope` | `LEADERSHIP` or `ALL` for PROJECT  |
 
 ## Suggested UI Components
 
@@ -198,6 +198,7 @@ The frontend only needs to render `source === "SYSTEM"` messages with a distinct
 
 ## Notes
 
+- **Direct (with staff list), Project (with project list), and Broadcast modes must always be shown regardless of whether a message block list exists.** These are core chat entry points and should not be gated by the presence or absence of blocked-message data. The compose selectors and tabs should also remain visible when the current user has no linked mobile number; only message sending and thread fetching should be disabled in that case.
 - Keep message rendering simple: bubble list, auto-scroll to bottom.
 - Do not implement real-time WebSocket in this first version; polling is sufficient.
 - Respect BMP UI standards: use `PageHeader`, `Box` without outer flex gap, MUI `List`, `Avatar`, etc.

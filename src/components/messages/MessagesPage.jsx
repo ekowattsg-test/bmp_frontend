@@ -30,6 +30,7 @@ import {
   Checkbox,
   FormControlLabel,
   IconButton,
+  Alert,
 } from "@mui/material";
 import {
   Chat as ChatIcon,
@@ -79,7 +80,8 @@ export default function MessagesPage() {
   const [selectedDirectStaff, setSelectedDirectStaff] = useState("");
   const [selectedProject, setSelectedProject] = useState("");
   const [messageInput, setMessageInput] = useState("");
-  const [composeOpen, setComposeOpen] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const [composeOpen, setComposeOpen] = useState(true);
   const defaultProjectScope =
     param?.chatProjectGroupDefaultScope ?? "LEADERSHIP";
   const [includeAllMembers, setIncludeAllMembers] = useState(
@@ -243,7 +245,12 @@ export default function MessagesPage() {
   }, []);
 
   const send = async (recipientType, extra) => {
-    if (!messageInput.trim() || !currentUserMobile) return;
+    if (!messageInput.trim()) return;
+    if (!currentUserMobile) {
+      setSendError(t("chat.mobileNumberRequired"));
+      return;
+    }
+    setSendError("");
     const payload = {
       recipientType,
       content: messageInput.trim(),
@@ -288,16 +295,13 @@ export default function MessagesPage() {
   );
 
   useEffect(() => {
-    if (!currentUserMobile || !currentStaffId) return;
-    let mounted = true;
     const load = async () => {
       await fetchMeta();
-      await fetchConversations();
+      if (currentUserMobile && currentStaffId) {
+        await fetchConversations();
+      }
     };
     load();
-    return () => {
-      mounted = false;
-    };
   }, [currentUserMobile, currentStaffId, fetchMeta, fetchConversations]);
 
   useEffect(() => {
@@ -307,7 +311,6 @@ export default function MessagesPage() {
       await fetchThread(selectedConversation);
     };
     loadThread();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedConversation]);
 
   useEffect(() => {
@@ -379,7 +382,6 @@ export default function MessagesPage() {
   useEffect(() => {
     // Only auto-scroll on initial thread open, not on every background refresh
     threadBottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedConversation]);
 
   const renderMessageList = (messages, hideInput) => (
@@ -461,6 +463,7 @@ export default function MessagesPage() {
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
             placeholder={t("chat.typeMessage")}
+            disabled={!currentUserMobile}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -472,10 +475,20 @@ export default function MessagesPage() {
             variant="contained"
             endIcon={<SendIcon />}
             onClick={() => send(getSendType(), getExtra())}
+            disabled={!currentUserMobile}
           >
             {t("chat.send")}
           </Button>
         </Box>
+      )}
+      {sendError && (
+        <Typography
+          variant="caption"
+          color="error"
+          sx={{ mt: 1, display: "block" }}
+        >
+          {sendError}
+        </Typography>
       )}
     </Box>
   );
@@ -511,22 +524,6 @@ export default function MessagesPage() {
       };
     return {};
   };
-
-  if (!currentUserMobileRaw) {
-    return (
-      <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-        <PageHeader
-          title={t("chat.title")}
-          subtitle={t("chat.subtitle")}
-          icon={ChatIcon}
-        />
-        <EmptyState
-          title={t("chat.title")}
-          description={t("chat.mobileNumberRequired")}
-        />
-      </Box>
-    );
-  }
 
   const conversationGroups = Object.values(
     conversations.reduce((acc, c) => {
@@ -764,6 +761,11 @@ export default function MessagesPage() {
           {/* Right: thread */}
           <Box sx={{ flex: 1, minWidth: 0, position: "relative" }}>
             <div ref={topOfThreadRef} />
+            {!currentUserMobileRaw && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                {t("chat.mobileNumberRequired")}
+              </Alert>
+            )}
             {composeOpen ? (
               <Box
                 sx={{
