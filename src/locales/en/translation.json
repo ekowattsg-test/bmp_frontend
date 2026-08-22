@@ -25,6 +25,7 @@
   },
   "topbar": {
     "notifications": "Notifications",
+    "messages": "Messages",
     "account": "Account",
     "profile": "Profile",
     "settings": "Settings",
@@ -144,6 +145,7 @@
       "inventoryMenu": "Inventory",
       "briefing": "Briefing",
       "me": "Me",
+      "messages": "Messages",
       "site": "Field Ops",
       "siteMenu": "Field Ops",
       "availableTasks": "Task Assignment Board",
@@ -479,6 +481,7 @@
     "waSimulator": "WA Simulator",
     "parameter": "Parameter",
     "briefing": "Briefing Setup",
+    "messages": "Messages",
     "delete": "Delete"
   },
   "tv": {
@@ -1355,6 +1358,31 @@
     "noProducts": "No products found.",
     "noCompanies": "No companies found.",
     "noUsers": "No users found."
+  },
+  "chat": {
+    "title": "Messages",
+    "subtitle": "Communicate with staff",
+    "direct": "Direct",
+    "project": "Project",
+    "broadcast": "Broadcast",
+    "selectStaff": "Select staff",
+    "selectStaffDescription": "Choose a staff member to start chatting.",
+    "selectProject": "Select project",
+    "selectProjectDescription": "Choose a project to view group messages.",
+    "includeAllMembers": "Include all project members",
+    "typeMessage": "Type a message...",
+    "send": "Send",
+    "noMessages": "No messages",
+    "startConversation": "Start a conversation",
+    "system": "System",
+    "conversations": "Conversations",
+    "you": "You",
+    "me": "Me",
+    "newMessage": "New message",
+    "noConversationSelected": "No conversation selected",
+    "selectConversationDescription": "Select a conversation from the list or start a new message.",
+    "mobileNumberRequired": "Messaging requires a mobile number linked to your account. Please contact your administrator.",
+    "broadcastOnlyForAdmins": "Only administrators can send broadcast messages."
   },
   "companyList": {
     "title": "Company List",

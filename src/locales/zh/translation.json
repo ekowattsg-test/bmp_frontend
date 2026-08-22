@@ -25,6 +25,7 @@
   },
   "topbar": {
     "notifications": "通知",
+    "messages": "消息",
     "account": "账户",
     "profile": "个人资料",
     "settings": "设置",
@@ -144,6 +145,7 @@
       "inventoryMenu": "库存",
       "briefing": "简报",
       "me": "我的",
+      "messages": "消息",
       "site": "现场作业",
       "siteMenu": "现场作业",
       "availableTasks": "任务分配看板",
@@ -479,6 +481,7 @@
     "waSimulator": "WA 模拟器",
     "parameter": "参数",
     "briefing": "简报设置",
+    "messages": "消息",
     "delete": "删除"
   },
   "tv": {
@@ -1355,6 +1358,31 @@
     "noProducts": "未找到产品。",
     "noCompanies": "未找到公司。",
     "noUsers": "未找到用户。"
+  },
+  "chat": {
+    "title": "消息",
+    "subtitle": "与员工沟通",
+    "direct": "直接消息",
+    "project": "项目消息",
+    "broadcast": "广播消息",
+    "selectStaff": "选择员工",
+    "selectStaffDescription": "选择一名员工开始聊天。",
+    "selectProject": "选择项目",
+    "selectProjectDescription": "选择项目以查看群组消息。",
+    "includeAllMembers": "包含所有项目成员",
+    "typeMessage": "输入消息...",
+    "send": "发送",
+    "noMessages": "没有消息",
+    "startConversation": "开始对话",
+    "system": "系统",
+    "conversations": "对话",
+    "you": "您",
+    "me": "我",
+    "newMessage": "新消息",
+    "noConversationSelected": "未选择对话",
+    "selectConversationDescription": "从列表中选择对话或开始新消息。",
+    "mobileNumberRequired": "消息功能需要您的账户绑定手机号。请联系管理员。",
+    "broadcastOnlyForAdmins": "只有管理员可以发送广播消息。"
   },
   "companyList": {
     "title": "公司列表",

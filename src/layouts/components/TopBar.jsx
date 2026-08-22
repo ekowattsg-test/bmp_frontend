@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   AppBar,
   Toolbar,
@@ -17,6 +17,7 @@ import {
 import {
   Menu as MenuIcon,
   Notifications as NotificationsIcon,
+  Chat as ChatIcon,
   AccountCircle,
   Logout,
   Settings as SettingsIcon,
@@ -28,6 +29,7 @@ import { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AuthContext } from "../../context/authContext";
+import { request } from "../../helpers/axios_helper";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
 
 const TopBar = ({ onMenuClick, collapsed }) => {
@@ -41,6 +43,7 @@ const TopBar = ({ onMenuClick, collapsed }) => {
   const [anchorElUser, setAnchorElUser] = useState(null);
   const [anchorElNotifications, setAnchorElNotifications] = useState(null);
   const [anchorElAbout, setAnchorElAbout] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const handleOpenUserMenu = (event) => {
     setAnchorElUser(event.currentTarget);
@@ -66,6 +69,35 @@ const TopBar = ({ onMenuClick, collapsed }) => {
   const handleCloseAbout = () => {
     setAnchorElAbout(null);
   };
+
+  const currentUserMobile = encodeURIComponent(
+    userInfo?.mobileNumber || userInfo?.mobile || userInfo?.phoneNumber || "",
+  );
+
+  const fetchUnreadCount = async () => {
+    if (!currentUserMobile) return;
+    try {
+      const res = await request(
+        "GET",
+        `/api/messages/unread-count?mobileNumber=${currentUserMobile}`,
+      );
+      setUnreadCount(Number(res.data?.count ?? 0));
+    } catch (err) {
+      // silently ignore; badge will show 0
+    }
+  };
+
+  useEffect(() => {
+    if (!currentUserMobile) return;
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 15000);
+    const onFocus = () => fetchUnreadCount();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [currentUserMobile]);
 
   const handleLogout = () => {
     handleCloseUserMenu();
@@ -166,6 +198,23 @@ const TopBar = ({ onMenuClick, collapsed }) => {
             </IconButton>
           </Tooltip>
           */}
+
+          {/* Messages */}
+          <Tooltip title={t("topbar.messages", "Messages")}>
+            <IconButton
+              color="inherit"
+              onClick={() => navigate("/messages")}
+              sx={{
+                "&:hover": {
+                  bgcolor: "action.hover",
+                },
+              }}
+            >
+              <Badge badgeContent={unreadCount} color="error">
+                <ChatIcon />
+              </Badge>
+            </IconButton>
+          </Tooltip>
 
           {/* User Menu */}
           <Tooltip title={t("topbar.account", "Account")}>

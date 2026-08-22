@@ -70,6 +70,7 @@ import ParameterModern from "./baseInformation/ParameterModern";
 import BriefingModern from "./baseInformation/BriefingModern";
 import BriefingContentPage from "./baseInformation/BriefingContentPage";
 import TvMobileApproval from "./workorder/TvMobileApproval";
+import MessagesPage from "./messages/MessagesPage";
 
 function MainPage() {
   return (
@@ -184,6 +185,7 @@ function MainPage() {
           path="/operations/tv-mobile-approval"
           element={<TvMobileApproval />}
         />
+        <Route path="/messages" element={<MessagesPage />} />
       </Routes>
     </AdminLayout>
   );

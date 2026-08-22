@@ -27,6 +27,7 @@ import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import ReplyIcon from "@mui/icons-material/Reply";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import WorklistIcon from "@mui/icons-material/PlaylistAddCheck";
+import ChatIcon from "@mui/icons-material/Chat";
 import { request } from "../../../helpers/axios_helper";
 
 const TAB_ITEMS = [
@@ -34,6 +35,11 @@ const TAB_ITEMS = [
     route: "/pda/stockcard",
     labelKey: "pda.nav.stockCard",
     icon: <Inventory2Icon />,
+  },
+  {
+    route: "/pda/messages",
+    labelKey: "pda.nav.messages",
+    icon: <ChatIcon />,
   },
 ];
 
@@ -263,12 +269,17 @@ export default function PdaBottomNav() {
   );
 
   const inventoryTabIndex = 0;
-  const siteTabIndex = inventoryTabIndex + 1;
+  const messagesTabIndex = inventoryTabIndex + 1;
+  const siteTabIndex = messagesTabIndex + 1;
   const meTabIndex = siteTabIndex + 1;
 
   const handleTabChange = (_, newIndex) => {
     if (newIndex === inventoryTabIndex) {
       setInventoryOpen(true);
+      return;
+    }
+    if (newIndex === messagesTabIndex) {
+      navigate("/pda/messages", { state: { title: t("pda.nav.messages") } });
       return;
     }
     if (newIndex === siteTabIndex) {
@@ -297,14 +308,17 @@ export default function PdaBottomNav() {
   };
 
   const isMeActive = location.pathname.startsWith("/pda/me");
+  const isMessagesActive = location.pathname.startsWith("/pda/messages");
 
   const activeValue = isMeActive
     ? meTabIndex
     : isSiteActive || siteOpen
       ? siteTabIndex
-      : isInventoryActive || inventoryOpen
-        ? inventoryTabIndex
-        : inventoryTabIndex;
+      : isMessagesActive
+        ? messagesTabIndex
+        : isInventoryActive || inventoryOpen
+          ? inventoryTabIndex
+          : inventoryTabIndex;
 
   return (
     <>

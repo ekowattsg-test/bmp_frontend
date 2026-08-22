@@ -20,7 +20,12 @@ import { getPdaDisplayName } from "../common/pda_user_helper";
 import PdaBottomNav from "./PdaBottomNav";
 
 // Tab root paths — no back button shown on these
-const TAB_ROOTS = ["/pda/stockcard", "/pda/briefing", "/pda/me"];
+const TAB_ROOTS = [
+  "/pda/stockcard",
+  "/pda/briefing",
+  "/pda/messages",
+  "/pda/me",
+];
 
 /**
  * PdaLayout — mobile shell for all /pda/* routes (except /pda/login).

@@ -53,6 +53,7 @@ import {
   Reply as ReplyIcon,
   Handyman as HandymanIcon,
   DeleteSweep as DeleteSweepIcon,
+  Chat as ChatIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -85,6 +86,13 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
           label: t("menu.dashboard", "Dashboard"),
           icon: <DashboardIcon />,
           path: "/home",
+        },
+        {
+          key: "messages",
+          menu: null,
+          label: t("menu.messages", "Messages"),
+          icon: <ChatIcon />,
+          path: "/messages",
         },
         {
           key: "BaseSetup",
