@@ -1382,7 +1382,9 @@
     "noConversationSelected": "No conversation selected",
     "selectConversationDescription": "Select a conversation from the list or start a new message.",
     "mobileNumberRequired": "Messaging requires a mobile number linked to your account. Please contact your administrator.",
-    "broadcastOnlyForAdmins": "Only administrators can send broadcast messages."
+    "broadcastOnlyForAdmins": "Only administrators can send broadcast messages.",
+    "messagingDisabled": "Messaging unavailable",
+    "messagingDisabledDescription": "Messaging is disabled because your account does not have a linked staff record with a valid mobile number. Please contact your administrator."
   },
   "companyList": {
     "title": "Company List",

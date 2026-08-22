@@ -1382,7 +1382,9 @@
     "noConversationSelected": "未选择对话",
     "selectConversationDescription": "从列表中选择对话或开始新消息。",
     "mobileNumberRequired": "消息功能需要您的账户绑定手机号。请联系管理员。",
-    "broadcastOnlyForAdmins": "只有管理员可以发送广播消息。"
+    "broadcastOnlyForAdmins": "只有管理员可以发送广播消息。",
+    "messagingDisabled": "消息功能不可用",
+    "messagingDisabledDescription": "由于您的账户未绑定有效的员工手机号记录，消息功能已被禁用。请联系管理员。"
   },
   "companyList": {
     "title": "公司列表",

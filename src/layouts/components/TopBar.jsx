@@ -73,6 +73,8 @@ const TopBar = ({ onMenuClick, collapsed }) => {
   const currentUserMobile = encodeURIComponent(
     userInfo?.mobileNumber || userInfo?.mobile || userInfo?.phoneNumber || "",
   );
+  const currentStaffId = userInfo?.staffId || userInfo?.staffID || null;
+  const messagingEnabled = Boolean(currentUserMobile && currentStaffId);
 
   const fetchUnreadCount = async () => {
     if (!currentUserMobile) return;
@@ -88,7 +90,7 @@ const TopBar = ({ onMenuClick, collapsed }) => {
   };
 
   useEffect(() => {
-    if (!currentUserMobile) return;
+    if (!messagingEnabled) return;
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 15000);
     const onFocus = () => fetchUnreadCount();
@@ -97,7 +99,7 @@ const TopBar = ({ onMenuClick, collapsed }) => {
       clearInterval(interval);
       window.removeEventListener("focus", onFocus);
     };
-  }, [currentUserMobile]);
+  }, [messagingEnabled]);
 
   const handleLogout = () => {
     handleCloseUserMenu();
@@ -200,21 +202,23 @@ const TopBar = ({ onMenuClick, collapsed }) => {
           */}
 
           {/* Messages */}
-          <Tooltip title={t("topbar.messages", "Messages")}>
-            <IconButton
-              color="inherit"
-              onClick={() => navigate("/messages")}
-              sx={{
-                "&:hover": {
-                  bgcolor: "action.hover",
-                },
-              }}
-            >
-              <Badge badgeContent={unreadCount} color="error">
-                <ChatIcon />
-              </Badge>
-            </IconButton>
-          </Tooltip>
+          {messagingEnabled && (
+            <Tooltip title={t("topbar.messages", "Messages")}>
+              <IconButton
+                color="inherit"
+                onClick={() => navigate("/messages")}
+                sx={{
+                  "&:hover": {
+                    bgcolor: "action.hover",
+                  },
+                }}
+              >
+                <Badge badgeContent={unreadCount} color="error">
+                  <ChatIcon />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+          )}
 
           {/* User Menu */}
           <Tooltip title={t("topbar.account", "Account")}>

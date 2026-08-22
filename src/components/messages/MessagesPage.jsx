@@ -30,7 +30,6 @@ import {
   Checkbox,
   FormControlLabel,
   IconButton,
-  Alert,
 } from "@mui/material";
 import {
   Chat as ChatIcon,
@@ -181,6 +180,7 @@ export default function MessagesPage() {
   }, [effectiveUserInfo]);
 
   const currentUserMobile = encodeURIComponent(currentUserMobileRaw);
+  const messagingEnabled = Boolean(currentUserMobileRaw && currentStaffId);
 
   const fetchConversations = useCallback(async () => {
     if (!currentUserMobile) return;
@@ -664,6 +664,24 @@ export default function MessagesPage() {
     return t("chat.broadcast");
   };
 
+  if (!messagingEnabled) {
+    return (
+      <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+        <div ref={topOfPageRef} />
+        <PageHeader
+          title={t("chat.title")}
+          subtitle={t("chat.subtitle")}
+          icon={ChatIcon}
+        />
+        <EmptyState
+          icon={ChatIcon}
+          title={t("chat.messagingDisabled")}
+          description={t("chat.messagingDisabledDescription")}
+        />
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <div ref={topOfPageRef} />
@@ -761,11 +779,6 @@ export default function MessagesPage() {
           {/* Right: thread */}
           <Box sx={{ flex: 1, minWidth: 0, position: "relative" }}>
             <div ref={topOfThreadRef} />
-            {!currentUserMobileRaw && (
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                {t("chat.mobileNumberRequired")}
-              </Alert>
-            )}
             {composeOpen ? (
               <Box
                 sx={{
