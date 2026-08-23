@@ -1359,6 +1359,15 @@
     "noCompanies": "No companies found.",
     "noUsers": "No users found."
   },
+  "staffSelection": {
+    "title": "Select Staff",
+    "searchPlaceholder": "Search staff...",
+    "noStaff": "No eligible staff found.",
+    "staffId": "Staff ID",
+    "staffName": "Staff Name",
+    "operationRole": "Operation Role",
+    "loadStaffFailed": "Failed to load staff list."
+  },
   "chat": {
     "title": "Messages",
     "subtitle": "Communicate with staff",
@@ -1618,7 +1627,14 @@
       "regeneratePdf": "Regenerate PDF",
       "regeneratePdfHint": "Regenerate and replace the document for this PO and current status.",
       "pdfRegenerated": "Purchase order PDF regenerated and stored.",
-      "pdfRegenerateFailed": "Failed to regenerate purchase order PDF."
+      "pdfRegenerateFailed": "Failed to regenerate purchase order PDF.",
+      "messagingNotEligible": "You are not eligible to send messages. Status update aborted.",
+      "readySuccess": "Purchase order marked ready and message sent to {{staffName}}.",
+      "messageFailed": "Status updated, but the message could not be sent.",
+      "selectStaffTitle": "Select Staff to Collect Inventory",
+      "selectStaffDescription": "Choose a delivery staff member to assign the collection of this purchase order.",
+      "confirmAssign": "Assign",
+      "readyMessage": "Please collect inventory list in [{{orderId}}](doc://po/{{encodedOrderId}}) from [{{vendorName}} on {{readyDate}}](/receive-po-stock?po={{encodedOrderId}})."
     },
     "product": "Product",
     "selectProduct": "Select product"
@@ -1685,7 +1701,13 @@
         "issuedDate": "Issued Date",
         "deliveredDate": "Delivered Date",
         "cancelledDate": "Cancelled Date"
-      }
+      },
+      "messagingNotEligible": "You are not eligible to send messages. Status update aborted.",
+      "messageFailed": "Status updated, but the message could not be sent.",
+      "selectStaffTitle": "Select Staff to Dispatch Inventory",
+      "selectStaffDescription": "Choose a delivery staff member to assign the dispatch of this delivery order.",
+      "confirmAssign": "Assign",
+      "issueMessage": "Please draw inventory list in [{{orderId}}](doc://do/{{encodedOrderId}}) from main store, dispatch to [project site {{projectCode}} on {{issuedDate}}](/transfer-out?do={{encodedOrderId}})."
     },
     "errors": {
       "customerRequired": "Customer is required",

@@ -17,3 +17,4 @@ export {
   useCRUDState,
 } from "./CRUDActions";
 export { default as LocationScanner } from "./LocationScanner";
+export { default as StaffSelectionDialog } from "./StaffSelectionDialog";

@@ -105,6 +105,17 @@ export default function useTransferOut() {
       .finally(() => setDosLoading(false));
   }, []);
 
+  // Pre-select DO from ?do= query parameter when eligible DOs load.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const doFromQuery = params.get("do");
+    if (!doFromQuery) return;
+    const match = deliveryOrders.find(
+      (o) => String(o.orderId || "").trim() === doFromQuery.trim(),
+    );
+    if (match) setSelectedDoId(match.orderId);
+  }, [location.search, deliveryOrders]);
+
   useEffect(() => {
     if (!selectedDoId) {
       setSelectedDo(null);

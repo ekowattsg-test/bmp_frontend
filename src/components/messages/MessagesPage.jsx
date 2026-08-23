@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Box,
   Tabs,
@@ -30,6 +30,10 @@ import {
   Checkbox,
   FormControlLabel,
   IconButton,
+  Link,
+  Dialog,
+  DialogContent,
+  CircularProgress,
 } from "@mui/material";
 import {
   Chat as ChatIcon,
@@ -43,6 +47,8 @@ import { AuthContext } from "../../context/authContext";
 import { request } from "../../helpers/axios_helper";
 import PageHeader from "../common/PageHeader";
 import EmptyState from "../common/EmptyState";
+import PurchaseOrderView from "../information/PurchaseOrderView";
+import DeliveryOrderView from "../information/DeliveryOrderView";
 import { getPdaUser } from "../pda/common/pda_user_helper";
 
 const POLL_INTERVAL_MS = 15000;
@@ -56,6 +62,112 @@ TabPanel.propTypes = {
   children: PropTypes.node,
   value: PropTypes.number.isRequired,
   index: PropTypes.number.isRequired,
+};
+
+const MARKDOWN_LINK_REGEX = /\[([^\]]+)\]\(([^)]+)\)/g;
+
+const PDA_PATH_MAP = {
+  "/receive-po-stock": "/pda/receive-po-stock",
+  "/transfer-out": "/pda/stock-transfer-out",
+};
+
+const resolveActionPath = (url, isPda) => {
+  if (!isPda) return url;
+  const [basePath, query] = url.split("?");
+  const pdaBase = PDA_PATH_MAP[basePath];
+  if (!pdaBase) return url;
+  return query ? `${pdaBase}?${query}` : pdaBase;
+};
+
+const inlineLinkSx = {
+  p: 0,
+  m: 0,
+  verticalAlign: "baseline",
+  fontSize: "inherit",
+  lineHeight: "inherit",
+  textTransform: "none",
+};
+
+const MessageContent = ({ text, onDocumentClick }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isPda = location.pathname.startsWith("/pda/");
+
+  if (!text) return null;
+
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+  const regex = new RegExp(MARKDOWN_LINK_REGEX);
+
+  while ((match = regex.exec(text)) !== null) {
+    const [fullMatch, display, url] = match;
+    if (match.index > lastIndex) {
+      parts.push(
+        <span key={`text-${lastIndex}`}>
+          {text.slice(lastIndex, match.index)}
+        </span>,
+      );
+    }
+
+    if (url.startsWith("doc://")) {
+      const docMatch = url.match(/^doc:\/\/(po|do)\/(.+)$/);
+      const [, type, orderId] = docMatch || [];
+      parts.push(
+        <Link
+          key={`link-${match.index}`}
+          component="button"
+          color="inherit"
+          underline="always"
+          onClick={() => type && orderId && onDocumentClick(type, orderId)}
+          sx={inlineLinkSx}
+        >
+          {display}
+        </Link>,
+      );
+    } else if (url.startsWith("/")) {
+      const path = resolveActionPath(url, isPda);
+      parts.push(
+        <Link
+          key={`link-${match.index}`}
+          component="button"
+          color="inherit"
+          underline="always"
+          onClick={() => navigate(path)}
+          sx={inlineLinkSx}
+        >
+          {display}
+        </Link>,
+      );
+    } else {
+      parts.push(
+        <Link
+          key={`link-${match.index}`}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          color="inherit"
+          underline="always"
+          sx={{ wordBreak: "break-all" }}
+        >
+          {display}
+        </Link>,
+      );
+    }
+
+    lastIndex = match.index + fullMatch.length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(<span key={`text-${lastIndex}`}>{text.slice(lastIndex)}</span>);
+  }
+
+  return <>{parts}</>;
+};
+
+MessageContent.propTypes = {
+  text: PropTypes.string,
+  onDocumentClick: PropTypes.func.isRequired,
 };
 
 export default function MessagesPage() {
@@ -81,6 +193,12 @@ export default function MessagesPage() {
   const [messageInput, setMessageInput] = useState("");
   const [sendError, setSendError] = useState("");
   const [composeOpen, setComposeOpen] = useState(true);
+  const [docView, setDocView] = useState({
+    open: false,
+    type: null,
+    order: null,
+    loading: false,
+  });
   const defaultProjectScope =
     param?.chatProjectGroupDefaultScope ?? "LEADERSHIP";
   const [includeAllMembers, setIncludeAllMembers] = useState(
@@ -114,6 +232,27 @@ export default function MessagesPage() {
     if (!staffId || !staffList.length) return null;
     return staffList.find((s) => s.staffId && isSameStaff(s.staffId, staffId));
   };
+
+  const handleDocumentClick = useCallback(async (type, orderId) => {
+    if (!type || !orderId) return;
+    setDocView({ open: true, type, order: null, loading: true });
+    try {
+      const url =
+        type === "po"
+          ? `/api/purchaseOrders/${orderId}`
+          : `/api/deliveryOrders/${orderId}`;
+      const res = await request("GET", url, null, {
+        skipBackendErrorDialog: true,
+      });
+      setDocView({ open: true, type, order: res.data, loading: false });
+    } catch (err) {
+      console.error("Failed to load order for document view", err);
+      setDocView({ open: true, type, order: null, loading: false });
+    }
+  }, []);
+
+  const closeDocumentView = () =>
+    setDocView({ open: false, type: null, order: null, loading: false });
 
   const getDisplayName = (staffId) => {
     if (!staffId) return "";
@@ -441,7 +580,12 @@ export default function MessagesPage() {
                         ? t("chat.you", "You")
                         : getDisplayName(msg.senderStaffId)}
                   </Typography>
-                  <Typography variant="body2">{msg.content}</Typography>
+                  <Typography variant="body2">
+                    <MessageContent
+                      text={msg.content}
+                      onDocumentClick={handleDocumentClick}
+                    />
+                  </Typography>
                   <Typography
                     variant="caption"
                     sx={{ opacity: 0.6, display: "block", textAlign: "right" }}
@@ -849,6 +993,32 @@ export default function MessagesPage() {
           </Box>
         </Box>
       </Box>
+
+      <Dialog
+        open={docView.open && (docView.loading || !docView.order)}
+        onClose={closeDocumentView}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogContent>
+          {docView.loading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <CircularProgress size={32} />
+            </Box>
+          ) : (
+            <Typography color="error">
+              {t("chat.documentLoadFailed", "Failed to load order details.")}
+            </Typography>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {docView.open && docView.type === "po" && docView.order && (
+        <PurchaseOrderView order={docView.order} onClose={closeDocumentView} />
+      )}
+      {docView.open && docView.type === "do" && docView.order && (
+        <DeliveryOrderView order={docView.order} onClose={closeDocumentView} />
+      )}
     </Box>
   );
 }

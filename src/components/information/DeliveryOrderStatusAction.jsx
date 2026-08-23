@@ -1,6 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
+import { AuthContext } from "../../context/authContext";
+import { StaffSelectionDialog } from "../common";
+import {
+  resolveCurrentUserForMessaging,
+  buildDeliveryOrderIssuedMessage,
+  sendDirectMessage,
+} from "../../helpers/messaging_helper";
 import {
   Dialog,
   DialogContent,
@@ -112,6 +119,7 @@ const today = () => new Date().toISOString().split("T")[0];
 
 const DeliveryOrderStatusAction = ({ order, onClose, onUpdated }) => {
   const { t } = useTranslation();
+  const { userInfo } = useContext(AuthContext);
 
   const transitions = getTransitions(order.orderStatus || "");
 
@@ -160,9 +168,43 @@ const DeliveryOrderStatusAction = ({ order, onClose, onUpdated }) => {
   const [loading, setLoading] = useState(null);
   const [error, setError] = useState("");
 
-  const handleAction = (transition) => {
+  const [staffDialogOpen, setStaffDialogOpen] = useState(false);
+  const [pendingTransition, setPendingTransition] = useState(null);
+  const [currentMessagingUser, setCurrentMessagingUser] = useState(null);
+
+  useEffect(() => {
+    setStaffDialogOpen(false);
+    setPendingTransition(null);
+    setCurrentMessagingUser(null);
+  }, [order.orderId]);
+
+  const ensureMessagingUser = async () => {
+    if (currentMessagingUser) return currentMessagingUser;
+    const resolved = await resolveCurrentUserForMessaging(userInfo);
+    if (resolved) setCurrentMessagingUser(resolved);
+    return resolved;
+  };
+
+  const handleAction = async (transition) => {
     if (!fullOrder) return;
     setError("");
+
+    if (transition.newStatus === "ISSUED") {
+      const messagingUser = await ensureMessagingUser();
+      if (!messagingUser) {
+        setError(
+          t(
+            "deliveryOrderList.action.messagingNotEligible",
+            "You are not eligible to send messages. Status update aborted.",
+          ),
+        );
+        return;
+      }
+      setPendingTransition(transition);
+      setStaffDialogOpen(true);
+      return;
+    }
+
     setLoading(transition.newStatus);
 
     const payload = {
@@ -185,6 +227,58 @@ const DeliveryOrderStatusAction = ({ order, onClose, onUpdated }) => {
             t("deliveryOrderList.action.failed", "Status update failed."),
         );
       });
+  };
+
+  const handleStaffConfirm = async (staff) => {
+    if (!pendingTransition || !fullOrder) return;
+    setStaffDialogOpen(false);
+    setError("");
+    setLoading(pendingTransition.newStatus);
+
+    const transition = pendingTransition;
+    const payload = {
+      ...fullOrder,
+      orderStatus: transition.newStatus,
+      ...(transition.dateField
+        ? { [transition.dateField]: dates[transition.dateField] }
+        : {}),
+    };
+
+    try {
+      await request("PUT", `/api/deliveryOrders/${order.orderId}`, payload);
+
+      let messageError = "";
+      try {
+        const messagingUser =
+          currentMessagingUser || (await ensureMessagingUser());
+        const content = buildDeliveryOrderIssuedMessage(
+          { ...order, ...payload },
+          dates[transition.dateField],
+          t,
+        );
+        await sendDirectMessage(messagingUser, staff.staffId, content);
+      } catch (msgErr) {
+        messageError =
+          msgErr?.response?.data?.message ||
+          msgErr?.message ||
+          t(
+            "deliveryOrderList.action.messageFailed",
+            "Status updated, but the message could not be sent.",
+          );
+        setError(messageError);
+      }
+
+      setLoading(null);
+      setPendingTransition(null);
+      if (!messageError) onUpdated();
+    } catch (err) {
+      setLoading(null);
+      setPendingTransition(null);
+      setError(
+        err.response?.data?.message ||
+          t("deliveryOrderList.action.failed", "Status update failed."),
+      );
+    }
   };
 
   const total = items.reduce(
@@ -479,6 +573,25 @@ const DeliveryOrderStatusAction = ({ order, onClose, onUpdated }) => {
           </>
         )}
       </DialogContent>
+
+      <StaffSelectionDialog
+        open={staffDialogOpen}
+        onClose={() => {
+          setStaffDialogOpen(false);
+          setPendingTransition(null);
+        }}
+        onConfirm={handleStaffConfirm}
+        title={t(
+          "deliveryOrderList.action.selectStaffTitle",
+          "Select Staff to Dispatch Inventory",
+        )}
+        description={t(
+          "deliveryOrderList.action.selectStaffDescription",
+          "Choose a delivery staff member to assign the dispatch of this delivery order.",
+        )}
+        roleFilters={["DELIVER"]}
+        confirmLabel={t("deliveryOrderList.action.confirmAssign", "Assign")}
+      />
     </Dialog>
   );
 };

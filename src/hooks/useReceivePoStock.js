@@ -95,6 +95,17 @@ export default function useReceivePoStock() {
       });
   }, []);
 
+  // Pre-select PO from ?po= query parameter when eligible POs load.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const poFromQuery = params.get("po");
+    if (!poFromQuery) return;
+    const match = eligiblePos.find(
+      (po) => String(po.orderId || "").trim() === poFromQuery.trim(),
+    );
+    if (match) setSelectedOrderId(match.orderId);
+  }, [location.search, eligiblePos]);
+
   // Load selected PO detail.
   useEffect(() => {
     if (!selectedOrderId) {

@@ -1359,6 +1359,15 @@
     "noCompanies": "未找到公司。",
     "noUsers": "未找到用户。"
   },
+  "staffSelection": {
+    "title": "选择员工",
+    "searchPlaceholder": "搜索员工...",
+    "noStaff": "未找到符合条件的员工。",
+    "staffId": "员工编号",
+    "staffName": "员工姓名",
+    "operationRole": "操作角色",
+    "loadStaffFailed": "加载员工列表失败。"
+  },
   "chat": {
     "title": "消息",
     "subtitle": "与员工沟通",
@@ -1618,7 +1627,14 @@
       "regeneratePdf": "重新生成 PDF",
       "regeneratePdfHint": "重新生成并替换该采购订单当前状态的文档。",
       "pdfRegenerated": "采购订单 PDF 已重新生成并存储。",
-      "pdfRegenerateFailed": "重新生成采购订单 PDF 失败。"
+      "pdfRegenerateFailed": "重新生成采购订单 PDF 失败。",
+      "messagingNotEligible": "您没有发送消息的权限，状态更新已取消。",
+      "readySuccess": "采购订单已标记为就绪，消息已发送给 {{staffName}}。",
+      "messageFailed": "状态已更新，但消息发送失败。",
+      "selectStaffTitle": "选择收取库存的员工",
+      "selectStaffDescription": "选择一名配送员工负责收取此采购订单的库存。",
+      "confirmAssign": "分配",
+      "readyMessage": "请于 [{{readyDate}} 到 {{vendorName}}](/receive-po-stock?po={{encodedOrderId}}) 收取采购订单 [{{orderId}}](doc://po/{{encodedOrderId}}) 的库存清单。"
     },
     "product": "产品",
     "selectProduct": "选择产品"
@@ -1685,7 +1701,13 @@
         "issuedDate": "发布日期",
         "deliveredDate": "交付日期",
         "cancelledDate": "取消日期"
-      }
+      },
+      "messagingNotEligible": "您没有发送消息的权限，状态更新已取消。",
+      "messageFailed": "状态已更新，但消息发送失败。",
+      "selectStaffTitle": "选择派发库存的员工",
+      "selectStaffDescription": "选择一名配送员工负责派发此交货单的库存。",
+      "confirmAssign": "分配",
+      "issueMessage": "请从主仓库提取交货单 [{{orderId}}](doc://do/{{encodedOrderId}}) 的库存清单，并于 [{{issuedDate}} 派送至项目现场 {{projectCode}}](/transfer-out?do={{encodedOrderId}})。"
     },
     "errors": {
       "customerRequired": "客户为必填项",

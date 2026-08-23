@@ -3,6 +3,12 @@ import { useTranslation } from "react-i18next";
 import { request } from "../../helpers/axios_helper";
 import { AuthContext } from "../../context/authContext";
 import { generateAndStorePurchaseOrderPdf } from "../../helpers/purchase_order_pdf_helper";
+import { StaffSelectionDialog } from "../common";
+import {
+  resolveCurrentUserForMessaging,
+  buildPurchaseOrderReadyMessage,
+  sendDirectMessage,
+} from "../../helpers/messaging_helper";
 import {
   Dialog,
   DialogContent,
@@ -144,10 +150,44 @@ const PurchaseOrderStatusAction = ({ order, onClose, onUpdated }) => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const [staffDialogOpen, setStaffDialogOpen] = useState(false);
+  const [pendingTransition, setPendingTransition] = useState(null);
+  const [currentMessagingUser, setCurrentMessagingUser] = useState(null);
+
+  useEffect(() => {
+    setStaffDialogOpen(false);
+    setPendingTransition(null);
+    setCurrentMessagingUser(null);
+  }, [order.orderId]);
+
+  const ensureMessagingUser = async () => {
+    if (currentMessagingUser) return currentMessagingUser;
+    const resolved = await resolveCurrentUserForMessaging(userInfo);
+    if (resolved) setCurrentMessagingUser(resolved);
+    return resolved;
+  };
+
   const handleAction = async (transition) => {
     if (!fullOrder) return;
     setError("");
     setSuccess("");
+
+    if (transition.newStatus === "READY") {
+      const messagingUser = await ensureMessagingUser();
+      if (!messagingUser) {
+        setError(
+          t(
+            "purchaseOrderList.action.messagingNotEligible",
+            "You are not eligible to send messages. Status update aborted.",
+          ),
+        );
+        return;
+      }
+      setPendingTransition(transition);
+      setStaffDialogOpen(true);
+      return;
+    }
+
     setLoading(transition.newStatus);
 
     const payload = {
@@ -191,6 +231,71 @@ const PurchaseOrderStatusAction = ({ order, onClose, onUpdated }) => {
       onUpdated();
     } catch (err) {
       setLoading(null);
+      setError(
+        err.response?.data?.message ||
+          t("purchaseOrderList.action.failed", "Status update failed."),
+      );
+    }
+  };
+
+  const handleStaffConfirm = async (staff) => {
+    if (!pendingTransition || !fullOrder) return;
+    setStaffDialogOpen(false);
+    setError("");
+    setSuccess("");
+    setLoading(pendingTransition.newStatus);
+
+    const transition = pendingTransition;
+    const payload = {
+      ...fullOrder,
+      orderStatus: transition.newStatus,
+      [transition.dateField]: dates[transition.dateField],
+    };
+
+    try {
+      await request("PUT", `/api/purchaseOrders/${order.orderId}`, payload);
+
+      const nextOrder = {
+        ...currentOrder,
+        ...payload,
+      };
+      setCurrentOrder(nextOrder);
+      setFullOrder((prev) => (prev ? { ...prev, ...payload } : prev));
+
+      let messageError = "";
+      try {
+        const messagingUser =
+          currentMessagingUser || (await ensureMessagingUser());
+        const content = buildPurchaseOrderReadyMessage(
+          nextOrder,
+          dates[transition.dateField],
+          t,
+        );
+        await sendDirectMessage(messagingUser, staff.staffId, content);
+        setSuccess(
+          t(
+            "purchaseOrderList.action.readySuccess",
+            "Purchase order marked ready and message sent to {{staffName}}.",
+            { staffName: staff.staffName || staff.staffId },
+          ),
+        );
+      } catch (msgErr) {
+        messageError =
+          msgErr?.response?.data?.message ||
+          msgErr?.message ||
+          t(
+            "purchaseOrderList.action.messageFailed",
+            "Status updated, but the message could not be sent.",
+          );
+        setError(messageError);
+      }
+
+      setLoading(null);
+      setPendingTransition(null);
+      if (!messageError) onUpdated();
+    } catch (err) {
+      setLoading(null);
+      setPendingTransition(null);
       setError(
         err.response?.data?.message ||
           t("purchaseOrderList.action.failed", "Status update failed."),
@@ -392,7 +497,10 @@ const PurchaseOrderStatusAction = ({ order, onClose, onUpdated }) => {
                           .toUpperCase();
                         const displayItemType =
                           rawType === "A"
-                            ? t("purchaseOrderList.itemTypeOptions.assets", "Assets")
+                            ? t(
+                                "purchaseOrderList.itemTypeOptions.assets",
+                                "Assets",
+                              )
                             : rawType === "I"
                               ? t(
                                   "purchaseOrderList.itemTypeOptions.inventory",
@@ -576,6 +684,25 @@ const PurchaseOrderStatusAction = ({ order, onClose, onUpdated }) => {
           </>
         )}
       </DialogContent>
+
+      <StaffSelectionDialog
+        open={staffDialogOpen}
+        onClose={() => {
+          setStaffDialogOpen(false);
+          setPendingTransition(null);
+        }}
+        onConfirm={handleStaffConfirm}
+        title={t(
+          "purchaseOrderList.action.selectStaffTitle",
+          "Select Staff to Collect Inventory",
+        )}
+        description={t(
+          "purchaseOrderList.action.selectStaffDescription",
+          "Choose a delivery staff member to assign the collection of this purchase order.",
+        )}
+        roleFilters={["DELIVER"]}
+        confirmLabel={t("purchaseOrderList.action.confirmAssign", "Assign")}
+      />
     </Dialog>
   );
 };
