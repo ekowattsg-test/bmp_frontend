@@ -30,6 +30,7 @@ const WorkbenchSettingsDialog = ({
   taskTypeMetaByCode,
   taskAssigneeOptions,
   parentCandidates,
+  streamParentCandidates,
   milestoneCandidates,
   childTaskData,
   setChildTaskData,
@@ -98,6 +99,30 @@ const WorkbenchSettingsDialog = ({
               multiline
               minRows={2}
             />
+            <FormControl size="small" fullWidth>
+              <InputLabel>{t("projectstream.parentStream")}</InputLabel>
+              <Select
+                label={t("projectstream.parentStream")}
+                value={String(formData.parentStreamNumber ?? "")}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    parentStreamNumber: e.target.value,
+                  }))
+                }
+              >
+                {streamParentCandidates.map((stream) => (
+                  <MenuItem
+                    key={stream?.projectStreamId || stream?.streamNumber}
+                    value={String(stream?.streamNumber ?? "")}
+                  >
+                    {stream?.streamName
+                      ? `${stream.streamName} (#${stream.streamNumber})`
+                      : `Stream #${stream?.streamNumber}`}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Stack>
         )}
 
@@ -149,6 +174,30 @@ const WorkbenchSettingsDialog = ({
               multiline
               minRows={2}
             />
+            <FormControl size="small" fullWidth>
+              <InputLabel>{t("projectstream.parentStream")}</InputLabel>
+              <Select
+                label={t("projectstream.parentStream")}
+                value={String(formData.parentStreamNumber ?? "")}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    parentStreamNumber: e.target.value,
+                  }))
+                }
+              >
+                {streamParentCandidates.map((stream) => (
+                  <MenuItem
+                    key={stream?.projectStreamId || stream?.streamNumber}
+                    value={String(stream?.streamNumber ?? "")}
+                  >
+                    {stream?.streamName
+                      ? `${stream.streamName} (#${stream.streamNumber})`
+                      : `Stream #${stream?.streamNumber}`}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Stack>
         )}
 

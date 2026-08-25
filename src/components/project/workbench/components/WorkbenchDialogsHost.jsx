@@ -24,6 +24,7 @@ const WorkbenchDialogsHost = ({
   taskTypeMetaByCode,
   taskAssigneeOptions,
   parentCandidates,
+  streamParentCandidates,
   milestoneCandidates,
   childTaskData,
   setChildTaskData,
@@ -205,6 +206,7 @@ const WorkbenchDialogsHost = ({
         taskTypeMetaByCode={taskTypeMetaByCode}
         taskAssigneeOptions={taskAssigneeOptions}
         parentCandidates={parentCandidates}
+        streamParentCandidates={streamParentCandidates}
         milestoneCandidates={milestoneCandidates}
         childTaskData={childTaskData}
         setChildTaskData={setChildTaskData}

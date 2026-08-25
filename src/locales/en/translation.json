@@ -859,7 +859,9 @@
   "projectstream": {
     "streamName": "Stream Name",
     "streamDescription": "Stream Description",
-    "streamType": "Stream Type"
+    "streamType": "Stream Type",
+    "parentStream": "Parent Stream",
+    "noParentStream": "None"
   },
   "projecttask": {
     "taskName": "Task Name",
@@ -3237,6 +3239,7 @@
     "editStack": "Edit Stack",
     "selectStoreyAndStack": "Select a storey and a stack to manage units.",
     "noIntersectionUnit": "No unit at this storey/stack intersection. Click Add to create.",
+    "streamHierarchyConflict": "Some units are hidden because their mapped streams overlap in a parent/child relationship (double counting): {{units}}. Go to Structure Setup to fix.",
     "plannedStartDate": "Planned Start",
     "plannedEndDate": "Planned End",
     "actualStartDate": "Actual Start",

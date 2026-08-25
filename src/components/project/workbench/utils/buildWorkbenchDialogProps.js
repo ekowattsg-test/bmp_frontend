@@ -18,6 +18,7 @@ export const buildWorkbenchDialogProps = (ctx) => {
     taskTypeMetaByCode: ctx.taskTypeMetaByCode,
     taskAssigneeOptions: ctx.taskAssigneeOptions,
     parentCandidates: ctx.parentCandidates,
+    streamParentCandidates: ctx.streamParentCandidates,
     milestoneCandidates: ctx.milestoneCandidates,
     childTaskData: ctx.childTaskData,
     setChildTaskData: ctx.setChildTaskData,

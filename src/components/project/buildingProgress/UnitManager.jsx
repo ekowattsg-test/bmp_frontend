@@ -145,18 +145,96 @@ const UnitManager = ({ storey, stack, blockName, projectCode }) => {
       String(unit.projectStackId || "") === String(stack?.projectStackId || ""),
   );
 
-  const availableStreams = streams.filter(
-    (stream) =>
-      !allProjectUnits.some(
-        (unit) =>
-          String(unit.projectStreamId || "") ===
-            String(stream.projectStreamId || "") &&
-          String(unit.projectUnitId || "") !==
-            String(editingUnit?.projectUnitId || ""),
-      ) ||
-      String(editingUnit?.projectStreamId || "") ===
-        String(stream.projectStreamId || ""),
+  const streamById = new Map(
+    streams.map((stream) => [String(stream?.projectStreamId || ""), stream]),
   );
+
+  const streamNumberById = new Map(
+    streams.map((stream) => [
+      String(stream?.projectStreamId || ""),
+      String(stream?.streamNumber ?? ""),
+    ]),
+  );
+
+  const childrenByStreamNumber = new Map();
+  streams.forEach((stream) => {
+    const number = String(stream?.streamNumber ?? "").trim();
+    const parent = String(stream?.parentStreamNumber ?? "").trim();
+    if (!parent || !number) return;
+    if (!childrenByStreamNumber.has(parent)) {
+      childrenByStreamNumber.set(parent, new Set());
+    }
+    childrenByStreamNumber.get(parent).add(number);
+  });
+
+  const collectRelatedStreamNumbers = (streamId) => {
+    const startNumber = String(streamNumberById.get(streamId) ?? "").trim();
+    if (!startNumber) return new Set();
+    const related = new Set([startNumber]);
+
+    const collectChildren = (number) => {
+      const children = childrenByStreamNumber.get(number);
+      if (!children) return;
+      children.forEach((child) => {
+        if (related.has(child)) return;
+        related.add(child);
+        collectChildren(child);
+      });
+    };
+
+    const collectParents = (number) => {
+      const parentStream = streams.find(
+        (s) => String(s?.streamNumber ?? "").trim() === number,
+      );
+      const parentNumber = String(
+        parentStream?.parentStreamNumber ?? "",
+      ).trim();
+      if (!parentNumber || related.has(parentNumber)) return;
+      related.add(parentNumber);
+      collectParents(parentNumber);
+    };
+
+    collectChildren(startNumber);
+    collectParents(startNumber);
+    return related;
+  };
+
+  const usedStreamNumbers = new Set(
+    allProjectUnits
+      .filter(
+        (unit) =>
+          String(unit?.projectUnitId || "") !==
+          String(editingUnit?.projectUnitId || ""),
+      )
+      .map((unit) =>
+        String(streamNumberById.get(String(unit?.projectStreamId || "")) ?? ""),
+      )
+      .filter(Boolean),
+  );
+
+  const blockedStreamNumbers = new Set();
+  usedStreamNumbers.forEach((number) => {
+    const related = collectRelatedStreamNumbers(
+      String(
+        streams.find((s) => String(s?.streamNumber ?? "").trim() === number)
+          ?.projectStreamId || "",
+      ),
+    );
+    related.forEach((n) => blockedStreamNumbers.add(n));
+  });
+
+  const availableStreams = streams.filter((stream) => {
+    const streamId = String(stream?.projectStreamId || "");
+    const number = String(streamNumberById.get(streamId) ?? "").trim();
+    if (
+      editingUnit?.projectStreamId != null &&
+      String(editingUnit.projectStreamId) === streamId
+    ) {
+      return true;
+    }
+    if (blockedStreamNumbers.has(number)) return false;
+    return true;
+  });
 
   const handleSave = async (form) => {
     if (!storey?.projectStoreyId || !stack?.projectStackId) return;

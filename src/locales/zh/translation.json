@@ -859,7 +859,9 @@
   "projectstream": {
     "streamName": "流程名称",
     "streamDescription": "流程描述",
-    "streamType": "流程类型"
+    "streamType": "流程类型",
+    "parentStream": "父流程",
+    "noParentStream": "无"
   },
   "projecttask": {
     "taskName": "任务名称",
@@ -3236,6 +3238,7 @@
     "editStack": "编辑堆栈",
     "selectStoreyAndStack": "请选择一个楼层和一个堆栈以管理单位。",
     "noIntersectionUnit": "此楼层/堆栈交叉点没有单位。点击新增以创建。",
+    "streamHierarchyConflict": "部分单位已隐藏，因为其映射的流线存在父子关系（重复计算）：{{units}}。请前往结构设置修正。",
     "plannedStartDate": "计划开始",
     "plannedEndDate": "计划结束",
     "actualStartDate": "实际开始",

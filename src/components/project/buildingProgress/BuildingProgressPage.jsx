@@ -76,6 +76,7 @@ const BuildingProgressPage = () => {
   const [detailContext, setDetailContext] = useState(null);
   const [setupOpen, setSetupOpen] = useState(false);
   const [canManageStructure, setCanManageStructure] = useState(false);
+  const [projectStreams, setProjectStreams] = useState([]);
   const {
     data: progressData,
     loading: progressLoading,
@@ -136,6 +137,7 @@ const BuildingProgressPage = () => {
     const normalizedCode = String(selectedProjectCode || "").trim();
     if (!normalizedCode) {
       setCanManageStructure(false);
+      setProjectStreams([]);
       return undefined;
     }
 
@@ -149,17 +151,24 @@ const BuildingProgressPage = () => {
       }
 
       try {
-        const [staffRes, leadersRes] = await Promise.all([
+        const [staffRes, leadersRes, streamsRes] = await Promise.all([
           request("GET", "/api/staffs").catch(() => ({ data: [] })),
           request(
             "GET",
             `/api/projectleaders/project/${encodeURIComponent(normalizedCode)}`,
+          ).catch(() => ({ data: [] })),
+          request(
+            "GET",
+            `/api/projectstreams/project/${encodeURIComponent(normalizedCode)}`,
           ).catch(() => ({ data: [] })),
         ]);
 
         const staffRows = Array.isArray(staffRes?.data) ? staffRes.data : [];
         const leaderRows = Array.isArray(leadersRes?.data)
           ? leadersRes.data
+          : [];
+        const streamRows = Array.isArray(streamsRes?.data)
+          ? streamsRes.data
           : [];
 
         const matchedStaffIds = new Set(
@@ -178,9 +187,11 @@ const BuildingProgressPage = () => {
 
         if (!mounted) return;
         setCanManageStructure(isLeader);
+        setProjectStreams(streamRows);
       } catch {
         if (!mounted) return;
         setCanManageStructure(false);
+        setProjectStreams([]);
       }
     };
 
@@ -198,6 +209,91 @@ const BuildingProgressPage = () => {
   const handleCloseDetail = () => setDetailContext(null);
 
   const blocks = progressData?.blocks || [];
+
+  const streamHierarchyConflicts = useMemo(() => {
+    if (!projectStreams.length || !blocks.length) return [];
+
+    const streamById = new Map(
+      projectStreams.map((s) => [String(s?.projectStreamId || ""), s]),
+    );
+
+    const childrenByNumber = new Map();
+    projectStreams.forEach((stream) => {
+      const number = String(stream?.streamNumber ?? "").trim();
+      const parent = String(stream?.parentStreamNumber ?? "").trim();
+      if (!parent || !number) return;
+      if (!childrenByNumber.has(parent))
+        childrenByNumber.set(parent, new Set());
+      childrenByNumber.get(parent).add(number);
+    });
+
+    const collectDescendantNumbers = (number, seen = new Set()) => {
+      const children = childrenByNumber.get(number);
+      if (!children) return seen;
+      children.forEach((child) => {
+        if (seen.has(child)) return;
+        seen.add(child);
+        collectDescendantNumbers(child, seen);
+      });
+      return seen;
+    };
+
+    const unitStreamPairs = [];
+    blocks.forEach((block) => {
+      (block?.storeys || []).forEach((storey) => {
+        (storey?.units || []).forEach((unit) => {
+          const streamId = String(unit?.projectStreamId || "");
+          const stream = streamById.get(streamId);
+          if (!stream) return;
+          const number = String(stream?.streamNumber ?? "").trim();
+          if (!number) return;
+          unitStreamPairs.push({
+            unit,
+            block,
+            storey,
+            stream,
+            number,
+            descendants: collectDescendantNumbers(number),
+          });
+        });
+      });
+    });
+
+    const conflictingUnitIds = new Set();
+    const conflicts = [];
+    for (let i = 0; i < unitStreamPairs.length; i += 1) {
+      const a = unitStreamPairs[i];
+      if (conflictingUnitIds.has(a.unit?.projectUnitId)) continue;
+      for (let j = i + 1; j < unitStreamPairs.length; j += 1) {
+        const b = unitStreamPairs[j];
+        if (conflictingUnitIds.has(b.unit?.projectUnitId)) continue;
+        const aIsAncestorOfB =
+          a.number === b.number || b.descendants.has(a.number);
+        const bIsAncestorOfA = a.descendants.has(b.number);
+        if (aIsAncestorOfB || bIsAncestorOfA) {
+          conflicts.push({ a, b });
+          conflictingUnitIds.add(a.unit?.projectUnitId);
+          conflictingUnitIds.add(b.unit?.projectUnitId);
+        }
+      }
+    }
+
+    return { conflicts, conflictingUnitIds };
+  }, [blocks, projectStreams]);
+
+  const filteredBlocks = useMemo(() => {
+    const conflictingIds = streamHierarchyConflicts?.conflictingUnitIds;
+    if (!conflictingIds || conflictingIds.size === 0) return blocks;
+    return blocks.map((block) => ({
+      ...block,
+      storeys: (block?.storeys || []).map((storey) => ({
+        ...storey,
+        units: (storey?.units || []).filter(
+          (unit) => !conflictingIds.has(unit?.projectUnitId),
+        ),
+      })),
+    }));
+  }, [blocks, streamHierarchyConflicts]);
 
   return (
     <Box>
@@ -316,6 +412,23 @@ const BuildingProgressPage = () => {
             </Stack>
           </Box>
 
+          {streamHierarchyConflicts?.conflicts?.length > 0 && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {t(
+                "buildingProgress.streamHierarchyConflict",
+                "Some units are hidden because their mapped streams overlap in a parent/child relationship (double counting). Go to Structure Setup to fix.",
+                {
+                  units: streamHierarchyConflicts.conflicts
+                    .map(
+                      ({ a, b }) =>
+                        `${a.unit?.unitName || "?"} (${a.stream?.streamName || "?"}) ↔ ${b.unit?.unitName || "?"} (${b.stream?.streamName || "?"})`,
+                    )
+                    .join("; "),
+                },
+              )}
+            </Alert>
+          )}
+
           {selectedProject && blocks.length === 0 && !progressLoading ? (
             <EmptyState
               title={t("buildingProgress.noData", "No building progress data")}
@@ -333,7 +446,10 @@ const BuildingProgressPage = () => {
               }
             />
           ) : selectedProject ? (
-            <BuildingProgress3D blocks={blocks} onUnitClick={handleUnitClick} />
+            <BuildingProgress3D
+              blocks={filteredBlocks}
+              onUnitClick={handleUnitClick}
+            />
           ) : null}
 
           <UnitDetailDialog

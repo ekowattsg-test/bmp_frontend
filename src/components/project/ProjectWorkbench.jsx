@@ -213,32 +213,8 @@ const buildRows = (streams, tasksByStream) => {
       children.forEach((child) => emitTaskTree(child));
     };
 
-    // Compute stream date span across ALL tasks (unchanged logic)
-    const streamTaskStarts = allStreamTasks
-      .map((task) => {
-        const s = String(task?.taskStatus || "").trim();
-        return s === "Not Started"
-          ? parseDate(task?.taskStartDate)
-          : parseDate(task?.actualStartDate) || parseDate(task?.taskStartDate);
-      })
-      .filter(Boolean);
-    const streamTaskEnds = allStreamTasks
-      .map((task) => {
-        const s = String(task?.taskStatus || "").trim();
-        return s === "Completed"
-          ? parseDate(task?.actualEndDate) || parseDate(task?.taskEndDate)
-          : parseDate(task?.taskEndDate);
-      })
-      .filter(Boolean);
-
-    const streamStart =
-      streamTaskStarts.length > 0
-        ? new Date(Math.min(...streamTaskStarts.map((date) => date.getTime())))
-        : null;
-    const streamEnd =
-      streamTaskEnds.length > 0
-        ? new Date(Math.max(...streamTaskEnds.map((date) => date.getTime())))
-        : null;
+    const streamStart = parseDate(stream?.streamStartDate);
+    const streamEnd = parseDate(stream?.streamEndDate);
 
     rows.push({
       id: `stream-${streamId}`,
@@ -2271,15 +2247,35 @@ const ProjectWorkbench = () => {
     closeSettingsMenu();
   };
 
+  const defaultProjectStreamNumber = useMemo(() => {
+    const found = streams.find(
+      (stream) =>
+        String(stream?.streamType || "")
+          .trim()
+          .toUpperCase() === "P",
+    );
+    return found?.streamNumber != null ? String(found.streamNumber) : "";
+  }, [streams]);
+
   const openStreamEditor = (row) => {
     clearMoveMode();
     setSettingsError("");
     setSettingsTarget(row);
     setDialogMode("edit-stream");
+    const isProjectStream =
+      String(row?.raw?.streamType || "")
+        .trim()
+        .toUpperCase() === "P";
     setFormData({
       streamName: row?.raw?.streamName || "",
       streamDescription: row?.raw?.streamDescription || "",
       streamType: row?.raw?.streamType || "P",
+      parentStreamNumber:
+        row?.raw?.parentStreamNumber != null
+          ? String(row.raw.parentStreamNumber)
+          : isProjectStream
+            ? ""
+            : defaultProjectStreamNumber,
     });
     setSettingsOpen(true);
     closeSettingsMenu();
@@ -2320,6 +2316,7 @@ const ProjectWorkbench = () => {
       streamName: "",
       streamDescription: "",
       streamType: row?.raw?.streamType || "S",
+      parentStreamNumber: defaultProjectStreamNumber,
     });
     setSettingsOpen(true);
   };
@@ -2366,6 +2363,9 @@ const ProjectWorkbench = () => {
         streamType: String(
           formData.streamType || settingsTarget.raw.streamType || "P",
         ).trim(),
+        parentStreamNumber: formData.parentStreamNumber
+          ? Number(formData.parentStreamNumber)
+          : null,
       };
       await request(
         "PUT",
@@ -2404,6 +2404,9 @@ const ProjectWorkbench = () => {
         streamNumber: maxNumber + 1,
         streamName,
         streamDescription: String(formData.streamDescription || "").trim(),
+        parentStreamNumber: formData.parentStreamNumber
+          ? Number(formData.parentStreamNumber)
+          : null,
       };
       await request("POST", "/api/projectstreams", payload);
       await syncWorkbenchFromServer();
@@ -2781,6 +2784,41 @@ const ProjectWorkbench = () => {
             String(settingsTarget?.raw?.projectTaskId || ""),
         )
       : [];
+
+  const streamParentCandidates = useMemo(() => {
+    if (dialogMode !== "edit-stream" || settingsTarget?.type !== "stream") {
+      return streams;
+    }
+    const currentStreamNumber = String(
+      settingsTarget?.raw?.streamNumber ?? "",
+    ).trim();
+    if (!currentStreamNumber) return streams;
+
+    const childrenByNumber = new Map();
+    streams.forEach((stream) => {
+      const parent = String(stream?.parentStreamNumber ?? "").trim();
+      if (!parent) return;
+      if (!childrenByNumber.has(parent)) childrenByNumber.set(parent, []);
+      childrenByNumber.get(parent).push(stream);
+    });
+
+    const excluded = new Set([currentStreamNumber]);
+    const collectDescendants = (number) => {
+      const children = childrenByNumber.get(number) || [];
+      children.forEach((child) => {
+        const childNumber = String(child?.streamNumber ?? "").trim();
+        if (excluded.has(childNumber)) return;
+        excluded.add(childNumber);
+        collectDescendants(childNumber);
+      });
+    };
+    collectDescendants(currentStreamNumber);
+
+    return streams.filter((stream) => {
+      const number = String(stream?.streamNumber ?? "").trim();
+      return !excluded.has(number);
+    });
+  }, [streams, dialogMode, settingsTarget]);
 
   const isMilestoneTask = (task) => {
     const taskTypeCode = String(task?.taskType || "")
@@ -4100,6 +4138,7 @@ const ProjectWorkbench = () => {
     taskTypeMetaByCode,
     taskAssigneeOptions,
     parentCandidates,
+    streamParentCandidates,
     milestoneCandidates,
     childTaskData,
     setChildTaskData,
