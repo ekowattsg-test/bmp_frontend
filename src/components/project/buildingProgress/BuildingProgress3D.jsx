@@ -23,8 +23,38 @@ const findUnit = (storey, stack) => {
   );
 };
 
-const BuildingProgress3D = ({ blocks, onUnitClick }) => {
+const BuildingProgress3D = ({ blocks, onUnitClick, streams }) => {
   const { t } = useTranslation();
+
+  const streamById = React.useMemo(() => {
+    return (streams || []).reduce((acc, stream) => {
+      const id = String(stream?.projectStreamId || "").trim();
+      if (id) acc[id] = stream;
+      return acc;
+    }, {});
+  }, [streams]);
+
+  const parentNumbersWithChildren = React.useMemo(() => {
+    const set = new Set();
+    (streams || []).forEach((stream) => {
+      const parent = String(stream?.parentStreamNumber ?? "").trim();
+      if (parent) set.add(parent);
+    });
+    return set;
+  }, [streams]);
+
+  const getStreamMeta = (unit) => {
+    const stream = streamById[String(unit?.projectStreamId || "")];
+    const number = String(stream?.streamNumber ?? "").trim();
+    const hasSubStreams = number
+      ? parentNumbersWithChildren.has(number)
+      : false;
+    return {
+      streamType: stream?.streamType || "",
+      streamName: stream?.streamName || unit?.streamName || "",
+      hasSubStreams,
+    };
+  };
 
   if (!blocks || blocks.length === 0) {
     return (
@@ -113,6 +143,7 @@ const BuildingProgress3D = ({ blocks, onUnitClick }) => {
                     {sortByName(block.stacks, "stackName", "asc").map(
                       (stack) => {
                         const unit = findUnit(storey, stack);
+                        const streamMeta = unit ? getStreamMeta(unit) : null;
                         const color = getProgressColor(
                           unit?.progress,
                           unit?.plannedEndDate,
@@ -150,6 +181,9 @@ const BuildingProgress3D = ({ blocks, onUnitClick }) => {
                               boxShadow: 2,
                               border: "1px solid",
                               borderColor: "divider",
+                              borderStyle: streamMeta?.hasSubStreams
+                                ? "dashed"
+                                : "solid",
                               pointerEvents: "auto",
                               transition:
                                 "transform 0.15s ease, box-shadow 0.15s ease",
@@ -194,6 +228,28 @@ const BuildingProgress3D = ({ blocks, onUnitClick }) => {
                                   {block.blockName} / {storey.storeyName} /{" "}
                                   {stack.stackName}
                                 </Typography>
+                                {streamMeta?.streamName && (
+                                  <Typography
+                                    variant="caption"
+                                    display="block"
+                                    sx={{ mt: 0.5 }}
+                                  >
+                                    {t("buildingProgress.stream", "Stream")}:{" "}
+                                    {streamMeta.streamName}
+                                  </Typography>
+                                )}
+                                {streamMeta?.hasSubStreams && (
+                                  <Typography
+                                    variant="caption"
+                                    display="block"
+                                    sx={{ fontStyle: "italic" }}
+                                  >
+                                    {t(
+                                      "buildingProgress.includesSubStreams",
+                                      "Includes sub-stream tasks",
+                                    )}
+                                  </Typography>
+                                )}
                                 <Typography variant="caption" display="block">
                                   {t("buildingProgress.progress", "Progress")}:{" "}
                                   {unit.progress ?? 0}%

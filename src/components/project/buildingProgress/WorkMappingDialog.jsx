@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  Box,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -15,8 +17,12 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import { useTranslation } from "react-i18next";
 import { request } from "../../../helpers/axios_helper";
+import {
+  buildStreamById,
+  collectDescendantStreamIds,
+} from "./streamHierarchyUtils";
 
-const WorkMappingDialog = ({ open, onClose, unit }) => {
+const WorkMappingDialog = ({ open, onClose, unit, streams }) => {
   const { t } = useTranslation();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -31,14 +37,31 @@ const WorkMappingDialog = ({ open, onClose, unit }) => {
       setLoading(true);
       setError("");
       try {
-        const tasksRes = unit.projectStreamId
-          ? await request(
-              "GET",
-              `/api/projecttasks/stream/${unit.projectStreamId}`,
-            ).catch(() => ({ data: [] }))
-          : { data: [] };
+        const streamIds = unit.projectStreamId
+          ? collectDescendantStreamIds(streams, unit.projectStreamId)
+          : [];
 
-        const loadedTasks = Array.isArray(tasksRes?.data) ? tasksRes.data : [];
+        const tasksResList = await Promise.all(
+          streamIds.map((streamId) =>
+            request("GET", `/api/projecttasks/stream/${streamId}`).catch(
+              () => ({ data: [] }),
+            ),
+          ),
+        );
+
+        const streamById = buildStreamById(streams);
+        const loadedTasks = tasksResList
+          .flatMap((res, index) => {
+            const streamId = streamIds[index];
+            const stream = streamById[streamId];
+            const list = Array.isArray(res?.data) ? res.data : [];
+            return list.map((task) => ({
+              ...task,
+              _sourceStreamName: stream?.streamName || "",
+              _sourceStreamType: stream?.streamType || "",
+            }));
+          })
+          .filter((task) => task.projectTaskId != null);
 
         if (!mounted) return;
         setTasks(loadedTasks);
@@ -61,7 +84,7 @@ const WorkMappingDialog = ({ open, onClose, unit }) => {
     return () => {
       mounted = false;
     };
-  }, [open, unit, t]);
+  }, [open, unit, streams, t]);
 
   if (!unit) return null;
 
@@ -103,7 +126,26 @@ const WorkMappingDialog = ({ open, onClose, unit }) => {
             {tasks.map((task) => (
               <ListItem key={task.projectTaskId}>
                 <ListItemText
-                  primary={task.taskName || `Task ${task.projectTaskId}`}
+                  primary={
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      {task.taskName || `Task ${task.projectTaskId}`}
+                      {task._sourceStreamName && (
+                        <Chip
+                          size="small"
+                          label={task._sourceStreamName}
+                          variant="outlined"
+                          sx={{ height: 20, fontSize: "0.7rem" }}
+                        />
+                      )}
+                    </Box>
+                  }
                   secondary={`${t("buildingProgress.taskStatus", "Status")}: ${task.taskStatus || "-"}`}
                 />
               </ListItem>

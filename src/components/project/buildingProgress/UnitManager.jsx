@@ -199,6 +199,62 @@ const UnitManager = ({ storey, stack, blockName, projectCode }) => {
     return related;
   };
 
+  const buildStreamTreeOptions = (candidateStreams) => {
+    const childrenByNumber = new Map();
+    candidateStreams.forEach((stream) => {
+      const number = String(stream?.streamNumber ?? "").trim();
+      const parent = String(stream?.parentStreamNumber ?? "").trim();
+      if (!number) return;
+      if (!childrenByNumber.has(parent)) childrenByNumber.set(parent, []);
+      childrenByNumber.get(parent).push(stream);
+    });
+
+    const getDisplayLabel = (stream) => {
+      const name = stream?.streamName || stream?.projectStreamId || "";
+      const number =
+        stream?.streamNumber != null ? `#${stream.streamNumber}` : "";
+      return number ? `${name} (${number})` : name;
+    };
+
+    const options = [];
+    const walk = (streamsList, depth) => {
+      const sorted = [...streamsList].sort((a, b) => {
+        const na = Number(a?.streamNumber ?? 0);
+        const nb = Number(b?.streamNumber ?? 0);
+        if (na !== nb) return na - nb;
+        return String(a?.streamName || "").localeCompare(
+          String(b?.streamName || ""),
+        );
+      });
+
+      sorted.forEach((stream, index) => {
+        const isLast = index === sorted.length - 1;
+        const indent = depth > 0 ? "\u00A0\u00A0".repeat(depth - 1) : "";
+        const branch = depth > 0 ? (isLast ? "└─ " : "├─ ") : "";
+        const prefix = `${indent}${branch}`;
+        options.push({
+          value: String(stream?.projectStreamId || ""),
+          label: `${prefix}${getDisplayLabel(stream)}`,
+          stream,
+        });
+        const number = String(stream?.streamNumber ?? "").trim();
+        const children = childrenByNumber.get(number) || [];
+        walk(children, depth + 1);
+      });
+    };
+
+    const rootStreams = candidateStreams.filter((stream) => {
+      const parent = String(stream?.parentStreamNumber ?? "").trim();
+      const parentInCandidates = candidateStreams.some(
+        (s) => String(s?.streamNumber ?? "").trim() === parent,
+      );
+      return !parent || !parentInCandidates;
+    });
+
+    walk(rootStreams, 0);
+    return options;
+  };
+
   const usedStreamNumbers = new Set(
     allProjectUnits
       .filter(
@@ -226,6 +282,10 @@ const UnitManager = ({ storey, stack, blockName, projectCode }) => {
   const availableStreams = streams.filter((stream) => {
     const streamId = String(stream?.projectStreamId || "");
     const number = String(streamNumberById.get(streamId) ?? "").trim();
+    const type = String(stream?.streamType || "")
+      .trim()
+      .toUpperCase();
+    if (type === "P") return false;
     if (
       editingUnit?.projectStreamId != null &&
       String(editingUnit.projectStreamId) === streamId
@@ -436,10 +496,7 @@ const UnitManager = ({ storey, stack, blockName, projectCode }) => {
             label: t("buildingProgress.mappedStream", "Mapped Stream"),
             type: "select",
             emptyLabel: t("buildingProgress.noStream", "No Stream"),
-            options: availableStreams.map((stream) => ({
-              value: String(stream.projectStreamId || ""),
-              label: stream.streamName || stream.projectStreamId || "",
-            })),
+            options: buildStreamTreeOptions(availableStreams),
           },
         ]}
       />
@@ -450,6 +507,7 @@ const UnitManager = ({ storey, stack, blockName, projectCode }) => {
           setMappingUnit(null);
         }}
         unit={mappingUnit}
+        streams={streams}
       />
     </Box>
   );

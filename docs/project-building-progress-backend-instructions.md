@@ -161,6 +161,7 @@ The frontend renders each block as a grid where rows are storeys and columns are
               "stackName": "Stack 1",
               "projectStreamId": 500,
               "streamName": "Tower A Electrical",
+              "streamType": "P",
               "progress": 35,
               "plannedStartDate": "2026-08-01",
               "plannedEndDate": "2026-09-15",
@@ -174,7 +175,9 @@ The frontend renders each block as a grid where rows are storeys and columns are
                   "plannedStartDate": "2026-08-01",
                   "plannedEndDate": "2026-08-15",
                   "actualStartDate": "2026-08-03",
-                  "actualEndDate": null
+                  "actualEndDate": null,
+                  "streamName": "Tower A Electrical",
+                  "streamType": "P"
                 }
               ]
             }
@@ -214,7 +217,8 @@ Validation rules:
 - A unit is uniquely identified by `(projectStoreyId, projectStackId)` within a block
 - Unit number must be unique within a storey
 - A stream can be mapped to at most one unit per project
-  - The frontend enforces this by calling `GET /api/projectunits/project/{projectCode}` before populating the stream dropdown. This endpoint must return every unit in the project so already-used streams can be filtered out.
+  - The mapping restriction also applies across the stream hierarchy: if a stream is mapped to a unit, none of its ancestor or descendant streams may be mapped to another unit in the same project
+  - The frontend enforces this by calling `GET /api/projectunits/project/{projectCode}` before populating the stream dropdown. This endpoint must return every unit in the project so already-used streams and their related ancestor/descendant streams can be filtered out
 
 ### 4.2 Aggregate / Progress Service
 
@@ -225,16 +229,16 @@ Responsibilities:
 1. Load all active blocks, storeys, stacks, and units for the project
 2. For each block, return its storeys and stacks so the frontend can render the intersection grid
 3. Place each unit under its parent storey and set `projectStackId` to the exact ID of the stack at that column. This field is authoritative: the frontend matches units to stacks only by `projectStackId`, so it must be present and correct.
-4. For each unit, load the mapped `ProjectStream` and its tasks
+4. For each unit, load the mapped `ProjectStream`, recursively collect all descendant sub-streams via `parentStreamNumber`, and load all tasks belonging to the mapped stream **and** its descendants
 5. Compute unit progress:
-   - If stream has no tasks → 0
-   - Otherwise progress = average of `ProjectTask.progress` for tasks under the stream
-6. Compute unit planned dates:
-   - `plannedStartDate` = minimum `taskStartDate` across stream tasks
-   - `plannedEndDate` = maximum `taskEndDate` across stream tasks
-   - `actualStartDate` = minimum `actualStartDate` across stream tasks
-   - `actualEndDate` = maximum `actualEndDate` across stream tasks
-7. Expose each unit's `works` as the stream's tasks (read-only; do not duplicate or persist)
+   - If no aggregated tasks → 0
+   - Otherwise progress = average of `ProjectTask.progress` for all aggregated tasks
+6. Compute unit planned dates from all aggregated tasks:
+   - `plannedStartDate` = minimum `taskStartDate`
+   - `plannedEndDate` = maximum `taskEndDate`
+   - `actualStartDate` = minimum `actualStartDate`
+   - `actualEndDate` = maximum `actualEndDate`
+7. Expose each unit's `works` as the aggregated tasks (read-only; do not duplicate or persist). Include each work's source `streamName` and `streamType` so the frontend can show whether a work belongs to the parent stream or a sub-stream
 8. Return the enriched tree
 
 ### 4.3 Cascade Delete Rules

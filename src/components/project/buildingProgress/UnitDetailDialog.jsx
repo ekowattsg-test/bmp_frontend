@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   Box,
   Chip,
+  CircularProgress,
   Dialog,
   DialogContent,
   DialogTitle,
@@ -14,9 +15,17 @@ import {
   Typography,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import { useTranslation } from "react-i18next";
 import { request } from "../../../helpers/axios_helper";
 import { getProgressColor, getProgressLabel } from "./progressColors";
+import {
+  buildStreamById,
+  buildStreamByNumber,
+  collectDescendantStreamIds,
+  isDescendantOf,
+  streamHasDescendants,
+} from "./streamHierarchyUtils";
 
 const formatDate = (value) => {
   const raw = String(value || "").trim();
@@ -37,36 +46,124 @@ const InfoRow = ({ label, value }) => (
   </Box>
 );
 
-const UnitDetailDialog = ({ open, onClose, unit, storey, block, stack }) => {
+const UnitDetailDialog = ({
+  open,
+  onClose,
+  unit,
+  storey,
+  block,
+  stack,
+  streams,
+}) => {
   const { t } = useTranslation();
-  const [tasks, setTasks] = useState([]);
+  const [works, setWorks] = useState([]);
+  const [loadingWorks, setLoadingWorks] = useState(false);
 
   useEffect(() => {
     if (!open || !unit?.projectStreamId) {
-      setTasks([]);
+      setWorks([]);
       return undefined;
     }
+
+    const aggregateWorks = Array.isArray(unit?.works) ? unit.works : [];
+
     let mounted = true;
-    const loadTasks = async () => {
+
+    const loadWorks = async () => {
+      setLoadingWorks(true);
       try {
-        const res = await request(
-          "GET",
-          `/api/projecttasks/stream/${unit.projectStreamId}`,
+        const streamIds = collectDescendantStreamIds(
+          streams,
+          unit.projectStreamId,
         );
+        const streamByIdMap = buildStreamById(streams);
+
+        const tasksResList = await Promise.all(
+          streamIds.map((streamId) =>
+            request("GET", `/api/projecttasks/stream/${streamId}`).catch(
+              () => ({ data: [] }),
+            ),
+          ),
+        );
+
+        const taskToStream = new Map();
+        tasksResList.forEach((res, index) => {
+          const streamId = streamIds[index];
+          const stream = streamByIdMap[streamId];
+          const list = Array.isArray(res?.data) ? res.data : [];
+          if (stream) stream._tasks = list;
+          list.forEach((task) => {
+            const taskId = String(task?.projectTaskId || "").trim();
+            if (taskId && !taskToStream.has(taskId)) {
+              taskToStream.set(taskId, stream);
+            }
+          });
+        });
+
+        const streamByNumber = buildStreamByNumber(streams);
+
+        const enrichedWorks = aggregateWorks.map((work) => {
+          const workTaskId = String(work?.projectTaskId || "").trim();
+
+          // Prefer explicit projectStreamId on the work
+          let sourceStream = streamByIdMap[String(work?.projectStreamId || "")];
+
+          // Fall back to matching against descendant stream tasks
+          if (!sourceStream && workTaskId) {
+            sourceStream = taskToStream.get(workTaskId);
+          }
+
+          // Final fallback: infer by task number uniqueness against descendant streams
+          if (!sourceStream && workTaskId && work?.workName) {
+            const candidates = [];
+            taskToStream.forEach((stream, taskId) => {
+              const task = stream?._tasks?.find(
+                (t) => String(t?.projectTaskId || "").trim() === taskId,
+              );
+              if (
+                task &&
+                (task.workName === work.workName ||
+                  task.taskName === work.workName)
+              ) {
+                candidates.push(stream);
+              }
+            });
+            if (candidates.length === 1) sourceStream = candidates[0];
+          }
+
+          return {
+            ...work,
+            projectStreamId:
+              work?.projectStreamId || sourceStream?.projectStreamId || "",
+            streamName: sourceStream?.streamName || work?.streamName || "",
+            streamType: sourceStream?.streamType || work?.streamType || "",
+          };
+        });
+
         if (!mounted) return;
-        setTasks(Array.isArray(res?.data) ? res.data : []);
+        setWorks(enrichedWorks);
       } catch {
         if (!mounted) return;
-        setTasks([]);
+        setWorks(aggregateWorks);
+      } finally {
+        if (!mounted) return;
+        setLoadingWorks(false);
       }
     };
-    loadTasks();
+
+    loadWorks();
+
     return () => {
       mounted = false;
     };
-  }, [open, unit?.projectStreamId]);
+  }, [open, unit?.projectStreamId, unit?.works, streams]);
 
   if (!unit) return null;
+
+  const streamByIdMap = buildStreamById(streams);
+  const mappedStream = streamByIdMap[String(unit?.projectStreamId || "")];
+  const streamType = mappedStream?.streamType || unit?.streamType || "";
+  const hasSubStreams = streamHasDescendants(streams, mappedStream);
 
   const color = getProgressColor(unit.progress, unit.plannedEndDate);
   const statusLabel = getProgressLabel(unit.progress, unit.plannedEndDate, t);
@@ -147,13 +244,20 @@ const UnitDetailDialog = ({ open, onClose, unit, storey, block, stack }) => {
           {t("buildingProgress.works", "Works")}
         </Typography>
 
-        {tasks.length === 0 ? (
+        {loadingWorks ? (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <CircularProgress size={16} />
+            <Typography color="text.secondary">
+              {t("basic.loading", "Loading...")}
+            </Typography>
+          </Box>
+        ) : works.length === 0 ? (
           <Typography color="text.secondary">
             {t("buildingProgress.noWorks", "No works mapped to this unit.")}
           </Typography>
         ) : (
           <List dense disablePadding>
-            {tasks.map((task) => {
+            {works.map((task) => {
               const plannedStart =
                 task.plannedStartDate ?? task.taskStartDate ?? task.startDate;
               const plannedEnd =
@@ -163,6 +267,16 @@ const UnitDetailDialog = ({ open, onClose, unit, storey, block, stack }) => {
               const actualEnd = task.actualEndDate ?? task.actualTaskEndDate;
               const progress = task.progress ?? 0;
               const workColor = getProgressColor(progress, plannedEnd);
+              const taskName =
+                task.workName ?? task.taskName ?? `Task ${task.projectTaskId}`;
+              const sourceStream =
+                streamByIdMap[String(task?.projectStreamId || "")];
+              const sourceStreamName =
+                task.streamName || sourceStream?.streamName || "";
+              const isFromDescendantStream =
+                String(task?.projectStreamId || "") !==
+                  String(unit?.projectStreamId || "") &&
+                isDescendantOf(streams, sourceStream, mappedStream);
 
               const status =
                 progress === 0
@@ -205,14 +319,31 @@ const UnitDetailDialog = ({ open, onClose, unit, storey, block, stack }) => {
                           flexWrap: "wrap",
                         }}
                       >
+                        {taskName}
+                        {isFromDescendantStream && sourceStreamName && (
+                          <Chip
+                            size="small"
+                            label={sourceStreamName}
+                            variant="outlined"
+                            sx={{ height: 20, fontSize: "0.7rem" }}
+                          />
+                        )}
+                      </Box>
+                    }
+                    secondary={
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          flexWrap: "wrap",
+                        }}
+                      >
                         <Chip
                           size="small"
                           sx={{ bgcolor: workColor, color: "common.white" }}
                           label={`${progress}%`}
                         />
-                        <Typography variant="body2">
-                          {task.taskName || `Task ${task.projectTaskId}`}
-                        </Typography>
                         <Typography variant="caption" color="text.secondary">
                           ({dateLabel}: {formatDate(dateValue)})
                         </Typography>

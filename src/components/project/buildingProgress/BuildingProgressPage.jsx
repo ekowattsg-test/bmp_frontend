@@ -144,31 +144,38 @@ const BuildingProgressPage = () => {
     let mounted = true;
 
     const checkPermission = async () => {
+      let streamRows = [];
+
+      try {
+        const streamsRes = await request(
+          "GET",
+          `/api/projectstreams/project/${encodeURIComponent(normalizedCode)}`,
+        ).catch(() => ({ data: [] }));
+        streamRows = Array.isArray(streamsRes?.data) ? streamsRes.data : [];
+      } catch {
+        streamRows = [];
+      }
+
+      if (!mounted) return;
+      setProjectStreams(streamRows);
+
       if (userLevel >= 5) {
-        if (!mounted) return;
         setCanManageStructure(true);
         return;
       }
 
       try {
-        const [staffRes, leadersRes, streamsRes] = await Promise.all([
+        const [staffRes, leadersRes] = await Promise.all([
           request("GET", "/api/staffs").catch(() => ({ data: [] })),
           request(
             "GET",
             `/api/projectleaders/project/${encodeURIComponent(normalizedCode)}`,
-          ).catch(() => ({ data: [] })),
-          request(
-            "GET",
-            `/api/projectstreams/project/${encodeURIComponent(normalizedCode)}`,
           ).catch(() => ({ data: [] })),
         ]);
 
         const staffRows = Array.isArray(staffRes?.data) ? staffRes.data : [];
         const leaderRows = Array.isArray(leadersRes?.data)
           ? leadersRes.data
-          : [];
-        const streamRows = Array.isArray(streamsRes?.data)
-          ? streamsRes.data
           : [];
 
         const matchedStaffIds = new Set(
@@ -187,11 +194,9 @@ const BuildingProgressPage = () => {
 
         if (!mounted) return;
         setCanManageStructure(isLeader);
-        setProjectStreams(streamRows);
       } catch {
         if (!mounted) return;
         setCanManageStructure(false);
-        setProjectStreams([]);
       }
     };
 
@@ -449,6 +454,7 @@ const BuildingProgressPage = () => {
             <BuildingProgress3D
               blocks={filteredBlocks}
               onUnitClick={handleUnitClick}
+              streams={projectStreams}
             />
           ) : null}
 
@@ -459,6 +465,7 @@ const BuildingProgressPage = () => {
             storey={detailContext?.storey}
             block={detailContext?.block}
             stack={detailContext?.stack}
+            streams={projectStreams}
           />
         </>
       )}
