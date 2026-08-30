@@ -8,8 +8,10 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import QrCodeScannerIcon from "@mui/icons-material/QrCodeScanner";
+import NfcIcon from "@mui/icons-material/Nfc";
 import { useTranslation } from "react-i18next";
 import { useCameraScanner } from "../../../helpers/camera_scanner_helper";
+import { useNfcScanner } from "../../../helpers/nfc_scanner_helper";
 
 /**
  * PdaScanInput — single reusable scan input for all PDA scanning steps.
@@ -40,6 +42,9 @@ export default function PdaScanInput({
 
   const { openScanner, scannerOpen, scannerOverlay } = useCameraScanner({
     containerId: cameraContainerId,
+    onScan: onChange,
+  });
+  const { nfcSupported, nfcScanning, startNfc } = useNfcScanner({
     onScan: onChange,
   });
 
@@ -81,6 +86,20 @@ export default function PdaScanInput({
                 >
                   <QrCodeScannerIcon fontSize="small" />
                 </IconButton>
+                {nfcSupported && (
+                  <IconButton
+                    size="small"
+                    onClick={startNfc}
+                    disabled={disabled || nfcScanning}
+                    aria-label={t("stockTake.openNfcScanner", "Scan NFC")}
+                  >
+                    {nfcScanning ? (
+                      <CircularProgress size={20} />
+                    ) : (
+                      <NfcIcon fontSize="small" />
+                    )}
+                  </IconButton>
+                )}
               </InputAdornment>
             ),
           }}

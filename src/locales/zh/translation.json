@@ -2149,7 +2149,11 @@
     "lastRecorded": "最近记录的库存",
     "cameraFailed": "无法打开相机",
     "cameraNotSupported": "设备不支持相机",
-    "openScannerHtml5": "打开扫描器"
+    "openScannerHtml5": "打开扫描器",
+    "openNfcScanner": "NFC 扫描",
+    "nfcScanning": "正在扫描 NFC…",
+    "nfcNotSupported": "此设备不支持 NFC",
+    "nfcFailed": "读取 NFC 标签失败"
   },
   "stockAdjustment": {
     "title": "库存调整",

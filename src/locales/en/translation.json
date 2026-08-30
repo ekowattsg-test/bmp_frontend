@@ -2149,7 +2149,11 @@
     "lastRecorded": "Last recorded stock",
     "cameraFailed": "Failed to open camera",
     "cameraNotSupported": "Camera not supported",
-    "openScannerHtml5": "Open scanner"
+    "openScannerHtml5": "Open scanner",
+    "openNfcScanner": "Scan NFC",
+    "nfcScanning": "Scanning NFC…",
+    "nfcNotSupported": "NFC not supported on this device",
+    "nfcFailed": "Failed to read NFC tag"
   },
   "stockAdjustment": {
     "title": "Stock Adjustment",

@@ -12,10 +12,12 @@ import {
   Typography,
 } from "@mui/material";
 import QrCodeScannerIcon from "@mui/icons-material/QrCodeScanner";
+import NfcIcon from "@mui/icons-material/Nfc";
 import SearchIcon from "@mui/icons-material/Search";
 import { useTranslation } from "react-i18next";
 import Modal from "../common/Modal";
 import { request } from "../../helpers/axios_helper";
+import { useNfcScanner } from "../../helpers/nfc_scanner_helper";
 
 const normalizeScannedValue = (raw) => {
   if (!raw) return "";
@@ -65,6 +67,12 @@ const StockCodeScanInput = React.forwardRef(function StockCodeScanInput(
   const [pickerSearch, setPickerSearch] = useState("");
   const [pickerAllProducts, setPickerAllProducts] = useState([]);
   const [pickerLoading, setPickerLoading] = useState(false);
+  const { nfcSupported, nfcScanning, startNfc } = useNfcScanner({
+    onScan: (value) => {
+      onChange(value);
+      onSubmit(value);
+    },
+  });
 
   const pickerProducts = (() => {
     const q = pickerSearch.trim().toLowerCase();
@@ -235,6 +243,16 @@ const StockCodeScanInput = React.forwardRef(function StockCodeScanInput(
               >
                 <QrCodeScannerIcon />
               </IconButton>
+              {nfcSupported && (
+                <IconButton
+                  size="small"
+                  onClick={startNfc}
+                  aria-label={t("stockTake.openNfcScanner", "Scan NFC")}
+                  disabled={busy || disabled || nfcScanning}
+                >
+                  {nfcScanning ? <CircularProgress size={20} /> : <NfcIcon />}
+                </IconButton>
+              )}
             </InputAdornment>
           ),
         }}
