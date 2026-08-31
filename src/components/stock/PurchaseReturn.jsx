@@ -182,7 +182,11 @@ export default function PurchaseReturn() {
         </Typography>
         <Autocomplete
           options={purchaseOrders}
-          getOptionLabel={(option) => option?.orderId || ""}
+          getOptionLabel={(option) => {
+            const id = option?.orderId || "";
+            const name = option?.vendorName || "";
+            return name ? `${id} — ${name}` : id;
+          }}
           value={selectedPoOption}
           onChange={(_, newValue) => {
             if (newValue) {
@@ -225,10 +229,9 @@ export default function PurchaseReturn() {
           size="small"
           color="primary"
         />
-        {selectedPo.vendorId && (
+        {selectedPo.vendorName && (
           <Typography variant="body2" color="text.secondary">
-            {t("purchaseReturn.vendor")}:{" "}
-            {selectedPo.vendorName || selectedPo.vendorId}
+            {t("purchaseReturn.vendor")}: {selectedPo.vendorName}
           </Typography>
         )}
       </Box>
@@ -325,7 +328,7 @@ export default function PurchaseReturn() {
                 <TableCell>
                   {productMap[scan.productCode] || scan.productCode || "-"}
                 </TableCell>
-                <TableCell>{scan.stockId}</TableCell>
+                <TableCell>{scan.stockCode || scan.stockId}</TableCell>
                 <TableCell align="right">{scan.returnable ?? 0}</TableCell>
                 <TableCell align="right" sx={{ width: 140 }}>
                   <TextField
@@ -373,7 +376,10 @@ export default function PurchaseReturn() {
       <DialogContent>
         <Typography variant="body2" sx={{ mb: 2 }}>
           {t("purchaseReturn.chooseProductBody", {
-            stockCode: pendingProductChoice?.stockId || "",
+            stockCode:
+              pendingProductChoice?.stockCode ||
+              pendingProductChoice?.stockId ||
+              "",
           })}
         </Typography>
         <List>

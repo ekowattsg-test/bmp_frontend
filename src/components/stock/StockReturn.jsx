@@ -186,7 +186,7 @@ export default function StockReturn() {
             }}
           >
             <Typography variant="body2" sx={{ flex: 1, fontWeight: 500 }}>
-              {returnFromStaffName || returnFromStaffId}
+              {returnFromStaffName || "-"}
             </Typography>
             <Button
               size="small"
@@ -302,7 +302,7 @@ export default function StockReturn() {
                 <TableCell>
                   {productMap[item.productCode] || item.productCode}
                 </TableCell>
-                <TableCell>{item.stockId}</TableCell>
+                <TableCell>{item.stockCode || item.stockId}</TableCell>
                 <TableCell align="right">{item.returnable ?? 0}</TableCell>
                 <TableCell align="right" sx={{ width: 140 }}>
                   <TextField
@@ -349,7 +349,10 @@ export default function StockReturn() {
       <DialogContent>
         <Typography variant="body2" sx={{ mb: 2 }}>
           {t("stockReturn.chooseProductBody", {
-            stockCode: pendingProductChoice?.stockId || "",
+            stockCode:
+              pendingProductChoice?.stockCode ||
+              pendingProductChoice?.stockId ||
+              "",
           })}
         </Typography>
         <List>
@@ -365,7 +368,7 @@ export default function StockReturn() {
                 primary={
                   productMap[option.productCode] || option.productCode || "-"
                 }
-                secondary={`Product ID: ${option.productId}`}
+                secondary={`${t("stockReturn.stockCode")}: ${option.stockCode || "-"}`}
               />
             </ListItemButton>
           ))}
@@ -527,7 +530,7 @@ export default function StockReturn() {
         />
         <Chip
           label={t("stockReturn.summaryWorker", {
-            name: returnFromStaffName || returnFromStaffId || "-",
+            name: returnFromStaffName || "-",
           })}
           color="info"
           variant="outlined"

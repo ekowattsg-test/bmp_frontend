@@ -206,7 +206,7 @@ export default function AssetAssignment() {
             }}
           >
             <Typography variant="body2" sx={{ flex: 1, fontWeight: 500 }}>
-              {recipientStaffName || recipientStaffId}
+              {recipientStaffName || "-"}
             </Typography>
             <Button
               size="small"
@@ -300,7 +300,7 @@ export default function AssetAssignment() {
                 <TableCell>
                   {productMap[item.productCode] || item.productCode || "-"}
                 </TableCell>
-                <TableCell>{item.stockId}</TableCell>
+                <TableCell>{item.stockCode || item.stockId}</TableCell>
                 <TableCell>
                   <TextField
                     type="number"
@@ -343,7 +343,8 @@ export default function AssetAssignment() {
       <DialogContent>
         <Typography variant="body2" sx={{ mb: 2 }}>
           {t("assetAssignment.chooseProductBody", {
-            stockCode: pendingProductChoice?.stockId,
+            stockCode:
+              pendingProductChoice?.stockCode || pendingProductChoice?.stockId,
           })}
         </Typography>
         <List dense disablePadding>
@@ -359,7 +360,7 @@ export default function AssetAssignment() {
                 primary={
                   productMap[option.productCode] || option.productCode || "-"
                 }
-                secondary={`Product ID: ${option.productId}`}
+                secondary={`${t("assetAssignment.stockCode")}: ${option.stockCode || "-"}`}
               />
             </ListItemButton>
           ))}
@@ -523,7 +524,7 @@ export default function AssetAssignment() {
         />
         <Chip
           label={t("assetAssignment.summaryRecipient", {
-            name: recipientStaffName || recipientStaffId || "-",
+            name: recipientStaffName || "-",
           })}
           color="info"
           variant="outlined"

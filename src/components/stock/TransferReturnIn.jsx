@@ -182,7 +182,11 @@ export default function TransferReturnIn() {
         </Typography>
         <Autocomplete
           options={deliveryOrders}
-          getOptionLabel={(option) => option?.orderId || ""}
+          getOptionLabel={(option) => {
+            const id = option?.orderId || "";
+            const name = option?.customerName || "";
+            return name ? `${id} — ${name}` : id;
+          }}
           value={selectedDoOption}
           onChange={(_, newValue) => {
             if (newValue) {
@@ -225,9 +229,9 @@ export default function TransferReturnIn() {
           size="small"
           color="primary"
         />
-        {selectedDo.customerId && (
+        {selectedDo.customerName && (
           <Typography variant="body2" color="text.secondary">
-            {t("transferReturnIn.customer")}: {selectedDo.customerId}
+            {t("transferReturnIn.customer")}: {selectedDo.customerName}
           </Typography>
         )}
       </Box>
@@ -326,7 +330,7 @@ export default function TransferReturnIn() {
                 <TableCell>
                   {productMap[scan.productCode] || scan.productCode || "-"}
                 </TableCell>
-                <TableCell>{scan.stockId}</TableCell>
+                <TableCell>{scan.stockCode || scan.stockId}</TableCell>
                 <TableCell align="right">{scan.returnable ?? 0}</TableCell>
                 <TableCell align="right" sx={{ width: 140 }}>
                   <TextField
@@ -374,7 +378,10 @@ export default function TransferReturnIn() {
       <DialogContent>
         <Typography variant="body2" sx={{ mb: 2 }}>
           {t("transferReturnIn.chooseProductBody", {
-            stockCode: pendingProductChoice?.stockId || "",
+            stockCode:
+              pendingProductChoice?.stockCode ||
+              pendingProductChoice?.stockId ||
+              "",
           })}
         </Typography>
         <List>
@@ -390,7 +397,7 @@ export default function TransferReturnIn() {
                 primary={
                   productMap[option.productCode] || option.productCode || "-"
                 }
-                secondary={`Product ID: ${option.productId}`}
+                secondary={`${t("transferReturnIn.stockCode")}: ${option.stockCode || "-"}`}
               />
             </ListItemButton>
           ))}

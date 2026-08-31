@@ -178,7 +178,11 @@ export default function TransferOut() {
     >
       <Autocomplete
         options={deliveryOrders}
-        getOptionLabel={(option) => option?.orderId || ""}
+        getOptionLabel={(option) => {
+          const id = option?.orderId || "";
+          const name = option?.customerName || "";
+          return name ? `${id} — ${name}` : id;
+        }}
         value={selectedDoOption}
         onChange={(_, newValue) => {
           setSelectedDoId(newValue?.orderId || "");
@@ -234,9 +238,9 @@ export default function TransferOut() {
           size="small"
           color="primary"
         />
-        {selectedDo.customerId && (
+        {selectedDo.customerName && (
           <Typography variant="body2" color="text.secondary">
-            {t("transferOut.customer")}: {selectedDo.customerId}
+            {t("transferOut.customer")}: {selectedDo.customerName}
           </Typography>
         )}
       </Box>
@@ -309,7 +313,7 @@ export default function TransferOut() {
           <TableBody>
             {scannedItems.map((scan, index) => (
               <TableRow key={`${scan.stockId}-${index}`} hover>
-                <TableCell>{scan.stockId}</TableCell>
+                <TableCell>{scan.stockCode || scan.stockId}</TableCell>
                 <TableCell>
                   {productMap[scan.productCode] || scan.productCode || "-"}
                 </TableCell>
@@ -362,7 +366,7 @@ export default function TransferOut() {
               >
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="body2" fontWeight={600} noWrap>
-                    {scan.stockId}
+                    {scan.stockCode || scan.stockId}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" noWrap>
                     {productMap[scan.productCode] || scan.productCode || "-"}
@@ -525,7 +529,8 @@ export default function TransferOut() {
       <DialogContent>
         <Typography variant="body2" sx={{ mb: 2 }}>
           {t("transferOut.chooseProductBody", {
-            stockCode: pendingProductChoice?.stockId,
+            stockCode:
+              pendingProductChoice?.stockCode || pendingProductChoice?.stockId,
           })}
         </Typography>
         <List dense disablePadding>
@@ -541,7 +546,7 @@ export default function TransferOut() {
                 primary={
                   productMap[option.productCode] || option.productCode || "-"
                 }
-                secondary={`Product ID: ${option.productId}`}
+                secondary={`${t("transferOut.stockCode")}: ${option.stockCode || "-"}`}
               />
             </ListItemButton>
           ))}

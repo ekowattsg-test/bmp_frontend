@@ -23,6 +23,32 @@ const toNumber = (value) => {
   return Number.isFinite(numberValue) ? numberValue : 0;
 };
 
+/**
+ * Build a map of customerId -> customerName from the customers endpoint.
+ */
+const fetchCustomerMap = async () => {
+  const response = await request("GET", "/api/customers", null, {
+    skipBackendErrorDialog: true,
+  });
+  const map = {};
+  toArray(response?.data).forEach((c) => {
+    if (c.customerId != null) {
+      map[c.customerId] = c.customerName || "";
+    }
+  });
+  return map;
+};
+
+/**
+ * Enrich delivery orders with customerName from a customer map.
+ */
+const enrichDeliveryOrdersWithCustomerName = (orders, customerMap) => {
+  return orders.map((o) => {
+    const resolved = customerMap[o.customerId] || o.customerName || "";
+    return { ...o, customerName: resolved };
+  });
+};
+
 const matchesStockCode = (row, stockCode) => {
   const normalized = String(stockCode || "")
     .trim()
@@ -86,13 +112,19 @@ export const getReturnableQuantityForDo = async (doId, stockCode) => {
 };
 
 /**
- * Fetch all delivery orders.
+ * Fetch all delivery orders, enriched with customerName.
  */
 export const fetchDeliveryOrders = async () => {
-  const response = await request("GET", "/api/deliveryOrders", null, {
-    skipBackendErrorDialog: true,
-  });
-  return toArray(response?.data);
+  const [response, customerMap] = await Promise.all([
+    request("GET", "/api/deliveryOrders", null, {
+      skipBackendErrorDialog: true,
+    }),
+    fetchCustomerMap().catch(() => ({})),
+  ]);
+  return enrichDeliveryOrdersWithCustomerName(
+    toArray(response?.data),
+    customerMap,
+  );
 };
 
 /**
@@ -408,7 +440,7 @@ export const executeReturnIn = async ({
     await createWorkOrderSubData({
       workOrderDataId,
       productId,
-      stockId: scan.stockId,
+      stockId: scan.stockCode || scan.stockId,
       subQuantity: scan.subQuantity,
     });
   }

@@ -69,6 +69,7 @@ import WASimulator from "./baseInformation/WASimulator";
 import ParameterModern from "./baseInformation/ParameterModern";
 import BriefingModern from "./baseInformation/BriefingModern";
 import BriefingContentPage from "./baseInformation/BriefingContentPage";
+import BriefingEnquiry from "./project/BriefingEnquiry";
 import TvMobileApproval from "./workorder/TvMobileApproval";
 import MessagesPage from "./messages/MessagesPage";
 
@@ -169,6 +170,7 @@ function MainPage() {
         <Route path="/wa-simulator" element={<WASimulator />} />
         <Route path="/parameter" element={<ParameterModern />} />
         <Route path="/briefing" element={<BriefingModern />} />
+        <Route path="/briefing-enquiry" element={<BriefingEnquiry />} />
         <Route
           path="/project-status-control"
           element={<ProjectStatusControl />}

@@ -417,6 +417,13 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               minLevel: 3,
             },
             {
+              key: "briefingEnquiry",
+              label: t("menu.briefingEnquiry", "Briefing Enquiry"),
+              icon: <DescriptionIcon fontSize="small" />,
+              path: "/briefing-enquiry",
+              minLevel: 3,
+            },
+            {
               key: "projectStatusControl",
               label: t("menu.projectStatusControl", "Project Status Control"),
               icon: <TaskIcon fontSize="small" />,

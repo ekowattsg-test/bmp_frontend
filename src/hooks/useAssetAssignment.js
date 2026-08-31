@@ -212,6 +212,7 @@ export default function useAssetAssignment() {
               productId: stock.productId,
               productCode: stock.productCode,
               stockId,
+              stockCode: stock.stockCode || stockId,
               subQuantity: 1,
               available,
             },
@@ -220,7 +221,11 @@ export default function useAssetAssignment() {
           return;
         }
 
-        setPendingProductChoice({ stockId, options: matches });
+        setPendingProductChoice({
+          stockId,
+          stockCode: matches[0]?.stockCode || stockId,
+          options: matches,
+        });
       } catch (err) {
         console.error("[AssetAssignment] searchAssetByCode failed:", err);
         setErrorMsg(err?.message || `Asset code ${rawValue} lookup failed.`);
@@ -286,6 +291,7 @@ export default function useAssetAssignment() {
             productId: product.productId,
             productCode: product.productCode,
             stockId,
+            stockCode: product.stockCode || stockId,
             subQuantity: 1,
             available,
           },

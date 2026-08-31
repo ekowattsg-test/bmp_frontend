@@ -210,16 +210,20 @@ export default function useReceivePoStock() {
     [eligiblePos, selectedOrderId],
   );
 
-  const addScan = useCallback((productCode, stockId, subQuantity = 1) => {
-    setScannedItems((prev) => [
-      ...prev,
-      {
-        productCode,
-        stockId: String(stockId || "").trim(),
-        subQuantity: toNumber(subQuantity),
-      },
-    ]);
-  }, []);
+  const addScan = useCallback(
+    (productCode, stockId, subQuantity = 1, stockCode) => {
+      setScannedItems((prev) => [
+        ...prev,
+        {
+          productCode,
+          stockId: String(stockId || "").trim(),
+          stockCode: String(stockCode || stockId || "").trim(),
+          subQuantity: toNumber(subQuantity),
+        },
+      ]);
+    },
+    [],
+  );
 
   const handleAddReceiptPhoto = useCallback(async (file) => {
     const localUrl = URL.createObjectURL(file);
@@ -255,6 +259,7 @@ export default function useReceivePoStock() {
       if (!stockId || !order) return;
 
       // Try auto-match by looking up the stock code in the backend.
+      let stock = null;
       try {
         const stockRes = await request(
           "GET",
@@ -262,14 +267,19 @@ export default function useReceivePoStock() {
           null,
           { skipBackendErrorDialog: true },
         );
-        const stock = stockRes?.data;
+        stock = stockRes?.data || null;
         const productId = Number(stock?.productId);
         if (Number.isFinite(productId) && productId > 0) {
           const matchingItem = orderItems.find(
             (item) => item.productId === productId,
           );
           if (matchingItem) {
-            addScan(matchingItem.productCode, stockId, 1);
+            addScan(
+              matchingItem.productCode,
+              stockId,
+              1,
+              stock?.stockCode || stockId,
+            );
             return;
           }
         }
@@ -279,7 +289,12 @@ export default function useReceivePoStock() {
 
       // Open identify dialog so the user can pick the PO line and link the
       // scanned stock code to a product, even when no matching stock exists yet.
-      setPendingScan({ stockId, productCode: null, subQuantity: 1 });
+      setPendingScan({
+        stockId,
+        stockCode: stock?.stockCode || stockId,
+        productCode: null,
+        subQuantity: 1,
+      });
     },
     [order, orderItems, addScan],
   );

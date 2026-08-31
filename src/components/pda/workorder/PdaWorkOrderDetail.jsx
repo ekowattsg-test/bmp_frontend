@@ -422,9 +422,9 @@ function ScannedStockRow({ sub, maxQty, onUpdateQty, onDelete }) {
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
         }}
-        title={sub.stockId}
+        title={sub.stockCode || sub.stockId}
       >
-        {sub.stockId}
+        {sub.stockCode || sub.stockId}
       </Typography>
 
       {/* − */}
@@ -1069,7 +1069,7 @@ function ScanDataPanel({
                     {scanned.map((sub) => (
                       <Chip
                         key={sub.workOrderSubDataId}
-                        label={`${sub.stockId} ×${sub.subQuantity || 1}`}
+                        label={`${sub.stockCode || sub.stockId} ×${sub.subQuantity || 1}`}
                         size="small"
                         sx={{
                           height: 20,

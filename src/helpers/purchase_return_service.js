@@ -28,6 +28,32 @@ const normalizeOrderStatus = (status) =>
     .trim()
     .toUpperCase();
 
+/**
+ * Build a map of vendorId -> vendorName from the vendors endpoint.
+ */
+const fetchVendorMap = async () => {
+  const response = await request("GET", "/api/vendors", null, {
+    skipBackendErrorDialog: true,
+  });
+  const map = {};
+  toArray(response?.data).forEach((v) => {
+    if (v.vendorId != null) {
+      map[v.vendorId] = v.vendorName || "";
+    }
+  });
+  return map;
+};
+
+/**
+ * Enrich purchase orders/returns with vendorName from a vendor map.
+ */
+const enrichWithVendorName = (rows, vendorMap) => {
+  return rows.map((row) => {
+    const resolved = vendorMap[row.vendorId] || row.vendorName || "";
+    return { ...row, vendorName: resolved };
+  });
+};
+
 const matchesProductCode = (row, productCode) => {
   const normalized = String(productCode || "")
     .trim()
@@ -53,13 +79,16 @@ export const fetchPurchaseReturnsByPoId = async (poId) => {
 };
 
 /**
- * Fetch all PurchaseReturn headers.
+ * Fetch all PurchaseReturn headers, enriched with vendorName.
  */
 export const fetchPurchaseReturns = async () => {
-  const response = await request("GET", "/api/purchaseReturns", null, {
-    skipBackendErrorDialog: true,
-  });
-  return toArray(response?.data);
+  const [response, vendorMap] = await Promise.all([
+    request("GET", "/api/purchaseReturns", null, {
+      skipBackendErrorDialog: true,
+    }),
+    fetchVendorMap().catch(() => ({})),
+  ]);
+  return enrichWithVendorName(toArray(response?.data), vendorMap);
 };
 
 /**
@@ -101,13 +130,16 @@ export const getReturnableQuantityForProduct = async (poId, productCode) => {
 };
 
 /**
- * Fetch all purchase orders.
+ * Fetch all purchase orders, enriched with vendorName.
  */
 export const fetchPurchaseOrders = async () => {
-  const response = await request("GET", "/api/purchaseOrders", null, {
-    skipBackendErrorDialog: true,
-  });
-  return toArray(response?.data);
+  const [response, vendorMap] = await Promise.all([
+    request("GET", "/api/purchaseOrders", null, {
+      skipBackendErrorDialog: true,
+    }),
+    fetchVendorMap().catch(() => ({})),
+  ]);
+  return enrichWithVendorName(toArray(response?.data), vendorMap);
 };
 
 /**
@@ -473,7 +505,7 @@ export const executePurchaseReturn = async ({
     await createWorkOrderSubData({
       workOrderDataId,
       productId,
-      stockId: scan.stockId,
+      stockId: scan.stockCode || scan.stockId,
       subQuantity: scan.subQuantity,
     });
   }

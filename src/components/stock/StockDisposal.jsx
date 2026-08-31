@@ -314,7 +314,7 @@ export default function StockDisposal() {
                 <TableCell>
                   {productMap[item.productCode] || item.productCode}
                 </TableCell>
-                <TableCell>{item.stockId}</TableCell>
+                <TableCell>{item.stockCode || item.stockId}</TableCell>
                 <TableCell align="right">{item.available ?? 0}</TableCell>
                 <TableCell align="right" sx={{ width: 140 }}>
                   <TextField
@@ -361,7 +361,10 @@ export default function StockDisposal() {
       <DialogContent>
         <Typography variant="body2" sx={{ mb: 2 }}>
           {t("stockDisposal.chooseProductBody", {
-            stockCode: pendingProductChoice?.stockId || "",
+            stockCode:
+              pendingProductChoice?.stockCode ||
+              pendingProductChoice?.stockId ||
+              "",
           })}
         </Typography>
         <List>
@@ -377,7 +380,7 @@ export default function StockDisposal() {
                 primary={
                   productMap[option.productCode] || option.productCode || "-"
                 }
-                secondary={`Product ID: ${option.productId}`}
+                secondary={`${t("stockDisposal.stockCode")}: ${option.stockCode || "-"}`}
               />
             </ListItemButton>
           ))}

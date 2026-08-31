@@ -212,6 +212,7 @@ export default function useStockIssue() {
               productId: stock.productId,
               productCode: stock.productCode,
               stockId,
+              stockCode: stock.stockCode || stockId,
               subQuantity: 1,
               available,
             },
@@ -220,7 +221,11 @@ export default function useStockIssue() {
           return;
         }
 
-        setPendingProductChoice({ stockId, options: matches });
+        setPendingProductChoice({
+          stockId,
+          stockCode: matches[0]?.stockCode || stockId,
+          options: matches,
+        });
       } catch (err) {
         console.error("[StockIssue] searchStockByCode failed:", err);
         setErrorMsg(err?.message || `Stock code ${rawValue} lookup failed.`);
@@ -311,6 +316,7 @@ export default function useStockIssue() {
             productId: product.productId,
             productCode: product.productCode,
             stockId,
+            stockCode: product.stockCode || stockId,
             subQuantity: 1,
             available,
           },

@@ -280,6 +280,11 @@ const AppMenu = () => {
             icon: <Description />,
           },
           {
+            to: "/briefing-enquiry",
+            label: t("menu.briefingEnquiry", "Briefing Enquiry"),
+            icon: <Description />,
+          },
+          {
             to: "/project-status-control",
             label: t("menu.projectStatusControl", "Project Status Control"),
             icon: <Task />,

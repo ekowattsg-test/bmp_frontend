@@ -292,7 +292,7 @@ export const executeAssetReturn = async ({
     await createWorkOrderSubData({
       workOrderDataId,
       productId,
-      stockId: scan.stockId,
+      stockId: scan.stockCode || scan.stockId,
       subQuantity: scan.subQuantity,
     });
   }

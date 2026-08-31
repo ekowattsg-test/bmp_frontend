@@ -169,7 +169,11 @@ export default function TransferIn() {
         </Typography>
         <Autocomplete
           options={deliveryOrders}
-          getOptionLabel={(option) => option?.orderId || ""}
+          getOptionLabel={(option) => {
+            const id = option?.orderId || "";
+            const name = option?.customerName || "";
+            return name ? `${id} — ${name}` : id;
+          }}
           value={selectedDoOption}
           onChange={(_, newValue) => {
             setSelectedDoId(newValue?.orderId || "");
@@ -256,9 +260,9 @@ export default function TransferIn() {
           size="small"
           color="primary"
         />
-        {selectedDo.customerId && (
+        {selectedDo.customerName && (
           <Typography variant="body2" color="text.secondary">
-            {t("transferIn.customer")}: {selectedDo.customerId}
+            {t("transferIn.customer")}: {selectedDo.customerName}
           </Typography>
         )}
       </Box>
@@ -331,7 +335,7 @@ export default function TransferIn() {
           <TableBody>
             {scannedItems.map((scan, index) => (
               <TableRow key={`${scan.stockId}-${index}`} hover>
-                <TableCell>{scan.stockId}</TableCell>
+                <TableCell>{scan.stockCode || scan.stockId}</TableCell>
                 <TableCell>
                   {productMap[scan.productCode] || scan.productCode || "-"}
                 </TableCell>
@@ -384,7 +388,7 @@ export default function TransferIn() {
               >
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="body2" fontWeight={600} noWrap>
-                    {scan.stockId}
+                    {scan.stockCode || scan.stockId}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" noWrap>
                     {productMap[scan.productCode] || scan.productCode || "-"}

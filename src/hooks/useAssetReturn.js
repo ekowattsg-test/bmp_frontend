@@ -199,6 +199,7 @@ export default function useAssetReturn() {
               productId: stock.productId,
               productCode: stock.productCode,
               stockId,
+              stockCode: stock.stockCode || stockId,
               subQuantity: 1,
               returnable: stock.returnable,
             },
@@ -207,7 +208,11 @@ export default function useAssetReturn() {
           return;
         }
 
-        setPendingProductChoice({ stockId, options: matches });
+        setPendingProductChoice({
+          stockId,
+          stockCode: matches[0]?.stockCode || stockId,
+          options: matches,
+        });
       } catch (err) {
         console.error("[AssetReturn] searchAssetReturnByCode failed:", err);
         setErrorMsg(
@@ -295,6 +300,7 @@ export default function useAssetReturn() {
             productId: product.productId,
             productCode: product.productCode,
             stockId,
+            stockCode: product.stockCode || stockId,
             subQuantity: 1,
             returnable: product.returnable,
           },

@@ -267,6 +267,7 @@ export default function useTransferIn() {
             productId,
             productCode,
             stockId,
+            stockCode: stock?.stockCode || stockId,
             subQuantity: 1,
             available: Number.POSITIVE_INFINITY,
           },

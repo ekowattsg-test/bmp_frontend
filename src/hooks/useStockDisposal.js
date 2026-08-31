@@ -183,6 +183,7 @@ export default function useStockDisposal() {
               productId: stock.productId,
               productCode: stock.productCode,
               stockId,
+              stockCode: stock.stockCode || stockId,
               subQuantity: 1,
               available: stock.availability?.current || 0,
             },
@@ -191,7 +192,11 @@ export default function useStockDisposal() {
           return;
         }
 
-        setPendingProductChoice({ stockId, options: matches });
+        setPendingProductChoice({
+          stockId,
+          stockCode: matches[0]?.stockCode || stockId,
+          options: matches,
+        });
       } catch (err) {
         console.error("[StockDisposal] searchDisposalStockByCode failed:", err);
         setErrorMsg(
@@ -280,6 +285,7 @@ export default function useStockDisposal() {
             productId: product.productId,
             productCode: product.productCode,
             stockId,
+            stockCode: product.stockCode || stockId,
             subQuantity: 1,
             available,
           },

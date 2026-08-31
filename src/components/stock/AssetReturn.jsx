@@ -184,7 +184,7 @@ export default function AssetReturn() {
             }}
           >
             <Typography variant="body2" sx={{ flex: 1, fontWeight: 500 }}>
-              {returnFromStaffName || returnFromStaffId}
+              {returnFromStaffName || "-"}
             </Typography>
             <Button
               size="small"
@@ -300,7 +300,7 @@ export default function AssetReturn() {
                 <TableCell>
                   {productMap[item.productCode] || item.productCode}
                 </TableCell>
-                <TableCell>{item.stockId}</TableCell>
+                <TableCell>{item.stockCode || item.stockId}</TableCell>
                 <TableCell align="right">{item.returnable ?? 0}</TableCell>
                 <TableCell align="right" sx={{ width: 140 }}>
                   <TextField
@@ -347,7 +347,10 @@ export default function AssetReturn() {
       <DialogContent>
         <Typography variant="body2" sx={{ mb: 2 }}>
           {t("assetReturn.chooseProductBody", {
-            stockCode: pendingProductChoice?.stockId || "",
+            stockCode:
+              pendingProductChoice?.stockCode ||
+              pendingProductChoice?.stockId ||
+              "",
           })}
         </Typography>
         <List>
@@ -363,7 +366,7 @@ export default function AssetReturn() {
                 primary={
                   productMap[option.productCode] || option.productCode || "-"
                 }
-                secondary={`Product ID: ${option.productId}`}
+                secondary={`${t("assetReturn.stockCode")}: ${option.stockCode || "-"}`}
               />
             </ListItemButton>
           ))}
@@ -525,7 +528,7 @@ export default function AssetReturn() {
         />
         <Chip
           label={t("assetReturn.summaryWorker", {
-            name: returnFromStaffName || returnFromStaffId || "-",
+            name: returnFromStaffName || "-",
           })}
           color="info"
           variant="outlined"

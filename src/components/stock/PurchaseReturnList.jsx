@@ -209,7 +209,7 @@ export default function PurchaseReturnList() {
               >
                 <TableCell>{row.returnId}</TableCell>
                 <TableCell>{row.poId || "-"}</TableCell>
-                <TableCell>{row.vendorName || row.vendorId || "-"}</TableCell>
+                <TableCell>{row.vendorName || "-"}</TableCell>
                 <TableCell>{row.location || "-"}</TableCell>
                 <TableCell>{row.returnedBy || "-"}</TableCell>
                 <TableCell>
@@ -255,7 +255,7 @@ export default function PurchaseReturnList() {
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {t("purchaseReturnList.vendor")}:{" "}
-            {selectedReturn?.vendorName || selectedReturn?.vendorId || "-"}
+            {selectedReturn?.vendorName || "-"}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {t("purchaseReturnList.location")}:{" "}

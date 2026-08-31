@@ -206,7 +206,7 @@ export default function StockIssue() {
             }}
           >
             <Typography variant="body2" sx={{ flex: 1, fontWeight: 500 }}>
-              {recipientStaffName || recipientStaffId}
+              {recipientStaffName || "-"}
             </Typography>
             <Button
               size="small"
@@ -304,7 +304,7 @@ export default function StockIssue() {
                 <TableCell>
                   {productMap[item.productCode] || item.productCode}
                 </TableCell>
-                <TableCell>{item.stockId}</TableCell>
+                <TableCell>{item.stockCode || item.stockId}</TableCell>
                 <TableCell align="right">{item.available ?? 0}</TableCell>
                 <TableCell align="right" sx={{ width: 140 }}>
                   <TextField
@@ -351,7 +351,10 @@ export default function StockIssue() {
       <DialogContent>
         <Typography variant="body2" sx={{ mb: 2 }}>
           {t("stockIssue.chooseProductBody", {
-            stockCode: pendingProductChoice?.stockId || "",
+            stockCode:
+              pendingProductChoice?.stockCode ||
+              pendingProductChoice?.stockId ||
+              "",
           })}
         </Typography>
         <List>
@@ -367,7 +370,7 @@ export default function StockIssue() {
                 primary={
                   productMap[option.productCode] || option.productCode || "-"
                 }
-                secondary={`Product ID: ${option.productId}`}
+                secondary={`${t("stockIssue.stockCode")}: ${option.stockCode || "-"}`}
               />
             </ListItemButton>
           ))}
@@ -529,7 +532,7 @@ export default function StockIssue() {
         />
         <Chip
           label={t("stockIssue.summaryRecipient", {
-            name: recipientStaffName || recipientStaffId || "-",
+            name: recipientStaffName || "-",
           })}
           color="info"
           variant="outlined"

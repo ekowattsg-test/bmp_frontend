@@ -320,7 +320,7 @@ export const executeStockReturn = async ({
     await createWorkOrderSubData({
       workOrderDataId,
       productId,
-      stockId: scan.stockId,
+      stockId: scan.stockCode || scan.stockId,
       subQuantity: scan.subQuantity,
     });
   }

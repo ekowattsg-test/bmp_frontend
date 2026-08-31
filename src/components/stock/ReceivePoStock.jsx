@@ -270,7 +270,7 @@ export default function ReceivePoStock() {
           <TableBody>
             {scannedItems.map((scan, index) => (
               <TableRow key={`${scan.stockId}-${index}`} hover>
-                <TableCell>{scan.stockId}</TableCell>
+                <TableCell>{scan.stockCode || scan.stockId}</TableCell>
                 <TableCell>
                   {orderItems.find(
                     (item) => item.productCode === scan.productCode,
@@ -329,7 +329,7 @@ export default function ReceivePoStock() {
                 >
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="body2" fontWeight={600} noWrap>
-                      {scan.stockId}
+                      {scan.stockCode || scan.stockId}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" noWrap>
                       {product?.productName || scan.productCode}
@@ -669,7 +669,7 @@ export default function ReceivePoStock() {
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {t("receivePoStock.identifyBody", {
-              stockCode: pendingScan.stockId,
+              stockCode: pendingScan.stockCode || pendingScan.stockId,
             })}
           </Typography>
 

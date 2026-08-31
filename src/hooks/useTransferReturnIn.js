@@ -203,6 +203,7 @@ export default function useTransferReturnIn() {
               productId: stock.productId,
               productCode: stock.productCode,
               stockId,
+              stockCode: stock.stockCode || stockId,
               subQuantity: 1,
               returnable: stock.returnable,
             },
@@ -211,7 +212,11 @@ export default function useTransferReturnIn() {
           return;
         }
 
-        setPendingProductChoice({ stockId, options: matches });
+        setPendingProductChoice({
+          stockId,
+          stockCode: matches[0]?.stockCode || stockId,
+          options: matches,
+        });
       } catch (err) {
         console.error(
           "[TransferReturnIn] searchReturnInStockByCode failed:",
@@ -302,6 +307,7 @@ export default function useTransferReturnIn() {
             productId: product.productId,
             productCode: product.productCode,
             stockId,
+            stockCode: product.stockCode || stockId,
             subQuantity: 1,
             returnable: product.returnable,
           },

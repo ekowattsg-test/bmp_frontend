@@ -21,6 +21,32 @@ const toArray = (value) => {
   return [];
 };
 
+/**
+ * Build a map of customerId -> customerName from the customers endpoint.
+ */
+const fetchCustomerMap = async () => {
+  const response = await request("GET", "/api/customers", null, {
+    skipBackendErrorDialog: true,
+  });
+  const map = {};
+  toArray(response?.data).forEach((c) => {
+    if (c.customerId != null) {
+      map[c.customerId] = c.customerName || "";
+    }
+  });
+  return map;
+};
+
+/**
+ * Enrich delivery orders with customerName from a customer map.
+ */
+const enrichDeliveryOrdersWithCustomerName = (orders, customerMap) => {
+  return orders.map((o) => {
+    const resolved = customerMap[o.customerId] || o.customerName || "";
+    return { ...o, customerName: resolved };
+  });
+};
+
 const toNumber = (value) => {
   if (value === null || value === undefined || value === "") return 0;
   const numberValue = Number(value);
@@ -28,13 +54,19 @@ const toNumber = (value) => {
 };
 
 /**
- * Fetch all delivery orders.
+ * Fetch all delivery orders, enriched with customerName.
  */
 export const fetchDeliveryOrders = async () => {
-  const response = await request("GET", "/api/deliveryOrders", null, {
-    skipBackendErrorDialog: true,
-  });
-  return toArray(response?.data);
+  const [response, customerMap] = await Promise.all([
+    request("GET", "/api/deliveryOrders", null, {
+      skipBackendErrorDialog: true,
+    }),
+    fetchCustomerMap().catch(() => ({})),
+  ]);
+  return enrichDeliveryOrdersWithCustomerName(
+    toArray(response?.data),
+    customerMap,
+  );
 };
 
 /**
@@ -381,7 +413,7 @@ export const executeTransferOut = async ({
     await createWorkOrderSubData({
       workOrderDataId,
       productId,
-      stockId: scan.stockId,
+      stockId: scan.stockCode || scan.stockId,
       subQuantity: scan.subQuantity,
     });
   }
@@ -485,7 +517,7 @@ export const executeTransferIn = async ({
     await createWorkOrderSubData({
       workOrderDataId,
       productId,
-      stockId: scan.stockId,
+      stockId: scan.stockCode || scan.stockId,
       subQuantity: scan.subQuantity,
     });
   }
