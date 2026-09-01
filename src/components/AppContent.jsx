@@ -280,11 +280,11 @@ export default function AppContent() {
           <Route path="/pda/login" element={<PdaLogin />} />
           <Route
             path="/pda/menu"
-            element={<Navigate to="/pda/stockcard" replace />}
+            element={<Navigate to="/pda/messages" replace />}
           />
           <Route
             path="/pda"
-            element={<Navigate to="/pda/stockcard" replace />}
+            element={<Navigate to="/pda/messages" replace />}
           />
           <Route element={<PdaLayout />}>
             <Route path="/pda/schedule" element={<PdaSchedule />} />

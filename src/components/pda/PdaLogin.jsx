@@ -110,9 +110,9 @@ export default function PdaLogin() {
         const userData = response.data;
         localStorage.setItem("pda_user_info", JSON.stringify(userData));
         console.log(
-          "[PdaLogin] User info saved to localStorage, navigating to /pda/menu",
+          "[PdaLogin] User info saved to localStorage, navigating to /pda/messages",
         );
-        navigate("/pda/stockcard", { replace: true });
+        navigate("/pda/messages", { replace: true });
       })
       .catch((err) => {
         console.error("[PdaLogin] Login failed:", err);
