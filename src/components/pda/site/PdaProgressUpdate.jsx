@@ -117,16 +117,17 @@ export default function PdaProgressUpdate() {
         return acc;
       }, {});
 
-      const streamMap = (Array.isArray(streamsRes?.data) ? streamsRes.data : [])
-        .reduce((acc, stream) => {
-          const streamId = String(stream?.projectStreamId || "").trim();
-          if (!streamId) return acc;
-          acc[streamId] = {
-            streamName: String(stream?.streamName || "").trim(),
-            projectCode: String(stream?.projectCode || "").trim(),
-          };
-          return acc;
-        }, {});
+      const streamMap = (
+        Array.isArray(streamsRes?.data) ? streamsRes.data : []
+      ).reduce((acc, stream) => {
+        const streamId = String(stream?.projectStreamId || "").trim();
+        if (!streamId) return acc;
+        acc[streamId] = {
+          streamName: String(stream?.streamName || "").trim(),
+          projectCode: String(stream?.projectCode || "").trim(),
+        };
+        return acc;
+      }, {});
 
       const filtered = progresses.filter((p) => {
         const progressDate = String(p.progressDate || "");
@@ -154,7 +155,8 @@ export default function PdaProgressUpdate() {
             : markerB === "U"
               ? "U"
               : "OTHERS";
-        const byMarker = (GROUP_ORDER[groupA] ?? 99) - (GROUP_ORDER[groupB] ?? 99);
+        const byMarker =
+          (GROUP_ORDER[groupA] ?? 99) - (GROUP_ORDER[groupB] ?? 99);
         if (byMarker !== 0) return byMarker;
 
         const ta = taskById[String(a.projectTaskId)];
@@ -270,10 +272,7 @@ export default function PdaProgressUpdate() {
       );
     }
     if (groupKey === "C_TODAY") {
-      return t(
-        "pda.progressUpdate.group.cToday",
-        "Tasks executed today",
-      );
+      return t("pda.progressUpdate.group.cToday", "Tasks executed today");
     }
     if (groupKey === "U") {
       return t("pda.progressUpdate.group.u", "Progress reported");
@@ -303,6 +302,7 @@ export default function PdaProgressUpdate() {
         ...prev,
         [progressId]: {
           progress: baseline,
+          progressRaw: String(baseline),
           completed: baseline >= 100,
         },
       };
@@ -317,35 +317,64 @@ export default function PdaProgressUpdate() {
   };
 
   const handleDraftProgress = (progressId, baseline, value) => {
-    const parsed = toProgressValue(value);
-    const clamped = Math.max(baseline, Math.min(100, parsed));
-    setDraftById((prev) => ({
-      ...prev,
-      [progressId]: {
-        ...(prev[progressId] || {
-          progress: baseline,
-          completed: baseline >= 100,
-        }),
-        progress: clamped,
-        completed: clamped >= 100,
-      },
-    }));
+    const raw = String(value ?? "").replace(/[^\d]/g, "");
+    const parsed = raw === "" ? baseline : Math.min(99, Number(raw));
+
+    setDraftById((prev) => {
+      const draft = prev[progressId] || {
+        progress: baseline,
+        progressRaw: String(baseline),
+        completed: baseline >= 100,
+      };
+      return {
+        ...prev,
+        [progressId]: {
+          ...draft,
+          progressRaw: raw === "" ? raw : String(parsed),
+          progress: parsed,
+          completed: false,
+        },
+      };
+    });
+  };
+
+  const handleDraftBlur = (progressId, baseline) => {
+    setDraftById((prev) => {
+      const draft = prev[progressId];
+      if (!draft) return prev;
+      const clamped = Math.max(
+        baseline,
+        Math.min(99, toProgressValue(draft.progressRaw)),
+      );
+      return {
+        ...prev,
+        [progressId]: {
+          ...draft,
+          progress: clamped,
+          progressRaw: String(clamped),
+          completed: false,
+        },
+      };
+    });
   };
 
   const handleDraftCompleted = (progressId, baseline, checked) => {
-    setDraftById((prev) => ({
-      ...prev,
-      [progressId]: {
-        ...(prev[progressId] || {
-          progress: baseline,
-          completed: baseline >= 100,
-        }),
-        completed: checked,
-        progress: checked
-          ? 100
-          : Math.max(baseline, prev[progressId]?.progress ?? baseline),
-      },
-    }));
+    setDraftById((prev) => {
+      const draft = prev[progressId] || {
+        progress: baseline,
+        progressRaw: String(baseline),
+        completed: baseline >= 100,
+      };
+      return {
+        ...prev,
+        [progressId]: {
+          ...draft,
+          completed: checked,
+          progress: checked ? 100 : baseline,
+          progressRaw: String(checked ? 100 : baseline),
+        },
+      };
+    });
   };
 
   const handleConfirmProgress = async (row) => {
@@ -355,16 +384,20 @@ export default function PdaProgressUpdate() {
     const baseline = getBaselineProgress(row);
     const draft = draftById[progressId] || {
       progress: baseline,
+      progressRaw: String(baseline),
       completed: baseline >= 100,
     };
-    if (draft.progress <= baseline) return;
+    const finalProgress = draft.completed
+      ? 100
+      : toProgressValue(Math.max(baseline, Math.min(99, draft.progress)));
+    if (!draft.completed && finalProgress <= baseline) return;
 
     setSavingId(progressId);
     setErrorMsg("");
     try {
       await request("PUT", `/api/projecttaskprogresses/${progressId}`, {
         ...row.progress,
-        progress: draft.completed ? 100 : draft.progress,
+        progress: finalProgress,
         completed: draft.completed ? 1 : 0,
         marker: "U",
         reportedBy: currentStaffId,
@@ -437,7 +470,8 @@ export default function PdaProgressUpdate() {
                 sx={{
                   px: 1.5,
                   py: 0.8,
-                  bgcolor: SECTION_HEADER[group.groupKey] || SECTION_HEADER.OTHERS,
+                  bgcolor:
+                    SECTION_HEADER[group.groupKey] || SECTION_HEADER.OTHERS,
                   color: "common.white",
                 }}
               >
@@ -482,7 +516,8 @@ export default function PdaProgressUpdate() {
                           fontWeight: 700,
                           fontSize: "1rem",
                           color:
-                            SECTION_HEADER[group.groupKey] || SECTION_HEADER.OTHERS,
+                            SECTION_HEADER[group.groupKey] ||
+                            SECTION_HEADER.OTHERS,
                           lineHeight: 1.5,
                         }}
                       >
@@ -493,233 +528,255 @@ export default function PdaProgressUpdate() {
                     </Box>
 
                     {stream.items.map((row) => {
-                  const progressId = String(
-                    row.progress.projectTaskProgressId || "",
-                  );
-                  const isUpdated =
-                    String(row?.progress?.marker || "").trim() === "U";
-                  const updatedProgress = toProgressValue(
-                    row?.progress?.progress,
-                  );
-                  const displayProgress = isUpdated
-                    ? updatedProgress
-                    : toProgressValue(row?.task?.progress);
-                  const { startDate, endDate } = getDisplayTaskDates(row.task);
-                  const expanded = expandedId === progressId && !isUpdated;
-                  const baseline = getBaselineProgress(row);
-                  const draft = draftById[progressId] || {
-                    progress: baseline,
-                    completed: baseline >= 100,
-                  };
-                  const canConfirm = draft.progress > baseline;
+                      const progressId = String(
+                        row.progress.projectTaskProgressId || "",
+                      );
+                      const isUpdated =
+                        String(row?.progress?.marker || "").trim() === "U";
+                      const updatedProgress = toProgressValue(
+                        row?.progress?.progress,
+                      );
+                      const displayProgress = isUpdated
+                        ? updatedProgress
+                        : toProgressValue(row?.task?.progress);
+                      const { startDate, endDate } = getDisplayTaskDates(
+                        row.task,
+                      );
+                      const expanded = expandedId === progressId && !isUpdated;
+                      const baseline = getBaselineProgress(row);
+                      const draft = draftById[progressId] || {
+                        progress: baseline,
+                        progressRaw: String(baseline),
+                        completed: baseline >= 100,
+                      };
+                      const finalProgress = draft.completed
+                        ? 100
+                        : toProgressValue(
+                            Math.max(baseline, Math.min(99, draft.progress)),
+                          );
+                      const canConfirm =
+                        draft.completed || finalProgress > baseline;
 
-                  return (
-                    <Box
-                      key={progressId}
-                      sx={{
-                        bgcolor: "background.paper",
-                        borderRadius: 1,
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                        display: "flex",
-                        flexDirection: "column",
-                        border: "1px solid",
-                        borderColor: expanded ? "primary.main" : "divider",
-                        overflow: "hidden",
-                        mb: 0.75,
-                        "&:last-child": { mb: 0 },
-                      }}
-                    >
-                      <Box
-                        role="button"
-                        tabIndex={isUpdated ? -1 : 0}
-                        onClick={() => {
-                          if (!isUpdated) handleExpand(row);
-                        }}
-                        onKeyDown={(e) => {
-                          if (
-                            !isUpdated &&
-                            (e.key === "Enter" || e.key === " ")
-                          ) {
-                            e.preventDefault();
-                            handleExpand(row);
-                          }
-                        }}
-                        sx={{
-                          px: 1.25,
-                          py: 1,
-                          display: "grid",
-                          gridTemplateColumns: "minmax(0,1fr) auto",
-                          gridTemplateRows: "auto auto",
-                          columnGap: 1,
-                          alignItems: "center",
-                          cursor: isUpdated ? "default" : "pointer",
-                        }}
-                      >
+                      return (
                         <Box
+                          key={progressId}
                           sx={{
-                            gridColumn: "2 / 3",
-                            gridRow: "1 / 3",
+                            bgcolor: "background.paper",
+                            borderRadius: 1,
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
                             display: "flex",
-                            justifyContent: "flex-end",
-                            alignItems: "center",
-                            minWidth: 24,
+                            flexDirection: "column",
+                            border: "1px solid",
+                            borderColor: expanded ? "primary.main" : "divider",
+                            overflow: "hidden",
+                            mb: 0.75,
+                            "&:last-child": { mb: 0 },
                           }}
                         >
-                          {!isUpdated ? (
-                            <IconButton
-                              size="small"
-                              sx={{ p: 0.25 }}
-                              onClick={(e) => {
-                                e.stopPropagation();
+                          <Box
+                            role="button"
+                            tabIndex={isUpdated ? -1 : 0}
+                            onClick={() => {
+                              if (!isUpdated) handleExpand(row);
+                            }}
+                            onKeyDown={(e) => {
+                              if (
+                                !isUpdated &&
+                                (e.key === "Enter" || e.key === " ")
+                              ) {
+                                e.preventDefault();
                                 handleExpand(row);
+                              }
+                            }}
+                            sx={{
+                              px: 1.25,
+                              py: 1,
+                              display: "grid",
+                              gridTemplateColumns: "minmax(0,1fr) auto",
+                              gridTemplateRows: "auto auto",
+                              columnGap: 1,
+                              alignItems: "center",
+                              cursor: isUpdated ? "default" : "pointer",
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                gridColumn: "2 / 3",
+                                gridRow: "1 / 3",
+                                display: "flex",
+                                justifyContent: "flex-end",
+                                alignItems: "center",
+                                minWidth: 24,
                               }}
-                              aria-label={t(
-                                "pda.progressUpdate.expandRow",
-                                "Expand task progress",
-                              )}
                             >
-                              <RadioButtonUncheckedIcon
-                                fontSize="small"
-                                color={expanded ? "primary" : "disabled"}
-                              />
-                            </IconButton>
-                          ) : (
-                            <CheckCircleOutlineIcon
-                              fontSize="small"
-                              color="success"
-                              sx={{ mr: 0.5 }}
-                            />
-                          )}
-                        </Box>
+                              {!isUpdated ? (
+                                <IconButton
+                                  size="small"
+                                  sx={{ p: 0.25 }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleExpand(row);
+                                  }}
+                                  aria-label={t(
+                                    "pda.progressUpdate.expandRow",
+                                    "Expand task progress",
+                                  )}
+                                >
+                                  <RadioButtonUncheckedIcon
+                                    fontSize="small"
+                                    color={expanded ? "primary" : "disabled"}
+                                  />
+                                </IconButton>
+                              ) : (
+                                <CheckCircleOutlineIcon
+                                  fontSize="small"
+                                  color="success"
+                                  sx={{ mr: 0.5 }}
+                                />
+                              )}
+                            </Box>
 
-                        <Box
-                          sx={{
-                            gridColumn: "1 / 2",
-                            gridRow: "1 / 2",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                            minWidth: 0,
-                            mb: 0.25,
-                          }}
-                        >
-                          <Typography
-                            variant="body2"
-                            fontWeight={600}
-                            sx={{ textAlign: "left", minWidth: 0 }}
-                          >
-                            {row.task?.taskName || ""}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            color="success.main"
-                            fontWeight={700}
-                            sx={{ flexShrink: 0 }}
-                          >
-                            {`${displayProgress}%`}
-                          </Typography>
-                        </Box>
+                            <Box
+                              sx={{
+                                gridColumn: "1 / 2",
+                                gridRow: "1 / 2",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                                minWidth: 0,
+                                mb: 0.25,
+                              }}
+                            >
+                              <Typography
+                                variant="body2"
+                                fontWeight={600}
+                                sx={{ textAlign: "left", minWidth: 0 }}
+                              >
+                                {row.task?.taskName || ""}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="success.main"
+                                fontWeight={700}
+                                sx={{ flexShrink: 0 }}
+                              >
+                                {`${displayProgress}%`}
+                              </Typography>
+                            </Box>
 
-                        <Box
-                          sx={{
-                            gridColumn: "1 / 2",
-                            gridRow: "2 / 3",
-                            minWidth: 0,
-                          }}
-                        >
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            display="block"
-                            sx={{ textAlign: "left" }}
-                          >
-                            {startDate || ""} - {endDate || ""}
-                          </Typography>
-                        </Box>
-                      </Box>
+                            <Box
+                              sx={{
+                                gridColumn: "1 / 2",
+                                gridRow: "2 / 3",
+                                minWidth: 0,
+                              }}
+                            >
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                display="block"
+                                sx={{ textAlign: "left" }}
+                              >
+                                {startDate || ""} - {endDate || ""}
+                              </Typography>
+                            </Box>
+                          </Box>
 
-                      {expanded ? (
-                        <Box
-                          sx={{
-                            px: 1.25,
-                            pb: 1.25,
-                            display: "grid",
-                            gridTemplateColumns: "minmax(120px,1fr) auto auto",
-                            gap: 1,
-                            alignItems: "center",
-                            borderTop: "1px solid",
-                            borderColor: "divider",
-                          }}
-                        >
-                          <TextField
-                            size="small"
-                            label={t("pda.progressUpdate.progress", "Progress")}
-                            type="number"
-                            value={draft.progress}
-                            onChange={(e) =>
-                              handleDraftProgress(
-                                progressId,
-                                baseline,
-                                e.target.value,
-                              )
-                            }
-                            inputProps={{ min: baseline, max: 100, step: 1 }}
-                            disabled={
-                              draft.completed || savingId === progressId
-                            }
-                            fullWidth
-                          />
-
-                          <FormControlLabel
-                            sx={{ m: 0 }}
-                            control={
-                              <Checkbox
-                                checked={draft.completed}
+                          {expanded ? (
+                            <Box
+                              sx={{
+                                px: 1.25,
+                                pb: 1.25,
+                                display: "grid",
+                                gridTemplateColumns:
+                                  "minmax(120px,1fr) auto auto",
+                                gap: 1,
+                                alignItems: "center",
+                                borderTop: "1px solid",
+                                borderColor: "divider",
+                              }}
+                            >
+                              <TextField
+                                size="small"
+                                label={t(
+                                  "pda.progressUpdate.progress",
+                                  "Progress",
+                                )}
+                                type="tel"
+                                value={draft.progressRaw}
                                 onChange={(e) =>
-                                  handleDraftCompleted(
+                                  handleDraftProgress(
                                     progressId,
                                     baseline,
-                                    e.target.checked,
+                                    e.target.value,
                                   )
                                 }
-                                disabled={savingId === progressId}
+                                onBlur={() =>
+                                  handleDraftBlur(progressId, baseline)
+                                }
+                                inputProps={{
+                                  inputMode: "numeric",
+                                  pattern: "[0-9]*",
+                                }}
+                                disabled={
+                                  draft.completed || savingId === progressId
+                                }
+                                fullWidth
                               />
-                            }
-                            label={t("pda.progressUpdate.complete", "Complete")}
-                          />
 
-                          {canConfirm ? (
-                            <Tooltip
-                              title={t(
-                                "pda.progressUpdate.confirm",
-                                "Confirm progress",
-                              )}
-                            >
-                              <span>
-                                <IconButton
-                                  color="success"
-                                  onClick={() => handleConfirmProgress(row)}
-                                  disabled={savingId === progressId}
-                                >
-                                  {savingId === progressId ? (
-                                    <CircularProgress
-                                      size={18}
-                                      color="inherit"
-                                    />
-                                  ) : (
-                                    <TaskAltIcon fontSize="small" />
+                              <FormControlLabel
+                                sx={{ m: 0 }}
+                                control={
+                                  <Checkbox
+                                    checked={draft.completed}
+                                    onChange={(e) =>
+                                      handleDraftCompleted(
+                                        progressId,
+                                        baseline,
+                                        e.target.checked,
+                                      )
+                                    }
+                                    disabled={savingId === progressId}
+                                  />
+                                }
+                                label={t(
+                                  "pda.progressUpdate.complete",
+                                  "Complete",
+                                )}
+                              />
+
+                              {canConfirm ? (
+                                <Tooltip
+                                  title={t(
+                                    "pda.progressUpdate.confirm",
+                                    "Confirm progress",
                                   )}
-                                </IconButton>
-                              </span>
-                            </Tooltip>
-                          ) : (
-                            <Box sx={{ width: 40, height: 40 }} />
-                          )}
+                                >
+                                  <span>
+                                    <IconButton
+                                      color="success"
+                                      onClick={() => handleConfirmProgress(row)}
+                                      disabled={savingId === progressId}
+                                    >
+                                      {savingId === progressId ? (
+                                        <CircularProgress
+                                          size={18}
+                                          color="inherit"
+                                        />
+                                      ) : (
+                                        <TaskAltIcon fontSize="small" />
+                                      )}
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                              ) : (
+                                <Box sx={{ width: 40, height: 40 }} />
+                              )}
+                            </Box>
+                          ) : null}
                         </Box>
-                      ) : null}
-                    </Box>
-                    );
-                  })}
+                      );
+                    })}
                   </Box>
                 ))}
               </Box>

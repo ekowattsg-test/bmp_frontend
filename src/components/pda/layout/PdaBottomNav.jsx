@@ -58,13 +58,6 @@ const INVENTORY_MENU_ITEMS = [
     requiresStockOrSiteLeader: true,
   },
   {
-    route: "/pda/stock-issue",
-    navigateTo: "/pda/stock-issue",
-    labelKey: "pda.nav.stockIssue",
-    icon: <MoveUpIcon />,
-    requiresStockOrSiteLeader: true,
-  },
-  {
     route: "/pda/stock-transfer-out",
     navigateTo: "/pda/stock-transfer-out",
     labelKey: "pda.nav.stockTransferOut",
@@ -76,6 +69,13 @@ const INVENTORY_MENU_ITEMS = [
     navigateTo: "/pda/stock-transfer-in",
     labelKey: "pda.nav.stockTransferIn",
     icon: <CompareArrowsIcon />,
+    requiresStockOrSiteLeader: true,
+  },
+  {
+    route: "/pda/stock-issue",
+    navigateTo: "/pda/stock-issue",
+    labelKey: "pda.nav.stockIssue",
+    icon: <MoveUpIcon />,
     requiresStockOrSiteLeader: true,
   },
   {
