@@ -37,6 +37,7 @@ import PdaBriefingPresenterPage from "./pda/briefing/PdaBriefingPresenterPage.js
 import PdaBriefingWorkerPage from "./pda/briefing/PdaBriefingWorkerPage.jsx";
 import PdaAvailableTask from "./pda/site/PdaAvailableTask.jsx";
 import PdaProgressUpdate from "./pda/site/PdaProgressUpdate.jsx";
+import PdaProgressInspection from "./pda/site/PdaProgressInspection.jsx";
 import PdaFieldQrCode from "./pda/site/PdaFieldQrCode.jsx";
 import MessagesPage from "./messages/MessagesPage.jsx";
 import StockCard from "./stock/StockCard.jsx";
@@ -311,6 +312,10 @@ export default function AppContent() {
             <Route
               path="/pda/progress-update"
               element={<PdaProgressUpdate />}
+            />
+            <Route
+              path="/pda/progress-inspection"
+              element={<PdaProgressInspection />}
             />
             <Route path="/pda/field-qr-code" element={<PdaFieldQrCode />} />
             <Route path="/pda/messages" element={<MessagesPage />} />

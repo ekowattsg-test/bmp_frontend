@@ -27,6 +27,7 @@ import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import ReplyIcon from "@mui/icons-material/Reply";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import WorklistIcon from "@mui/icons-material/PlaylistAddCheck";
+import FactCheckIcon from "@mui/icons-material/FactCheck";
 import ChatIcon from "@mui/icons-material/Chat";
 import { request } from "../../../helpers/axios_helper";
 
@@ -144,6 +145,13 @@ const SITE_MENU_ITEMS = [
     requiresSiteLeader: true,
   },
   {
+    route: "/pda/progress-inspection",
+    navigateTo: "/pda/progress-inspection",
+    labelKey: "pda.nav.progressInspection",
+    icon: <FactCheckIcon />,
+    requiresSiteInspect: true,
+  },
+  {
     route: "/pda/field-qr-code",
     navigateTo: "/pda/field-qr-code",
     labelKey: "pda.nav.fieldQrCode",
@@ -165,6 +173,22 @@ const isSiteLeaderRole = (roleRow) => {
       .toLowerCase()
       .replace(/\s+/g, "");
     return normalized === "siteleader";
+  });
+};
+
+const isSiteInspectRole = (roleRow) => {
+  const candidates = [
+    roleRow?.roleName,
+    roleRow?.operationRole,
+    roleRow?.role,
+    roleRow?.name,
+  ];
+  return candidates.some((value) => {
+    const normalized = String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "");
+    return normalized === "siteinspect";
   });
 };
 
@@ -196,6 +220,7 @@ export default function PdaBottomNav() {
   const [siteOpen, setSiteOpen] = useState(false);
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const [isSiteLeader, setIsSiteLeader] = useState(false);
+  const [isSiteInspect, setIsSiteInspect] = useState(false);
   const [isStock, setIsStock] = useState(false);
 
   useEffect(() => {
@@ -218,6 +243,7 @@ export default function PdaBottomNav() {
 
         if (!staffId) {
           if (!cancelled) setIsSiteLeader(false);
+          if (!cancelled) setIsSiteInspect(false);
           return;
         }
 
@@ -227,11 +253,14 @@ export default function PdaBottomNav() {
           (r) => String(r?.staffId || "").trim() === staffId,
         );
         const hasSiteLeader = ownRoleRows.some(isSiteLeaderRole);
+        const hasSiteInspect = ownRoleRows.some(isSiteInspectRole);
         const hasStock = ownRoleRows.some(isStockRole);
         if (!cancelled) setIsSiteLeader(hasSiteLeader);
+        if (!cancelled) setIsSiteInspect(hasSiteInspect);
         if (!cancelled) setIsStock(hasStock);
       } catch {
         if (!cancelled) setIsSiteLeader(false);
+        if (!cancelled) setIsSiteInspect(false);
         if (!cancelled) setIsStock(false);
       }
     };
@@ -252,10 +281,12 @@ export default function PdaBottomNav() {
 
   const visibleSiteMenuItems = useMemo(
     () =>
-      SITE_MENU_ITEMS.filter(
-        (item) => !item.requiresSiteLeader || isSiteLeader,
-      ),
-    [isSiteLeader],
+      SITE_MENU_ITEMS.filter((item) => {
+        if (item.requiresSiteLeader && !isSiteLeader) return false;
+        if (item.requiresSiteInspect && !isSiteInspect) return false;
+        return true;
+      }),
+    [isSiteLeader, isSiteInspect],
   );
 
   // Check if current path is within an inventory-menu route (for Inventory tab highlight)

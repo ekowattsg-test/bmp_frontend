@@ -431,6 +431,16 @@ const Sidebar = ({ open, onClose, collapsed, onToggleCollapse }) => {
               minLevel: 3,
             },
             {
+              key: "projectProgressInspection",
+              label: t(
+                "menu.projectProgressInspection",
+                "Progress Inspection Records",
+              ),
+              icon: <TaskIcon fontSize="small" />,
+              path: "/project-progress-inspection",
+              minLevel: 3,
+            },
+            {
               key: "projectSkillMatchAnalysis",
               label: t(
                 "menu.projectSkillMatchAnalysis",

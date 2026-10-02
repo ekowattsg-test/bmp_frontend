@@ -60,6 +60,7 @@ import RequisitionGenerate from "./project/RequisitionGenerate";
 import ProjectTaskDeliveryExtract from "./project/ProjectTaskDeliveryExtract";
 import RebuildHoldMovements from "./project/RebuildHoldMovements";
 import ProjectStatusControl from "./project/ProjectStatusControl";
+import ProjectProgressInspection from "./project/ProjectProgressInspection";
 import BuildingProgressPage from "./project/buildingProgress/BuildingProgressPage";
 import VehicleModern from "./information/VehicleModern";
 import WorkOrderModern from "./workorder/WorkOrderModern";
@@ -174,6 +175,10 @@ function MainPage() {
         <Route
           path="/project-status-control"
           element={<ProjectStatusControl />}
+        />
+        <Route
+          path="/project-progress-inspection"
+          element={<ProjectProgressInspection />}
         />
         <Route
           path="/project/building-progress"
