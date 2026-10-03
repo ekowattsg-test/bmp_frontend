@@ -330,6 +330,18 @@ export default function ProjectProgressHistoryDialog({
                     </Grid>
                     <Grid item xs={6} sm={3}>
                       <Typography variant="caption" color="text.secondary">
+                        {t("projectProgressInspection.reportedProgress", "Reported Progress")}
+                      </Typography>
+                      <Box>
+                        <Chip
+                          label={`${Number(currentRecord.reportedProgress || 0)}%`}
+                          size="small"
+                          color="primary"
+                        />
+                      </Box>
+                    </Grid>
+                    <Grid item xs={6} sm={3}>
+                      <Typography variant="caption" color="text.secondary">
                         {t("projectProgressInspection.progress", "Progress")}
                       </Typography>
                       <Box>

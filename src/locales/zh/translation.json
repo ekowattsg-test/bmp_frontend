@@ -586,7 +586,7 @@
     "streamName": "工作流",
     "taskName": "任务",
     "progressDate": "上报日期",
-    "reportedProgress": "进度",
+    "reportedProgress": "上报进度",
     "reportedBy": "上报人",
     "verifiedProgress": "核实",
     "inspectedBy": "检查人",

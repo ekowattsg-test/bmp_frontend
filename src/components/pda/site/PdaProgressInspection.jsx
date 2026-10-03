@@ -307,7 +307,8 @@ export default function PdaProgressInspection() {
 
   const handleSaveInspection = async (row) => {
     const progressId = String(row.progress.projectTaskProgressId || "");
-    if (!progressId) return;
+    const taskId = String(row.task?.projectTaskId || "");
+    if (!progressId || !taskId) return;
 
     const photos = photosById[progressId] || [];
     if (photos.length === 0) {
@@ -347,8 +348,16 @@ export default function PdaProgressInspection() {
     setErrorMsg("");
     setSuccessMsg("");
     try {
+      await request("PUT", `/api/projecttasks/${taskId}`, {
+        ...row.task,
+        actualEndDate:
+          verifiedProgress === 100 ? row.progress.progressDate : null,
+      });
       await request("PUT", `/api/projecttaskprogresses/${progressId}`, {
         ...row.progress,
+        reportedProgress: row.progress.progress,
+        progress: verifiedProgress,
+        completed: verifiedProgress === 100 ? 1 : 0,
         verifiedProgress,
         inspectionRemark: String(remarkById[progressId] || "").trim(),
         inspectionDate: today,

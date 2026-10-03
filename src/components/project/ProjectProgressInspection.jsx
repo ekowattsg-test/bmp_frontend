@@ -340,7 +340,7 @@ export default function ProjectProgressInspection() {
         width: 90,
         renderCell: (params) => (
           <Chip
-            label={`${Number(params.row.progress || 0)}%`}
+            label={`${Number(params.row.reportedProgress || 0)}%`}
             size="small"
             color={Number(params.row.completed) ? "success" : "primary"}
           />
